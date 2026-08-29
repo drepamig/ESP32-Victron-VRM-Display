@@ -48,6 +48,22 @@ WifiSetupRect rowBounds(size_t row) {
   return {kRowX, static_cast<int16_t>(kFirstRowY + static_cast<int16_t>(row) * kRowStride),
           kRowWidth, kRowHeight};
 }
+
+void drawLockGlyph(TFT_eSPI& display, const WifiSetupRect& bounds) {
+  const int16_t bodyX = static_cast<int16_t>(bounds.x + 280);
+  const int16_t bodyY = static_cast<int16_t>(bounds.y + 9);
+  display.drawCircle(bodyX + 6, bodyY, 5, TFT_WHITE);
+  display.fillRect(bodyX, bodyY, 12, 10, TFT_WHITE);
+  display.fillCircle(bodyX + 6, bodyY + 5, 1, kPanel);
+}
+
+void formatNearbySsid(const String& ssid, char output[25]) {
+  if (ssid.length() > 24) {
+    std::snprintf(output, 25, "%.21s...", ssid.c_str());
+  } else {
+    std::snprintf(output, 25, "%s", ssid.c_str());
+  }
+}
 }  // namespace
 
 bool WifiSetupRect::contains(const TouchPoint& point) const {
@@ -58,6 +74,7 @@ WifiSetupUi::WifiSetupUi(TFT_eSPI& display) : display_(display) {}
 
 void WifiSetupUi::open() {
   view_ = WifiSetupView::Saved;
+  awaitEntryRelease_ = false;
   selectedProfileIndex_ = -1;
   scanPage_ = 0;
   lastActivityMs_ = lastNowMs_;
@@ -66,6 +83,7 @@ void WifiSetupUi::open() {
 
 void WifiSetupUi::close() {
   view_ = WifiSetupView::Closed;
+  awaitEntryRelease_ = false;
   selectedProfileIndex_ = -1;
   cancelHolds();
 }
@@ -90,6 +108,7 @@ void WifiSetupUi::cancelHolds() {
 
 WifiSetupAction WifiSetupUi::handleRelease(uint32_t nowMs) {
   lastNowMs_ = nowMs;
+  awaitEntryRelease_ = false;
   if (isOpen()) {
     lastActivityMs_ = nowMs;
   }
@@ -102,6 +121,7 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
   if (!isOpen()) {
     if (wanHoldActive_ && nowMs - wanHoldStartedMs_ >= kWanHoldMs) {
       open();
+      awaitEntryRelease_ = true;
       lastActivityMs_ = nowMs;
     }
     return noAction();
@@ -136,6 +156,9 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   }
 
   lastActivityMs_ = nowMs;
+  if (awaitEntryRelease_) {
+    return noAction();
+  }
   wanHoldActive_ = false;
   if (clearHoldActive_ && !kClearBounds.contains(point)) {
     clearHoldActive_ = false;
@@ -215,7 +238,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
 
   if (view_ == WifiSetupView::Nearby) {
     const size_t pageStart = scanPage_ * kRowsPerPage;
-    const size_t remaining = scanResultCount_ > pageStart ? scanResultCount_ - pageStart : 0;
+    const size_t remaining = scanResults_.size() > pageStart ? scanResults_.size() - pageStart : 0;
     const size_t rowCount = remaining < kRowsPerPage ? remaining : kRowsPerPage;
     for (size_t row = 0; row < rowCount; ++row) {
       if (!rowBounds(row).contains(point)) {
@@ -241,7 +264,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
       return simpleAction(WifiSetupActionType::Refresh);
     }
     if (kNextBounds.contains(point)) {
-      if ((scanPage_ + 1) * kRowsPerPage < scanResultCount_) {
+      if ((scanPage_ + 1) * kRowsPerPage < scanResults_.size()) {
         ++scanPage_;
       }
       return noAction();
@@ -272,15 +295,16 @@ void WifiSetupUi::setSavedProfiles(const NetworkProfile* profiles, size_t count,
 }
 
 void WifiSetupUi::setScanResults(const ScanResult* results, size_t count) {
-  scanResultCount_ = count < kMaxScanResults ? count : kMaxScanResults;
-  if (results == nullptr) {
-    scanResultCount_ = 0;
+  const bool showCompletedScan = isOpen() && view_ == WifiSetupView::Scanning;
+  if (results == nullptr || count == 0) {
+    scanResults_.clear();
+  } else {
+    scanResults_.assign(results, results + count);
   }
-  for (size_t index = 0; index < scanResultCount_; ++index) {
-    scanResults_[index] = results[index];
+  if (showCompletedScan) {
+    scanPage_ = 0;
+    view_ = WifiSetupView::Nearby;
   }
-  scanPage_ = 0;
-  view_ = WifiSetupView::Nearby;
 }
 
 void WifiSetupUi::showPortal(const String& ssid, const String& code,
@@ -411,7 +435,7 @@ void WifiSetupUi::renderScanning() {
 
 void WifiSetupUi::renderNearby() {
   const size_t pageStart = scanPage_ * kRowsPerPage;
-  const size_t remaining = scanResultCount_ > pageStart ? scanResultCount_ - pageStart : 0;
+  const size_t remaining = scanResults_.size() > pageStart ? scanResults_.size() - pageStart : 0;
   const size_t rowCount = remaining < kRowsPerPage ? remaining : kRowsPerPage;
   for (size_t row = 0; row < rowCount; ++row) {
     const ScanResult& result = scanResults_[pageStart + row];
@@ -419,12 +443,17 @@ void WifiSetupUi::renderNearby() {
     display_.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 3, kPanel);
     display_.setTextDatum(TL_DATUM);
     display_.setTextColor(TFT_WHITE, kPanel);
-    display_.drawString(result.ssid, bounds.x + 5, bounds.y + 5, 1);
+    char ssid[25];
+    formatNearbySsid(result.ssid, ssid);
+    display_.drawString(ssid, bounds.x + 5, bounds.y + 5, 1);
     char rssi[24];
     std::snprintf(rssi, sizeof(rssi), "%ld dBm", static_cast<long>(result.rssi));
     display_.drawString(rssi, bounds.x + 170, bounds.y + 5, 1);
-    display_.drawString(result.encryptionType == 0 ? "OPEN" : "LOCK", bounds.x + 260,
-                        bounds.y + 5, 1);
+    if (result.encryptionType == 0) {
+      display_.drawString("OPEN", bounds.x + 272, bounds.y + 5, 1);
+    } else {
+      drawLockGlyph(display_, bounds);
+    }
     int bars = 1;
     if (result.rssi >= -60) {
       bars = 4;
@@ -439,14 +468,14 @@ void WifiSetupUi::renderNearby() {
                         bar < bars ? TFT_GREEN : kMuted);
     }
   }
-  if (scanResultCount_ == 0) {
+  if (scanResults_.empty()) {
     display_.setTextColor(kMuted, kBackground);
     display_.setTextDatum(MC_DATUM);
     display_.drawString("No nearby networks", display_.width() / 2, 105, 2);
   }
   drawButton(kPreviousBounds, "Previous", scanPage_ > 0);
   drawButton(kRefreshBounds, "Refresh");
-  drawButton(kNextBounds, "Next", (scanPage_ + 1) * kRowsPerPage < scanResultCount_);
+  drawButton(kNextBounds, "Next", (scanPage_ + 1) * kRowsPerPage < scanResults_.size());
 }
 
 void WifiSetupUi::renderConfirmDelete() {

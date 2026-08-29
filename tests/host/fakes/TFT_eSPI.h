@@ -23,17 +23,38 @@ constexpr uint8_t MC_DATUM = 4;
 
 class TFT_eSPI {
  public:
+  struct RectCall {
+    int32_t x;
+    int32_t y;
+    int32_t width;
+    int32_t height;
+  };
+
+  struct CircleCall {
+    int32_t x;
+    int32_t y;
+    int32_t radius;
+  };
+
   int16_t width() const { return 320; }
   int16_t height() const { return 240; }
 
-  void fillScreen(uint16_t) { drawnStrings.clear(); }
-  void fillRect(int32_t, int32_t, int32_t, int32_t, uint16_t) {}
+  void fillScreen(uint16_t) {
+    drawnStrings.clear();
+    filledRects.clear();
+    drawnCircles.clear();
+  }
+  void fillRect(int32_t x, int32_t y, int32_t width, int32_t height, uint16_t) {
+    filledRects.push_back({x, y, width, height});
+  }
   void drawRect(int32_t, int32_t, int32_t, int32_t, uint16_t) {}
   void fillRoundRect(int32_t, int32_t, int32_t, int32_t, int32_t, uint16_t) {}
   void drawRoundRect(int32_t, int32_t, int32_t, int32_t, int32_t, uint16_t) {}
   void drawLine(int32_t, int32_t, int32_t, int32_t, uint16_t) {}
   void fillCircle(int32_t, int32_t, int32_t, uint16_t) {}
-  void drawCircle(int32_t, int32_t, int32_t, uint16_t) {}
+  void drawCircle(int32_t x, int32_t y, int32_t radius, uint16_t) {
+    drawnCircles.push_back({x, y, radius});
+  }
   void setTextColor(uint16_t, uint16_t = TFT_BLACK) {}
   void setTextDatum(uint8_t) {}
 
@@ -64,5 +85,25 @@ class TFT_eSPI {
     return false;
   }
 
+  bool filledRectAt(int32_t x, int32_t y, int32_t width, int32_t height) const {
+    for (const RectCall& call : filledRects) {
+      if (call.x == x && call.y == y && call.width == width && call.height == height) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool drewCircleAt(int32_t x, int32_t y, int32_t radius) const {
+    for (const CircleCall& call : drawnCircles) {
+      if (call.x == x && call.y == y && call.radius == radius) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   std::vector<std::string> drawnStrings;
+  std::vector<RectCall> filledRects;
+  std::vector<CircleCall> drawnCircles;
 };

@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstdio>
 #include <iostream>
 #include <string>
 
@@ -39,6 +40,12 @@ void testWanHoldRequiresContinuousContact() {
   check(ui.poll(10000).type == WifiSetupActionType::None && !ui.isOpen(),
         "released WAN hold must stay cancelled");
   holdWanToOpen(ui, 11000);
+  check(ui.handleTouch({300, 10}, 14001).type == WifiSetupActionType::None,
+        "entry contact must not become a Nearby touch before release");
+  check(ui.handleRelease(14002).type == WifiSetupActionType::None,
+        "entry release should only clear the navigation gate");
+  check(ui.handleTouch({300, 10}, 14003).type == WifiSetupActionType::Refresh,
+        "setup navigation must work after the entry contact releases");
 }
 
 void testSavedSelectionConnectAndDeleteConfirmation() {
@@ -85,12 +92,18 @@ void testNearbyRoutingPaginationAndRefresh() {
 
   ScanResult results[7]{{"Known", -42, 3, 1}, {"Secure", -55, 3, 1},
                         {"Open", -66, 0, 6}, {"Third", -70, 3, 6},
-                        {"Fourth", -75, 3, 11}, {"PageTwo", -80, 3, 11},
+                        {"ABCDEFGHIJKLMNOPQRSTUVWXYZ123456", -75, 3, 11},
+                        {"PageTwo", -80, 3, 11},
                         {"Last", -85, 0, 11}};
   ui.setScanResults(results, 7);
   ui.render(offlineStatus());
-  check(display.drewContaining("-55 dBm") && display.drew("LOCK") && display.drew("OPEN"),
-        "nearby rows must show RSSI and security state");
+  check(display.drewContaining("-55 dBm") && display.drew("OPEN") &&
+            !display.drew("LOCK") && display.drewCircleAt(290, 78, 5) &&
+            display.filledRectAt(284, 78, 12, 10),
+        "nearby rows must show RSSI, OPEN text, and a secured lock glyph");
+  check(display.drew("ABCDEFGHIJKLMNOPQRSTU...") &&
+            !display.drew("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"),
+        "32-character SSIDs must be ellipsized before the RSSI column");
 
   check(ui.handleTouch({100, 56}, 20).type == WifiSetupActionType::None,
         "known nearby SSID must route to its saved profile without auto-connect");
@@ -132,6 +145,65 @@ void testNearbyRoutingPaginationAndRefresh() {
   action = ui.handleTouch({160, 218}, 120);
   check(action.type == WifiSetupActionType::Refresh,
         "Refresh control must emit Refresh explicitly");
+}
+
+void testLateScanResultsDoNotOwnNavigation() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ScanResult result[1]{{"Late", -50, 3, 1}};
+
+  ui.open();
+  check(ui.handleTouch({210, 18}, 10).type == WifiSetupActionType::Refresh,
+        "Nearby should enter Scanning before Back test");
+  check(ui.handleTouch({30, 18}, 20).type == WifiSetupActionType::Exit && !ui.isOpen(),
+        "Back must close while a scan is outstanding");
+  ui.setScanResults(result, 1);
+  check(!ui.isOpen(), "late scan results must not reopen a Back-closed UI");
+
+  ui.open();
+  check(ui.handleTouch({210, 18}, 100).type == WifiSetupActionType::Refresh,
+        "Nearby should enter Scanning before inactivity test");
+  check(ui.poll(60100).type == WifiSetupActionType::Exit && !ui.isOpen(),
+        "Scanning must still honor inactivity exit");
+  ui.setScanResults(result, 1);
+  check(!ui.isOpen(), "late scan results must not reopen an inactivity-closed UI");
+
+  NetworkProfile saved[1]{{"Saved", "not-rendered", 3, 7}};
+  ui.setSavedProfiles(saved, 1, 0);
+  ui.open();
+  check(ui.handleTouch({210, 18}, 60200).type == WifiSetupActionType::Refresh,
+        "Nearby should enter Scanning before navigation-away test");
+  check(ui.handleTouch({100, 18}, 60201).type == WifiSetupActionType::None,
+        "Saved tab should navigate away from Scanning");
+  ui.setScanResults(result, 1);
+  check(ui.handleTouch({100, 56}, 60202).type == WifiSetupActionType::None,
+        "late results must preserve the open Saved view");
+  const WifiSetupAction action = ui.handleTouch({55, 218}, 60203);
+  check(action.type == WifiSetupActionType::ConnectSaved && action.profileIndex == 0,
+        "Saved controls must remain active after late scan results");
+}
+
+void testNearbyPaginationRetainsMoreThanTwentyResults() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ScanResult results[26];
+  for (size_t index = 0; index < 26; ++index) {
+    char ssid[8];
+    std::snprintf(ssid, sizeof(ssid), "Net%02u", static_cast<unsigned>(index));
+    results[index] = {String(ssid), static_cast<int32_t>(-40 - static_cast<int>(index)), 3, 1};
+  }
+
+  ui.open();
+  check(ui.handleTouch({210, 18}, 10).type == WifiSetupActionType::Refresh,
+        "Nearby should enter Scanning before large result set");
+  ui.setScanResults(results, 26);
+  for (uint32_t page = 0; page < 5; ++page) {
+    check(ui.handleTouch({278, 218}, 20 + page).type == WifiSetupActionType::None,
+          "Next should advance through every supplied result page");
+  }
+  const WifiSetupAction action = ui.handleTouch({100, 56}, 30);
+  check(action.type == WifiSetupActionType::ProvisionNew && action.ssid == String("Net25"),
+        "sixth page must retain and select the twenty-sixth scan result");
 }
 
 void testClearAllHoldCountdownAndReleaseCancellation() {
@@ -197,6 +269,8 @@ int main() {
   testWanHoldRequiresContinuousContact();
   testSavedSelectionConnectAndDeleteConfirmation();
   testNearbyRoutingPaginationAndRefresh();
+  testLateScanResultsDoNotOwnNavigation();
+  testNearbyPaginationRetainsMoreThanTwentyResults();
   testClearAllHoldCountdownAndReleaseCancellation();
   testBackInactivityPortalAndResultViews();
   return 0;

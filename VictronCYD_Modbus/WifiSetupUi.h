@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <vector>
 
 #include "CamperNetwork.h"
 #include "NetworkProfiles.h"
@@ -64,7 +65,6 @@ class WifiSetupUi {
 
  private:
   static constexpr size_t kRowsPerPage = 5;
-  static constexpr size_t kMaxScanResults = 20;
   static constexpr uint32_t kWanHoldMs = 3000;
   static constexpr uint32_t kClearHoldMs = 10000;
   static constexpr uint32_t kInactivityMs = 60000;
@@ -90,13 +90,13 @@ class WifiSetupUi {
   TFT_eSPI& display_;
   WifiSetupView view_ = WifiSetupView::Closed;
   SavedProfileDisplay savedProfiles_[NetworkProfileStore::kMaxProfiles]{};
-  ScanResult scanResults_[kMaxScanResults]{};
+  std::vector<ScanResult> scanResults_;
   size_t savedProfileCount_ = 0;
-  size_t scanResultCount_ = 0;
   size_t scanPage_ = 0;
   int activeProfileIndex_ = -1;
   int selectedProfileIndex_ = -1;
   bool wanHoldActive_ = false;
+  bool awaitEntryRelease_ = false;
   bool clearHoldActive_ = false;
   bool clearActionEmitted_ = false;
   uint32_t wanHoldStartedMs_ = 0;
