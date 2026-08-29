@@ -7,19 +7,21 @@ namespace {
 constexpr char kNamespace[] = "wanprofiles";
 constexpr char kCountKey[] = "count";
 constexpr char kActiveKey[] = "active";
+constexpr int8_t kRecoveryActive = -2;
+
+struct StoreSnapshot {
+  size_t count = 0;
+  int active = -1;
+  NetworkProfile profiles[NetworkProfileStore::kMaxProfiles];
+};
 
 void profileKey(char* key, const char* prefix, size_t index) {
-  snprintf(key, 6, "%s%u", prefix, static_cast<unsigned int>(index));
-}
-
-size_t storedCount(Preferences& preferences) {
-  const uint8_t count = preferences.getUChar(kCountKey, 0);
-  return count > NetworkProfileStore::kMaxProfiles ? NetworkProfileStore::kMaxProfiles : count;
-}
-
-int storedActiveIndex(Preferences& preferences, size_t count) {
-  const int active = preferences.getChar(kActiveKey, -1);
-  return active >= 0 && static_cast<size_t>(active) < count ? active : -1;
+  const size_t prefixLength = prefix[3] == '\0' ? 3 : 4;
+  for (size_t character = 0; character < prefixLength; ++character) {
+    key[character] = prefix[character];
+  }
+  key[prefixLength] = static_cast<char>('0' + index);
+  key[prefixLength + 1] = '\0';
 }
 
 bool readProfile(Preferences& preferences, size_t index, NetworkProfile& out) {
@@ -31,6 +33,11 @@ bool readProfile(Preferences& preferences, size_t index, NetworkProfile& out) {
   profileKey(passphraseKey, "pass", index);
   profileKey(securityKey, "sec", index);
   profileKey(seenKey, "seen", index);
+
+  if (preferences.getType(ssidKey) != PT_STR || preferences.getType(passphraseKey) != PT_STR ||
+      preferences.getType(securityKey) != PT_U8 || preferences.getType(seenKey) != PT_U32) {
+    return false;
+  }
 
   NetworkProfile profile;
   profile.ssid = preferences.getString(ssidKey, String());
@@ -57,7 +64,7 @@ bool writeProfile(Preferences& preferences, size_t index, const NetworkProfile& 
   const bool ssidStored = preferences.putString(ssidKey, profile.ssid) > 0;
   const bool passphraseStored = profile.passphrase.isEmpty()
       ? preferences.putString(passphraseKey, profile.passphrase) == 0 &&
-            preferences.isKey(passphraseKey) &&
+            preferences.getType(passphraseKey) == PT_STR &&
             preferences.getString(passphraseKey, String()) == profile.passphrase
       : preferences.putString(passphraseKey, profile.passphrase) > 0;
   const bool securityStored = preferences.putUChar(securityKey, profile.securityType) == 1;
@@ -65,21 +72,70 @@ bool writeProfile(Preferences& preferences, size_t index, const NetworkProfile& 
   return ssidStored && passphraseStored && securityStored && seenStored;
 }
 
-bool removeProfile(Preferences& preferences, size_t index) {
-  char ssidKey[6];
-  char passphraseKey[6];
-  char securityKey[6];
-  char seenKey[6];
-  profileKey(ssidKey, "ssid", index);
-  profileKey(passphraseKey, "pass", index);
-  profileKey(securityKey, "sec", index);
-  profileKey(seenKey, "seen", index);
+bool readSnapshot(Preferences& preferences, StoreSnapshot& out) {
+  if (preferences.getType(kCountKey) != PT_U8 || preferences.getType(kActiveKey) != PT_I8) {
+    return false;
+  }
 
-  const bool ssidRemoved = !preferences.isKey(ssidKey) || preferences.remove(ssidKey);
-  const bool passphraseRemoved = !preferences.isKey(passphraseKey) || preferences.remove(passphraseKey);
-  const bool securityRemoved = !preferences.isKey(securityKey) || preferences.remove(securityKey);
-  const bool seenRemoved = !preferences.isKey(seenKey) || preferences.remove(seenKey);
-  return ssidRemoved && passphraseRemoved && securityRemoved && seenRemoved;
+  const size_t count = preferences.getUChar(kCountKey, 0);
+  const int active = preferences.getChar(kActiveKey, -1);
+  if (count > NetworkProfileStore::kMaxProfiles || active < -1 ||
+      (active >= 0 && static_cast<size_t>(active) >= count)) {
+    return false;
+  }
+
+  StoreSnapshot snapshot;
+  snapshot.count = count;
+  snapshot.active = active;
+  for (size_t index = 0; index < count; ++index) {
+    if (!readProfile(preferences, index, snapshot.profiles[index])) {
+      return false;
+    }
+  }
+  out = snapshot;
+  return true;
+}
+
+bool writeSnapshot(Preferences& preferences, const StoreSnapshot& snapshot) {
+  if (!preferences.clear()) {
+    return false;
+  }
+  for (size_t index = 0; index < snapshot.count; ++index) {
+    if (!writeProfile(preferences, index, snapshot.profiles[index])) {
+      return false;
+    }
+  }
+  return preferences.putUChar(kCountKey, static_cast<uint8_t>(snapshot.count)) == 1 &&
+         preferences.putChar(kActiveKey, static_cast<int8_t>(snapshot.active)) == 1;
+}
+
+bool resetStore(Preferences& preferences) {
+  const StoreSnapshot empty;
+  return writeSnapshot(preferences, empty);
+}
+
+bool commitSnapshot(Preferences& preferences, const StoreSnapshot& previous, const StoreSnapshot& next) {
+  if (preferences.putChar(kActiveKey, kRecoveryActive) != 1) {
+    return false;
+  }
+  if (writeSnapshot(preferences, next)) {
+    return true;
+  }
+  if (!writeSnapshot(preferences, previous)) {
+    return false;
+  }
+  return false;
+}
+
+bool readOrReset(Preferences& preferences, StoreSnapshot& out) {
+  if (readSnapshot(preferences, out)) {
+    return true;
+  }
+  if (!resetStore(preferences)) {
+    return false;
+  }
+  out = StoreSnapshot();
+  return true;
 }
 
 }  // namespace
@@ -90,10 +146,10 @@ bool NetworkProfileStore::begin() {
     return false;
   }
 
-  const bool countReady = preferences.isKey(kCountKey) || preferences.putUChar(kCountKey, 0) == 1;
-  const bool activeReady = preferences.isKey(kActiveKey) || preferences.putChar(kActiveKey, -1) == 1;
+  StoreSnapshot snapshot;
+  const bool ready = readSnapshot(preferences, snapshot) || resetStore(preferences);
   preferences.end();
-  return countReady && activeReady;
+  return ready;
 }
 
 size_t NetworkProfileStore::count() const {
@@ -102,7 +158,8 @@ size_t NetworkProfileStore::count() const {
     return 0;
   }
 
-  const size_t count = storedCount(preferences);
+  StoreSnapshot snapshot;
+  const size_t count = readSnapshot(preferences, snapshot) ? snapshot.count : 0;
   preferences.end();
   return count;
 }
@@ -113,8 +170,8 @@ int NetworkProfileStore::activeIndex() const {
     return -1;
   }
 
-  const size_t count = storedCount(preferences);
-  const int active = storedActiveIndex(preferences, count);
+  StoreSnapshot snapshot;
+  const int active = readSnapshot(preferences, snapshot) ? snapshot.active : -1;
   preferences.end();
   return active;
 }
@@ -125,13 +182,11 @@ bool NetworkProfileStore::load(size_t index, NetworkProfile& out) const {
     return false;
   }
 
-  const size_t count = storedCount(preferences);
-  if (index >= count) {
-    preferences.end();
-    return false;
+  StoreSnapshot snapshot;
+  const bool loaded = readSnapshot(preferences, snapshot) && index < snapshot.count;
+  if (loaded) {
+    out = snapshot.profiles[index];
   }
-
-  const bool loaded = readProfile(preferences, index, out);
   preferences.end();
   return loaded;
 }
@@ -142,13 +197,15 @@ bool NetworkProfileStore::activate(size_t index) {
     return false;
   }
 
-  const size_t count = storedCount(preferences);
-  if (index >= count) {
+  StoreSnapshot previous;
+  if (!readOrReset(preferences, previous) || index >= previous.count) {
     preferences.end();
     return false;
   }
 
-  const bool activated = preferences.putChar(kActiveKey, static_cast<int8_t>(index)) == 1;
+  StoreSnapshot next = previous;
+  next.active = static_cast<int>(index);
+  const bool activated = commitSnapshot(preferences, previous, next);
   preferences.end();
   return activated;
 }
@@ -163,53 +220,47 @@ bool NetworkProfileStore::upsert(const NetworkProfile& profile, size_t& storedIn
     return false;
   }
 
-  const size_t count = storedCount(preferences);
-  for (size_t index = 0; index < count; ++index) {
-    char ssidKey[6];
-    profileKey(ssidKey, "ssid", index);
-    if (preferences.getString(ssidKey, String()) == profile.ssid) {
-      const bool updated = writeProfile(preferences, index, profile);
-      preferences.end();
-      if (updated) {
-        storedIndex = index;
-      }
-      return updated;
-    }
-  }
-
-  if (count < kMaxProfiles) {
-    const bool stored = writeProfile(preferences, count, profile) &&
-                        preferences.putUChar(kCountKey, static_cast<uint8_t>(count + 1)) == 1;
+  StoreSnapshot previous;
+  if (!readOrReset(preferences, previous)) {
     preferences.end();
-    if (stored) {
-      storedIndex = count;
-    }
-    return stored;
+    return false;
   }
 
-  const int active = storedActiveIndex(preferences, count);
-  size_t oldestIndex = 0;
-  uint32_t oldestEpoch = 0;
-  bool foundReplacement = false;
-  for (size_t index = 0; index < count; ++index) {
-    if (static_cast<int>(index) == active) {
-      continue;
-    }
-
-    char seenKey[6];
-    profileKey(seenKey, "seen", index);
-    const uint32_t seen = preferences.getUInt(seenKey, 0);
-    if (!foundReplacement || seen < oldestEpoch) {
-      oldestIndex = index;
-      oldestEpoch = seen;
-      foundReplacement = true;
+  StoreSnapshot next = previous;
+  size_t target = previous.count;
+  for (size_t index = 0; index < previous.count; ++index) {
+    if (previous.profiles[index].ssid == profile.ssid) {
+      target = index;
+      break;
     }
   }
 
-  const bool stored = foundReplacement && writeProfile(preferences, oldestIndex, profile);
+  if (target == previous.count && previous.count == kMaxProfiles) {
+    uint32_t oldestEpoch = 0;
+    bool foundReplacement = false;
+    for (size_t index = 0; index < previous.count; ++index) {
+      if (static_cast<int>(index) == previous.active) {
+        continue;
+      }
+      if (!foundReplacement || previous.profiles[index].lastSuccessEpoch < oldestEpoch) {
+        target = index;
+        oldestEpoch = previous.profiles[index].lastSuccessEpoch;
+        foundReplacement = true;
+      }
+    }
+    if (!foundReplacement) {
+      preferences.end();
+      return false;
+    }
+  } else if (target == previous.count) {
+    ++next.count;
+  }
+
+  next.profiles[target] = profile;
+  const bool stored = commitSnapshot(preferences, previous, next);
   preferences.end();
   if (stored) {
-    storedIndex = oldestIndex;
+    storedIndex = target;
   }
   return stored;
 }
@@ -220,33 +271,26 @@ bool NetworkProfileStore::erase(size_t index) {
     return false;
   }
 
-  const size_t count = storedCount(preferences);
-  if (index >= count) {
+  StoreSnapshot previous;
+  if (!readOrReset(preferences, previous) || index >= previous.count) {
     preferences.end();
     return false;
   }
 
-  for (size_t source = index + 1; source < count; ++source) {
-    NetworkProfile profile;
-    if (!readProfile(preferences, source, profile) || !writeProfile(preferences, source - 1, profile)) {
-      preferences.end();
-      return false;
-    }
+  StoreSnapshot next = previous;
+  for (size_t source = index + 1; source < previous.count; ++source) {
+    next.profiles[source - 1] = previous.profiles[source];
+  }
+  --next.count;
+  if (previous.active == static_cast<int>(index)) {
+    next.active = -1;
+  } else if (previous.active > static_cast<int>(index)) {
+    next.active = previous.active - 1;
   }
 
-  if (!removeProfile(preferences, count - 1) ||
-      preferences.putUChar(kCountKey, static_cast<uint8_t>(count - 1)) != 1) {
-    preferences.end();
-    return false;
-  }
-
-  const int active = storedActiveIndex(preferences, count);
-  const int adjustedActive = active == static_cast<int>(index)
-      ? -1
-      : active > static_cast<int>(index) ? active - 1 : active;
-  const bool activeStored = preferences.putChar(kActiveKey, static_cast<int8_t>(adjustedActive)) == 1;
+  const bool erased = commitSnapshot(preferences, previous, next);
   preferences.end();
-  return activeStored;
+  return erased;
 }
 
 bool NetworkProfileStore::clearUpstreamProfiles() {
