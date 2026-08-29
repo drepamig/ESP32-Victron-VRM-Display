@@ -1,0 +1,203 @@
+#include <cstdlib>
+#include <iostream>
+#include <string>
+
+#include "TFT_eSPI.h"
+#include "../../VictronCYD_Modbus/WifiSetupUi.h"
+
+namespace {
+
+void check(bool condition, const char* message) {
+  if (!condition) {
+    std::cerr << "FAIL: " << message << '\n';
+    std::exit(1);
+  }
+}
+
+CamperNetworkStatus offlineStatus() {
+  return {true, WanPhase::Offline, IPAddress(), 0, 1};
+}
+
+void holdWanToOpen(WifiSetupUi& ui, uint32_t startedAtMs = 1000) {
+  check(ui.handleTouch({300, 10}, startedAtMs).type == WifiSetupActionType::None,
+        "WAN press must not immediately open setup");
+  check(ui.poll(startedAtMs + 2999).type == WifiSetupActionType::None && !ui.isOpen(),
+        "WAN hold must remain closed before three seconds");
+  check(ui.poll(startedAtMs + 3000).type == WifiSetupActionType::None && ui.isOpen(),
+        "WAN hold must open setup at three seconds");
+}
+
+void testWanHoldRequiresContinuousContact() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  check(ui.handleTouch({300, 10}, 100).type == WifiSetupActionType::None,
+        "WAN press should arm entry");
+  check(ui.poll(3099).type == WifiSetupActionType::None && !ui.isOpen(),
+        "entry should remain closed before deadline");
+  check(ui.handleRelease(3100).type == WifiSetupActionType::None,
+        "release should only cancel entry");
+  check(ui.poll(10000).type == WifiSetupActionType::None && !ui.isOpen(),
+        "released WAN hold must stay cancelled");
+  holdWanToOpen(ui, 11000);
+}
+
+void testSavedSelectionConnectAndDeleteConfirmation() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  NetworkProfile profiles[2]{{"Camp", "do-not-render-one", 3, 1234},
+                             {"Backup", "do-not-render-two", 3, 0}};
+  ui.setSavedProfiles(profiles, 2, 0);
+  ui.open();
+  ui.render(offlineStatus());
+  check(display.drewContaining("Camp") && display.drewContaining("ACTIVE") &&
+            display.drewContaining("1234"),
+        "saved view must show SSID, active marker, and last-success metadata");
+  check(display.drew("Clear Saved"), "destructive hold control must be clearly named");
+  check(!display.drewContaining("do-not-render"), "saved view must not render passphrases");
+
+  check(ui.handleTouch({100, 56}, 10).type == WifiSetupActionType::None,
+        "selecting a saved row must not connect or delete");
+  WifiSetupAction action = ui.handleTouch({55, 218}, 20);
+  check(action.type == WifiSetupActionType::ConnectSaved && action.profileIndex == 0,
+        "Connect must explicitly return the selected saved profile");
+
+  check(ui.handleTouch({100, 82}, 30).type == WifiSetupActionType::None,
+        "second saved row should select without action");
+  check(ui.handleTouch({160, 218}, 40).type == WifiSetupActionType::None,
+        "Delete must open confirmation without deleting");
+  ui.render(offlineStatus());
+  check(display.drewContaining("Delete Backup"), "confirmation must identify selected SSID");
+  action = ui.handleTouch({235, 218}, 50);
+  check(action.type == WifiSetupActionType::DeleteSaved && action.profileIndex == 1,
+        "confirmation must emit DeleteSaved for selected profile");
+}
+
+void testNearbyRoutingPaginationAndRefresh() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  NetworkProfile profiles[1]{{"Known", "hidden", 3, 1}};
+  ui.setSavedProfiles(profiles, 1, 0);
+  ui.open();
+
+  WifiSetupAction action = ui.handleTouch({210, 18}, 10);
+  check(action.type == WifiSetupActionType::Refresh,
+        "opening Nearby must request an asynchronous refresh");
+
+  ScanResult results[7]{{"Known", -42, 3, 1}, {"Secure", -55, 3, 1},
+                        {"Open", -66, 0, 6}, {"Third", -70, 3, 6},
+                        {"Fourth", -75, 3, 11}, {"PageTwo", -80, 3, 11},
+                        {"Last", -85, 0, 11}};
+  ui.setScanResults(results, 7);
+  ui.render(offlineStatus());
+  check(display.drewContaining("-55 dBm") && display.drew("LOCK") && display.drew("OPEN"),
+        "nearby rows must show RSSI and security state");
+
+  check(ui.handleTouch({100, 56}, 20).type == WifiSetupActionType::None,
+        "known nearby SSID must route to its saved profile without auto-connect");
+  action = ui.handleTouch({55, 218}, 30);
+  check(action.type == WifiSetupActionType::ConnectSaved && action.profileIndex == 0,
+        "known nearby route must select the matching saved profile");
+
+  check(ui.handleTouch({210, 18}, 40).type == WifiSetupActionType::Refresh,
+        "Nearby tab must remain refreshable");
+  ui.setScanResults(results, 7);
+  action = ui.handleTouch({100, 82}, 50);
+  check(action.type == WifiSetupActionType::ProvisionNew && action.ssid == String("Secure") &&
+            action.securityType == 3,
+        "unknown secured SSID must provision with its security type");
+
+  ui.open();
+  check(ui.handleTouch({210, 18}, 60).type == WifiSetupActionType::Refresh,
+        "Nearby should request refresh after reopening");
+  ui.setScanResults(results, 7);
+  action = ui.handleTouch({100, 108}, 70);
+  check(action.type == WifiSetupActionType::ProvisionNew && action.ssid == String("Open") &&
+            action.securityType == 0,
+        "unknown open SSID must use ProvisionNew with open security type");
+
+  ui.open();
+  check(ui.handleTouch({210, 18}, 80).type == WifiSetupActionType::Refresh,
+        "Nearby should refresh for pagination test");
+  ui.setScanResults(results, 7);
+  check(ui.handleTouch({278, 218}, 90).type == WifiSetupActionType::None,
+        "Next must paginate without selecting");
+  action = ui.handleTouch({100, 56}, 100);
+  check(action.type == WifiSetupActionType::ProvisionNew && action.ssid == String("PageTwo"),
+        "page-two row must route the sixth scan result");
+
+  ui.open();
+  check(ui.handleTouch({210, 18}, 110).type == WifiSetupActionType::Refresh,
+        "Nearby should enter scanning for explicit refresh test");
+  ui.setScanResults(results, 7);
+  action = ui.handleTouch({160, 218}, 120);
+  check(action.type == WifiSetupActionType::Refresh,
+        "Refresh control must emit Refresh explicitly");
+}
+
+void testClearAllHoldCountdownAndReleaseCancellation() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ui.open();
+  check(ui.handleTouch({270, 218}, 1000).type == WifiSetupActionType::None,
+        "Clear Saved press must only arm the hold");
+  ui.poll(6000);
+  ui.render(offlineStatus());
+  check(display.drewContaining("Clear in 5s"), "clear hold must render a visible countdown");
+  check(ui.poll(10999).type == WifiSetupActionType::None,
+        "clear hold must not complete before ten seconds");
+  ui.handleRelease(11000);
+  check(ui.poll(20000).type == WifiSetupActionType::None,
+        "release must cancel a clear-all hold");
+
+  check(ui.handleTouch({270, 218}, 21000).type == WifiSetupActionType::None,
+        "second Clear Saved press must re-arm the hold");
+  WifiSetupAction action = ui.poll(31000);
+  check(action.type == WifiSetupActionType::ClearAll,
+        "continuous ten-second hold must emit ClearAll");
+  check(ui.poll(31001).type == WifiSetupActionType::None,
+        "completed clear hold must emit exactly once");
+  check(ui.handleTouch({270, 218}, 31002).type == WifiSetupActionType::None &&
+            ui.poll(41002).type == WifiSetupActionType::None,
+        "completed clear hold must not re-arm before release");
+}
+
+void testBackInactivityPortalAndResultViews() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ui.open();
+  check(ui.poll(59999).type == WifiSetupActionType::None && ui.isOpen(),
+        "setup must remain open before sixty seconds of inactivity");
+  WifiSetupAction action = ui.poll(60000);
+  check(action.type == WifiSetupActionType::Exit && !ui.isOpen(),
+        "setup must exit at sixty seconds of inactivity");
+
+  ui.showPortal("Secure", "123456", 600000);
+  ui.render(offlineStatus());
+  check(display.drewContaining("Secure") && display.drewContaining("192.168.50.1/setup") &&
+            display.drewContaining("123456"),
+        "portal view must show SSID, local URL, and pairing code");
+  check(ui.poll(300000).type == WifiSetupActionType::None && ui.isOpen(),
+        "portal must be exempt from setup inactivity exit");
+  action = ui.handleTouch({30, 18}, 300001);
+  check(action.type == WifiSetupActionType::Exit && !ui.isOpen(),
+        "persistent Back must exit the portal view");
+
+  ui.showResult("Connected", true);
+  ui.render(offlineStatus());
+  check(display.drewContaining("Connected") && display.drewContaining("Success"),
+        "result view must render outcome and message");
+  action = ui.handleTouch({30, 18}, 1);
+  check(action.type == WifiSetupActionType::Exit && !ui.isOpen(),
+        "persistent Back must exit the result view");
+}
+
+}  // namespace
+
+int main() {
+  testWanHoldRequiresContinuousContact();
+  testSavedSelectionConnectAndDeleteConfirmation();
+  testNearbyRoutingPaginationAndRefresh();
+  testClearAllHoldCountdownAndReleaseCancellation();
+  testBackInactivityPortalAndResultViews();
+  return 0;
+}

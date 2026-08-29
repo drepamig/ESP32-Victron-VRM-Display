@@ -26,6 +26,9 @@ void testTouchGestureDebouncesContactJitter() {
   event = updateTouchGesture(false, TouchPoint{0, 0}, 289, 40, 6, gesture);
   assert(event.type == TouchEventType::None && gesture.pressed);
   event = updateTouchGesture(false, TouchPoint{0, 0}, 290, 40, 6, gesture);
+  assert(event.type == TouchEventType::Release && !gesture.pressed);
+  assert(event.point.x == 17 && event.point.y == 10);
+  event = updateTouchGesture(false, TouchPoint{0, 0}, 291, 40, 6, gesture);
   assert(event.type == TouchEventType::None && !gesture.pressed);
 
   event = updateTouchGesture(true, TouchPoint{20, 20}, 300, 40, 6, gesture);

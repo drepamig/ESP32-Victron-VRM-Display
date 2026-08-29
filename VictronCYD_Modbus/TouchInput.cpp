@@ -68,8 +68,8 @@ bool TouchInput::poll(TouchEvent& event) {
     return pollCalibration(contactPresent, rawPoint, now, event);
   }
   if (!contactPresent || !calibrated()) {
-    updateTouchGesture(false, {0, 0}, now, kDebounceMs, kMinimumScrollDistance, gesture_);
-    return false;
+    event = updateTouchGesture(false, {0, 0}, now, kDebounceMs, kMinimumScrollDistance, gesture_);
+    return event.type != TouchEventType::None;
   }
 
   const TouchPoint point = mapTouchPoint(rawPoint.x, rawPoint.y, calibration_,

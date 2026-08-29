@@ -48,7 +48,11 @@ class Preferences {
 
   size_t putChar(const char* key, int8_t value) { return put(key, value, 1); }
   size_t putUChar(const char* key, uint8_t value) { return put(key, value, 1); }
+  size_t putInt(const char* key, int32_t value) { return put(key, value, sizeof(value)); }
   size_t putUInt(const char* key, uint32_t value) { return put(key, value, sizeof(value)); }
+  size_t putBool(const char* key, bool value) {
+    return put(key, static_cast<uint8_t>(value ? 1 : 0), sizeof(uint8_t));
+  }
 
   size_t putString(const char* key, const String& value) {
     if (!canWrite()) {
@@ -73,6 +77,9 @@ class Preferences {
     if (std::holds_alternative<uint8_t>(*value)) {
       return PT_U8;
     }
+    if (std::holds_alternative<int32_t>(*value)) {
+      return PT_I32;
+    }
     if (std::holds_alternative<uint32_t>(*value)) {
       return PT_U32;
     }
@@ -92,6 +99,20 @@ class Preferences {
   uint32_t getUInt(const char* key, uint32_t defaultValue = 0) {
     const Entry* value = entry(key);
     return value != nullptr && std::holds_alternative<uint32_t>(*value) ? std::get<uint32_t>(*value) : defaultValue;
+  }
+
+  int32_t getInt(const char* key, int32_t defaultValue = 0) {
+    const Entry* value = entry(key);
+    return value != nullptr && std::holds_alternative<int32_t>(*value)
+               ? std::get<int32_t>(*value)
+               : defaultValue;
+  }
+
+  bool getBool(const char* key, bool defaultValue = false) {
+    const Entry* value = entry(key);
+    return value != nullptr && std::holds_alternative<uint8_t>(*value)
+               ? std::get<uint8_t>(*value) != 0
+               : defaultValue;
   }
 
   String getString(const char* key, const String& defaultValue = String()) {
@@ -129,7 +150,7 @@ class Preferences {
   }
 
  private:
-  using Entry = std::variant<int8_t, uint8_t, uint32_t, String>;
+  using Entry = std::variant<int8_t, uint8_t, int32_t, uint32_t, String>;
   using Namespace = std::map<std::string, Entry>;
 
   bool canWrite() {

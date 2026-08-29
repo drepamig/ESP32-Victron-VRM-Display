@@ -25,6 +25,7 @@ struct TouchRawPoint {
 enum class TouchEventType : uint8_t {
   None,
   Press,
+  Release,
   Scroll,
   CalibrationComplete,
 };
@@ -166,7 +167,7 @@ inline TouchEvent updateTouchGesture(bool touching, TouchPoint point, uint32_t n
     }
     state.pressed = state.candidateContact;
     if (!state.pressed) {
-      return {TouchEventType::None, point, 0, 0};
+      return {TouchEventType::Release, state.lastPoint, 0, 0};
     }
     state.lastPoint = point;
     return {TouchEventType::Press, point, 0, 0};
