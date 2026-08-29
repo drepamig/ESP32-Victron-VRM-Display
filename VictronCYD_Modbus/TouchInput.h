@@ -30,7 +30,8 @@ class TouchInput {
 
   bool loadCalibration();
   bool saveCalibration(const TouchCalibration& calibration);
-  bool pollCalibration(const TouchRawPoint& rawPoint, TouchEvent& event);
+  bool pollCalibration(bool contactPresent, const TouchRawPoint& rawPoint, uint32_t now,
+                       TouchEvent& event);
   TouchCalibration makeCalibration() const;
   void drawCalibrationScreen(bool invalidCalibration);
   void drawCalibrationTarget();
@@ -43,8 +44,7 @@ class TouchInput {
   TouchRawPoint calibrationSamples_[kCalibrationSampleCount]{};
   TouchRawPoint calibrationCorners_[kCalibrationTargetCount]{};
   TouchPoint calibrationTargets_[kCalibrationTargetCount]{};
-  uint8_t calibrationSampleCount_ = 0;
   uint8_t calibrationTargetIndex_ = 0;
   bool calibrationActive_ = false;
-  bool calibrationAwaitingRelease_ = false;
+  TouchCalibrationContactState calibrationContact_{};
 };

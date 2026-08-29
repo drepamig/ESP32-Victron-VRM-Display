@@ -53,40 +53,35 @@ bool TouchInput::calibrated() const {
 
 bool TouchInput::poll(TouchEvent& event) {
   event = {TouchEventType::None, {0, 0}, 0, 0};
+  const uint32_t now = millis();
   const bool touched = touch_.touched();
-  if (!touched) {
-    updateTouchGesture(false, {0, 0}, millis(), kDebounceMs, kMinimumScrollDistance, gesture_);
-    if (calibrationActive_) {
-      calibrationAwaitingRelease_ = false;
+  TouchRawPoint rawPoint{};
+  bool contactPresent = false;
+  if (touched) {
+    const TS_Point rawTouch = touch_.getPoint();
+    if (rawTouch.z >= kMinimumPressure) {
+      rawPoint = {rawTouch.x, rawTouch.y};
+      contactPresent = true;
     }
-    return false;
   }
-
-  const TS_Point rawTouch = touch_.getPoint();
-  if (rawTouch.z < kMinimumPressure) {
-    updateTouchGesture(false, {0, 0}, millis(), kDebounceMs, kMinimumScrollDistance, gesture_);
-    return false;
-  }
-
-  const TouchRawPoint rawPoint{rawTouch.x, rawTouch.y};
   if (calibrationActive_) {
-    return pollCalibration(rawPoint, event);
+    return pollCalibration(contactPresent, rawPoint, now, event);
   }
-  if (!calibrated()) {
+  if (!contactPresent || !calibrated()) {
+    updateTouchGesture(false, {0, 0}, now, kDebounceMs, kMinimumScrollDistance, gesture_);
     return false;
   }
 
   const TouchPoint point = mapTouchPoint(rawPoint.x, rawPoint.y, calibration_,
                                          static_cast<int16_t>(display_.width()),
                                          static_cast<int16_t>(display_.height()));
-  event = updateTouchGesture(true, point, millis(), kDebounceMs, kMinimumScrollDistance, gesture_);
+  event = updateTouchGesture(true, point, now, kDebounceMs, kMinimumScrollDistance, gesture_);
   return event.type != TouchEventType::None;
 }
 
 void TouchInput::startCalibration() {
   calibrationActive_ = true;
-  calibrationAwaitingRelease_ = false;
-  calibrationSampleCount_ = 0;
+  calibrationContact_ = {};
   calibrationTargetIndex_ = 0;
   drawCalibrationScreen(false);
 }
@@ -97,8 +92,7 @@ bool TouchInput::applyCalibration(const TouchCalibration& calibration) {
   }
   calibration_ = calibration;
   calibrationActive_ = false;
-  calibrationAwaitingRelease_ = false;
-  calibrationSampleCount_ = 0;
+  calibrationContact_ = {};
   return true;
 }
 
@@ -145,37 +139,45 @@ bool TouchInput::saveCalibration(const TouchCalibration& calibration) {
   return saved;
 }
 
-bool TouchInput::pollCalibration(const TouchRawPoint& rawPoint, TouchEvent& event) {
-  if (calibrationAwaitingRelease_) {
+bool TouchInput::pollCalibration(bool contactPresent, const TouchRawPoint& rawPoint, uint32_t now,
+                                 TouchEvent& event) {
+  const CalibrationContactTransition transition =
+      updateCalibrationContact(contactPresent, now, kDebounceMs, calibrationContact_);
+  if (transition == CalibrationContactTransition::TargetCanAdvance) {
+    ++calibrationTargetIndex_;
+    if (calibrationTargetIndex_ < kCalibrationTargetCount) {
+      drawCalibrationTarget();
+      return false;
+    }
+
+    const TouchCalibration calibration = makeCalibration();
+    if (!applyCalibration(calibration)) {
+      calibrationTargetIndex_ = 0;
+      calibrationContact_ = {};
+      drawCalibrationScreen(true);
+      return false;
+    }
+    display_.fillScreen(TFT_BLACK);
+    event = {TouchEventType::CalibrationComplete, {0, 0}, 0, 0};
+    return true;
+  }
+  if (!contactPresent || !calibrationContact_.contactActive ||
+      calibrationContact_.awaitingRelease) {
     return false;
   }
-  calibrationSamples_[calibrationSampleCount_++] = rawPoint;
-  if (calibrationSampleCount_ < kCalibrationSampleCount) {
+  calibrationSamples_[calibrationContact_.sampleCount++] = rawPoint;
+  if (calibrationContact_.sampleCount < kCalibrationSampleCount) {
     return false;
   }
-  calibrationSampleCount_ = 0;
+  calibrationContact_.sampleCount = 0;
   if (!areTouchSamplesStable(calibrationSamples_, kMaximumCalibrationSampleSpread)) {
     return false;
   }
 
   calibrationCorners_[calibrationTargetIndex_] = medianTouchSamples(calibrationSamples_);
-  calibrationAwaitingRelease_ = true;
-  ++calibrationTargetIndex_;
-  if (calibrationTargetIndex_ < kCalibrationTargetCount) {
-    drawCalibrationTarget();
-    return false;
-  }
-
-  const TouchCalibration calibration = makeCalibration();
-  if (!applyCalibration(calibration)) {
-    calibrationTargetIndex_ = 0;
-    calibrationAwaitingRelease_ = false;
-    drawCalibrationScreen(true);
-    return false;
-  }
-  display_.fillScreen(TFT_BLACK);
-  event = {TouchEventType::CalibrationComplete, {0, 0}, 0, 0};
-  return true;
+  calibrationContact_.awaitingRelease = true;
+  calibrationContact_.targetReady = true;
+  return false;
 }
 
 TouchCalibration TouchInput::makeCalibration() const {

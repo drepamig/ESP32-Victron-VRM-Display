@@ -3,6 +3,63 @@
 
 #include "../../VictronCYD_Modbus/TouchMapping.h"
 
+void testTouchGestureDebouncesContactJitter() {
+  TouchGestureState gesture{};
+  TouchEvent event = updateTouchGesture(true, TouchPoint{10, 10}, 100, 40, 6, gesture);
+  assert(event.type == TouchEventType::None);
+  event = updateTouchGesture(true, TouchPoint{10, 10}, 139, 40, 6, gesture);
+  assert(event.type == TouchEventType::None);
+  event = updateTouchGesture(true, TouchPoint{10, 10}, 140, 40, 6, gesture);
+  assert(event.type == TouchEventType::Press);
+  event = updateTouchGesture(true, TouchPoint{17, 10}, 145, 40, 6, gesture);
+  assert(event.type == TouchEventType::Scroll && event.deltaX == 7 && event.deltaY == 0);
+
+  event = updateTouchGesture(false, TouchPoint{0, 0}, 150, 40, 6, gesture);
+  assert(event.type == TouchEventType::None && gesture.pressed);
+  event = updateTouchGesture(true, TouchPoint{17, 10}, 170, 40, 6, gesture);
+  assert(event.type == TouchEventType::None && gesture.pressed);
+  event = updateTouchGesture(true, TouchPoint{17, 10}, 220, 40, 6, gesture);
+  assert(event.type == TouchEventType::None && gesture.pressed);
+
+  event = updateTouchGesture(false, TouchPoint{0, 0}, 250, 40, 6, gesture);
+  assert(event.type == TouchEventType::None && gesture.pressed);
+  event = updateTouchGesture(false, TouchPoint{0, 0}, 289, 40, 6, gesture);
+  assert(event.type == TouchEventType::None && gesture.pressed);
+  event = updateTouchGesture(false, TouchPoint{0, 0}, 290, 40, 6, gesture);
+  assert(event.type == TouchEventType::None && !gesture.pressed);
+
+  event = updateTouchGesture(true, TouchPoint{20, 20}, 300, 40, 6, gesture);
+  assert(event.type == TouchEventType::None);
+  event = updateTouchGesture(true, TouchPoint{20, 20}, 340, 40, 6, gesture);
+  assert(event.type == TouchEventType::Press);
+}
+
+void testCalibrationRequiresStableReleaseAndFreshSamples() {
+  TouchCalibrationContactState contact{};
+  assert(updateCalibrationContact(true, 100, 40, contact) == CalibrationContactTransition::None);
+  assert(updateCalibrationContact(true, 140, 40, contact) ==
+         CalibrationContactTransition::ContactBegan);
+  contact.awaitingRelease = true;
+  contact.targetReady = true;
+  contact.sampleCount = 3;
+
+  assert(updateCalibrationContact(false, 150, 40, contact) == CalibrationContactTransition::None);
+  assert(contact.contactActive && contact.awaitingRelease && contact.sampleCount == 0);
+  assert(updateCalibrationContact(true, 170, 40, contact) == CalibrationContactTransition::None);
+  assert(contact.contactActive && contact.awaitingRelease);
+
+  assert(updateCalibrationContact(false, 200, 40, contact) == CalibrationContactTransition::None);
+  assert(updateCalibrationContact(false, 239, 40, contact) == CalibrationContactTransition::None);
+  assert(contact.contactActive && contact.awaitingRelease);
+  assert(updateCalibrationContact(false, 240, 40, contact) ==
+         CalibrationContactTransition::TargetCanAdvance);
+  assert(!contact.contactActive && !contact.awaitingRelease && !contact.targetReady);
+
+  assert(updateCalibrationContact(true, 250, 40, contact) == CalibrationContactTransition::None);
+  assert(updateCalibrationContact(true, 290, 40, contact) ==
+         CalibrationContactTransition::ContactBegan);
+}
+
 int main() {
   TouchCalibration calibration{200, 3800, 250, 3750, false, false, false};
   const TouchPoint topLeft = mapTouchPoint(200, 250, calibration, 320, 240);
@@ -39,18 +96,7 @@ int main() {
   assert(hasSufficientTouchCalibrationSpan(TouchCalibration{0, 1500, 0, 1500, false, false, false}));
   assert(!hasSufficientTouchCalibrationSpan(TouchCalibration{0, 1499, 0, 1500, false, false, false}));
 
-  TouchGestureState gesture{};
-  TouchEvent event = updateTouchGesture(true, TouchPoint{10, 10}, 100, 40, 6, gesture);
-  assert(event.type == TouchEventType::Press);
-  event = updateTouchGesture(true, TouchPoint{10, 10}, 110, 40, 6, gesture);
-  assert(event.type == TouchEventType::None);
-  event = updateTouchGesture(true, TouchPoint{17, 10}, 120, 40, 6, gesture);
-  assert(event.type == TouchEventType::Scroll && event.deltaX == 7 && event.deltaY == 0);
-  event = updateTouchGesture(false, TouchPoint{0, 0}, 130, 40, 6, gesture);
-  assert(event.type == TouchEventType::None);
-  event = updateTouchGesture(true, TouchPoint{20, 20}, 150, 40, 6, gesture);
-  assert(event.type == TouchEventType::None);
-  event = updateTouchGesture(true, TouchPoint{20, 20}, 170, 40, 6, gesture);
-  assert(event.type == TouchEventType::Press);
+  testTouchGestureDebouncesContactJitter();
+  testCalibrationRequiresStableReleaseAndFreshSamples();
   return 0;
 }

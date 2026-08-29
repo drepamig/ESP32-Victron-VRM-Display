@@ -38,8 +38,25 @@ struct TouchEvent {
 
 struct TouchGestureState {
   bool pressed;
-  uint32_t lastTransitionMs;
+  bool candidateContact;
+  uint32_t candidateSinceMs;
   TouchPoint lastPoint;
+};
+
+enum class CalibrationContactTransition : uint8_t {
+  None,
+  ContactBegan,
+  ContactReleased,
+  TargetCanAdvance,
+};
+
+struct TouchCalibrationContactState {
+  bool contactActive;
+  bool candidateContact;
+  uint32_t candidateSinceMs;
+  bool awaitingRelease;
+  bool targetReady;
+  uint8_t sampleCount;
 };
 
 constexpr int32_t kMinimumTouchCalibrationSpan = 1500;
@@ -109,24 +126,54 @@ inline int32_t absoluteTouchValue(int32_t value) {
   return value < 0 ? -value : value;
 }
 
+inline CalibrationContactTransition updateCalibrationContact(
+    bool contactPresent, uint32_t now, uint32_t debounceMs,
+    TouchCalibrationContactState& state) {
+  if (!contactPresent) {
+    state.sampleCount = 0;
+  }
+  if (contactPresent != state.candidateContact) {
+    state.candidateContact = contactPresent;
+    state.candidateSinceMs = now;
+  }
+  if (state.contactActive == state.candidateContact ||
+      now - state.candidateSinceMs < debounceMs) {
+    return CalibrationContactTransition::None;
+  }
+
+  state.contactActive = state.candidateContact;
+  if (state.contactActive) {
+    return CalibrationContactTransition::ContactBegan;
+  }
+  state.awaitingRelease = false;
+  if (state.targetReady) {
+    state.targetReady = false;
+    return CalibrationContactTransition::TargetCanAdvance;
+  }
+  return CalibrationContactTransition::ContactReleased;
+}
+
 inline TouchEvent updateTouchGesture(bool touching, TouchPoint point, uint32_t now,
                                      uint32_t debounceMs, int16_t minimumScrollDistance,
                                      TouchGestureState& state) {
-  if (!touching) {
-    if (state.pressed) {
-      state.pressed = false;
-      state.lastTransitionMs = now;
-    }
-    return {TouchEventType::None, point, 0, 0};
+  if (touching != state.candidateContact) {
+    state.candidateContact = touching;
+    state.candidateSinceMs = now;
   }
-
-  if (!state.pressed) {
-    if (now - state.lastTransitionMs < debounceMs) {
+  if (state.pressed != state.candidateContact) {
+    if (now - state.candidateSinceMs < debounceMs) {
       return {TouchEventType::None, point, 0, 0};
     }
-    state.pressed = true;
+    state.pressed = state.candidateContact;
+    if (!state.pressed) {
+      return {TouchEventType::None, point, 0, 0};
+    }
     state.lastPoint = point;
     return {TouchEventType::Press, point, 0, 0};
+  }
+
+  if (!touching || !state.pressed) {
+    return {TouchEventType::None, point, 0, 0};
   }
 
   const int32_t deltaX = static_cast<int32_t>(point.x) - state.lastPoint.x;
