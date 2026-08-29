@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "Network.h"
@@ -9,6 +10,15 @@
 #include "../../VictronCYD_Modbus/CamperNetwork.h"
 
 namespace {
+
+static_assert(!std::is_copy_constructible<CamperNetwork>::value,
+              "CamperNetwork must not copy queue/task ownership");
+static_assert(!std::is_copy_assignable<CamperNetwork>::value,
+              "CamperNetwork must not copy-assign queue/task ownership");
+static_assert(!std::is_move_constructible<CamperNetwork>::value,
+              "CamperNetwork must not move while a validation worker may run");
+static_assert(!std::is_move_assignable<CamperNetwork>::value,
+              "CamperNetwork must not move-assign while a validation worker may run");
 
 int failures = 0;
 

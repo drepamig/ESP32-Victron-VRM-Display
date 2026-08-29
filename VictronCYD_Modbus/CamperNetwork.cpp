@@ -271,10 +271,10 @@ void CamperNetwork::disconnectUpstream() {
 }
 
 void CamperNetwork::validationWorker(void* context) {
-  CamperNetwork* network = static_cast<CamperNetwork*>(context);
+  QueueHandle_t validationQueue = static_cast<QueueHandle_t>(context);
   IPAddress result;
   const bool succeeded = Network.hostByName("vrm.victronenergy.com", result) != 0;
-  xQueueSend(network->validationQueue_, &succeeded, portMAX_DELAY);
+  xQueueSend(validationQueue, &succeeded, portMAX_DELAY);
   vTaskDelete(nullptr);
 }
 
@@ -290,8 +290,8 @@ void CamperNetwork::startValidation(uint32_t nowMs) {
   validationResultCurrent_ = true;
   validationScheduled_ = false;
   wanPhase_ = WanPhase::Validating;
-  if (xTaskCreatePinnedToCore(validationWorker, "wan-validation", kValidationTaskStack, this,
-                              kValidationTaskPriority, nullptr, 0) != pdPASS) {
+  if (xTaskCreatePinnedToCore(validationWorker, "wan-validation", kValidationTaskStack,
+                              validationQueue_, kValidationTaskPriority, nullptr, 0) != pdPASS) {
     validationWorkerActive_ = false;
     validationResultCurrent_ = false;
     wanPhase_ = WanPhase::Offline;

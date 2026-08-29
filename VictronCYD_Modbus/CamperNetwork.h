@@ -26,6 +26,12 @@ struct CamperNetworkStatus {
 
 class CamperNetwork {
  public:
+  CamperNetwork() = default;
+  CamperNetwork(const CamperNetwork&) = delete;
+  CamperNetwork& operator=(const CamperNetwork&) = delete;
+  CamperNetwork(CamperNetwork&&) = delete;
+  CamperNetwork& operator=(CamperNetwork&&) = delete;
+
   bool begin(const char* apSsid, const char* apPassword, uint32_t nowMs);
   void poll(uint32_t nowMs);
   bool connect(const NetworkProfile& profile, uint32_t nowMs);
