@@ -1,0 +1,276 @@
+#include "CamperNetwork.h"
+
+#include <Network.h>
+#include <WiFi.h>
+#include <algorithm>
+#include <cstring>
+#include <vector>
+#include <freertos/task.h>
+
+namespace {
+
+constexpr uint32_t kValidationIntervalMs = 30000;
+constexpr uint32_t kValidationTaskStack = 3072;
+constexpr UBaseType_t kValidationTaskPriority = 1;
+
+void secureClear(char* value, size_t length) {
+  volatile char* cursor = value;
+  while (length-- > 0) {
+    *cursor++ = 0;
+  }
+}
+
+}  // namespace
+
+bool CamperNetwork::begin(const char* apSsid, const char* apPassword, uint32_t) {
+  if (beginAttempted_) {
+    return apReady_;
+  }
+  if (apPassword == nullptr) {
+    return false;
+  }
+  const size_t passwordLength = std::strlen(apPassword);
+  if (passwordLength < 12 || passwordLength > 63) {
+    return false;
+  }
+
+  beginAttempted_ = true;
+  validationQueue_ = xQueueCreate(1, sizeof(bool));
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.AP.config(IPAddress(192, 168, 50, 1), IPAddress(192, 168, 50, 1),
+                 IPAddress(255, 255, 255, 0), IPAddress(192, 168, 50, 100),
+                 IPAddress(1, 1, 1, 1));
+  const bool apReady = WiFi.AP.create(apSsid, apPassword, 6, false, 4);
+  const bool naptReady = apReady && WiFi.AP.enableNAPT(true);
+  apReady_ = apReady && naptReady;
+  WiFi.setAutoReconnect(false);
+
+  Serial.print("Camper AP ");
+  Serial.print(apReady_ ? "ready" : "failed");
+  Serial.print(" at ");
+  Serial.println(WiFi.AP.localIP());
+  return apReady_ && validationQueue_ != nullptr;
+}
+
+void CamperNetwork::poll(uint32_t nowMs) {
+  bool validationSucceeded = false;
+  if (validationWorkerActive_ &&
+      xQueueReceive(validationQueue_, &validationSucceeded, 0) == pdPASS) {
+    validationWorkerActive_ = false;
+    if (wanPhase_ == WanPhase::Validating && stationReady()) {
+      wanPhase_ = validationSucceeded ? WanPhase::Online : WanPhase::Offline;
+      if (validationSucceeded) {
+        retryBackoff_.reset();
+      }
+      validationScheduled_ = true;
+      validationDeadlineMs_ = nowMs + kValidationIntervalMs;
+    }
+  }
+
+  if (!stationReady()) {
+    validationScheduled_ = false;
+    if (!selectedProfile_) {
+      wanPhase_ = WanPhase::Offline;
+      retryScheduled_ = false;
+      return;
+    }
+    if (wanPhase_ != WanPhase::Connecting) {
+      wanPhase_ = WanPhase::Connecting;
+      retryScheduled_ = false;
+    }
+    if (!retryScheduled_) {
+      retryDeadlineMs_ = nowMs + retryBackoff_.nextDelay();
+      retryScheduled_ = true;
+    }
+    if (isDeadlineReached(nowMs, retryDeadlineMs_)) {
+      beginSelectedProfile();
+      retryDeadlineMs_ = nowMs + retryBackoff_.nextDelay();
+    }
+    return;
+  }
+
+  retryScheduled_ = false;
+  if (validationWorkerActive_) {
+    wanPhase_ = WanPhase::Validating;
+    return;
+  }
+  if (wanPhase_ == WanPhase::Connecting ||
+      ((wanPhase_ == WanPhase::Online || wanPhase_ == WanPhase::Offline) &&
+       validationScheduled_ && isDeadlineReached(nowMs, validationDeadlineMs_)) ||
+      (wanPhase_ == WanPhase::Offline && !validationScheduled_)) {
+    startValidation(nowMs);
+  }
+}
+
+bool CamperNetwork::connect(const NetworkProfile& profile, uint32_t nowMs) {
+  const size_t ssidLength = profile.ssid.length();
+  const size_t passphraseLength = profile.passphrase.length();
+  if (!apReady_ || ssidLength == 0 || ssidLength > 32 || passphraseLength > 63) {
+    return false;
+  }
+
+  clearSelectedProfile();
+  std::memcpy(selectedSsid_, profile.ssid.c_str(), ssidLength + 1);
+  std::memcpy(selectedPassphrase_, profile.passphrase.c_str(), passphraseLength + 1);
+  selectedProfile_ = true;
+  pendingProfile_ = true;
+  retryBackoff_.reset();
+  retryDeadlineMs_ = nowMs + retryBackoff_.nextDelay();
+  retryScheduled_ = true;
+  validationScheduled_ = false;
+  wanPhase_ = WanPhase::Connecting;
+  beginSelectedProfile();
+  return true;
+}
+
+bool CamperNetwork::startScan() {
+  if (scanActive_) {
+    return false;
+  }
+  scanActive_ = WiFi.scanNetworks(true, false) == WIFI_SCAN_RUNNING;
+  return scanActive_;
+}
+
+bool CamperNetwork::scanComplete() const {
+  if (!scanActive_) {
+    return false;
+  }
+  const int16_t result = WiFi.scanComplete();
+  if (result == WIFI_SCAN_RUNNING) {
+    return false;
+  }
+  if (result == WIFI_SCAN_FAILED) {
+    scanActive_ = false;
+    return false;
+  }
+  return true;
+}
+
+size_t CamperNetwork::scanResults(ScanResult* output, size_t capacity) {
+  if (!scanActive_) {
+    return 0;
+  }
+  const int16_t scanCount = WiFi.scanComplete();
+  if (scanCount == WIFI_SCAN_RUNNING) {
+    return 0;
+  }
+  scanActive_ = false;
+  if (scanCount == WIFI_SCAN_FAILED) {
+    WiFi.scanDelete();
+    return 0;
+  }
+
+  std::vector<ScanResult> unique;
+  const int16_t boundedCount = std::min<int16_t>(scanCount, 255);
+  unique.reserve(static_cast<size_t>(boundedCount));
+  for (int16_t index = 0; index < boundedCount; ++index) {
+    const String ssid = WiFi.SSID(static_cast<uint8_t>(index));
+    if (ssid.isEmpty()) {
+      continue;
+    }
+    const int32_t rssi = WiFi.RSSI(static_cast<uint8_t>(index));
+    auto existing = std::find_if(unique.begin(), unique.end(), [&ssid](const ScanResult& result) {
+      return result.ssid == ssid;
+    });
+    if (existing == unique.end()) {
+      unique.push_back({ssid, rssi,
+                        static_cast<uint8_t>(WiFi.encryptionType(static_cast<uint8_t>(index))),
+                        WiFi.channel(static_cast<uint8_t>(index))});
+    } else if (rssi > existing->rssi) {
+      *existing = {ssid, rssi,
+                   static_cast<uint8_t>(WiFi.encryptionType(static_cast<uint8_t>(index))),
+                   WiFi.channel(static_cast<uint8_t>(index))};
+    }
+  }
+  std::sort(unique.begin(), unique.end(), [](const ScanResult& left, const ScanResult& right) {
+    return left.rssi > right.rssi;
+  });
+
+  const size_t copied = output == nullptr ? 0 : std::min(capacity, unique.size());
+  for (size_t index = 0; index < copied; ++index) {
+    output[index] = unique[index];
+  }
+  WiFi.scanDelete();
+  return copied;
+}
+
+CamperNetworkStatus CamperNetwork::status() const {
+  const bool ready = stationReady();
+  return {apReady_, wanPhase_, ready ? WiFi.localIP() : IPAddress(),
+          ready ? static_cast<int32_t>(WiFi.RSSI()) : 0,
+          static_cast<uint8_t>(apReady_ ? WiFi.AP.stationCount() : 0)};
+}
+
+bool CamperNetwork::pendingProfileConnected() const {
+  return pendingProfile_ && stationReady();
+}
+
+void CamperNetwork::acceptPendingProfile() {
+  if (!pendingProfile_) {
+    return;
+  }
+  pendingProfile_ = false;
+  selectedProfile_ = false;
+  retryScheduled_ = false;
+  clearSelectedProfile();
+}
+
+void CamperNetwork::cancelPendingProfile() {
+  if (!pendingProfile_) {
+    return;
+  }
+  WiFi.disconnect(false, false);
+  pendingProfile_ = false;
+  selectedProfile_ = false;
+  retryScheduled_ = false;
+  validationScheduled_ = false;
+  wanPhase_ = WanPhase::Offline;
+  clearSelectedProfile();
+}
+
+void CamperNetwork::disconnectUpstream() {
+  WiFi.disconnect(false, false);
+  pendingProfile_ = false;
+  selectedProfile_ = false;
+  retryScheduled_ = false;
+  validationScheduled_ = false;
+  wanPhase_ = WanPhase::Offline;
+  clearSelectedProfile();
+}
+
+void CamperNetwork::validationWorker(void* context) {
+  CamperNetwork* network = static_cast<CamperNetwork*>(context);
+  IPAddress result;
+  const bool succeeded = Network.hostByName("vrm.victronenergy.com", result) != 0;
+  xQueueSend(network->validationQueue_, &succeeded, portMAX_DELAY);
+  vTaskDelete(nullptr);
+}
+
+void CamperNetwork::beginSelectedProfile() {
+  WiFi.begin(selectedSsid_, selectedPassphrase_);
+}
+
+void CamperNetwork::startValidation(uint32_t nowMs) {
+  if (validationWorkerActive_ || validationQueue_ == nullptr) {
+    return;
+  }
+  validationWorkerActive_ = true;
+  validationScheduled_ = false;
+  wanPhase_ = WanPhase::Validating;
+  if (xTaskCreatePinnedToCore(validationWorker, "wan-validation", kValidationTaskStack, this,
+                              kValidationTaskPriority, nullptr, 0) != pdPASS) {
+    validationWorkerActive_ = false;
+    wanPhase_ = WanPhase::Offline;
+    validationScheduled_ = true;
+    validationDeadlineMs_ = nowMs + kValidationIntervalMs;
+  }
+}
+
+void CamperNetwork::clearSelectedProfile() {
+  secureClear(selectedSsid_, sizeof(selectedSsid_));
+  secureClear(selectedPassphrase_, sizeof(selectedPassphrase_));
+}
+
+bool CamperNetwork::stationReady() const {
+  return WiFi.isConnected() && static_cast<uint32_t>(WiFi.localIP()) != 0;
+}
