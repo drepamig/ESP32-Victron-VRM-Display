@@ -85,6 +85,7 @@ class WifiSetupUi {
   void renderPortal();
   void renderResult();
   void cancelHolds();
+  void clearPortalState();
   int savedProfileForSsid(const String& ssid) const;
 
   TFT_eSPI& display_;

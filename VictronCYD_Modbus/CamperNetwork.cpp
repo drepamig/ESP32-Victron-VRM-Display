@@ -238,9 +238,6 @@ void CamperNetwork::acceptPendingProfile() {
     return;
   }
   pendingProfile_ = false;
-  selectedProfile_ = false;
-  retryScheduled_ = false;
-  clearSelectedProfile();
 }
 
 void CamperNetwork::cancelPendingProfile() {

@@ -206,6 +206,39 @@ void testNearbyPaginationRetainsMoreThanTwentyResults() {
         "sixth page must retain and select the twenty-sixth scan result");
 }
 
+void testReplacementScanClampsInvalidPage() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ScanResult initial[26];
+  for (size_t index = 0; index < 26; ++index) {
+    char ssid[12];
+    std::snprintf(ssid, sizeof(ssid), "Initial%02u", static_cast<unsigned>(index));
+    initial[index] = {String(ssid), -50, 3, 1};
+  }
+
+  ui.open();
+  check(ui.handleTouch({210, 18}, 10).type == WifiSetupActionType::Refresh,
+        "Nearby should scan before replacement-page test");
+  ui.setScanResults(initial, 26);
+  for (uint32_t page = 0; page < 5; ++page) {
+    ui.handleTouch({278, 218}, 20 + page);
+  }
+  check(ui.handleTouch({160, 218}, 30).type == WifiSetupActionType::Refresh,
+        "page-six refresh should request a replacement scan");
+
+  ScanResult replacement[7];
+  for (size_t index = 0; index < 7; ++index) {
+    char ssid[12];
+    std::snprintf(ssid, sizeof(ssid), "Smaller%02u", static_cast<unsigned>(index));
+    replacement[index] = {String(ssid), -60, 3, 1};
+  }
+  ui.setScanResults(replacement, 7);
+  const WifiSetupAction action = ui.handleTouch({100, 56}, 31);
+  check(action.type == WifiSetupActionType::ProvisionNew &&
+            action.ssid == String("Smaller05"),
+        "replacement scan must clamp an invalid page to the new last page");
+}
+
 void testClearAllHoldCountdownAndReleaseCancellation() {
   TFT_eSPI display;
   WifiSetupUi ui(display);
@@ -261,6 +294,17 @@ void testBackInactivityPortalAndResultViews() {
   action = ui.handleTouch({30, 18}, 1);
   check(action.type == WifiSetupActionType::Exit && !ui.isOpen(),
         "persistent Back must exit the result view");
+
+  ui.showPortal("Expired SSID", "654321", 100);
+  check(ui.poll(99).type == WifiSetupActionType::None && ui.isOpen(),
+        "portal UI must remain active before its lifecycle deadline");
+  action = ui.poll(100);
+  check(action.type == WifiSetupActionType::Exit && !ui.isOpen(),
+        "portal UI must close and clear retained portal material at expiry");
+  ui.open();
+  ui.render(offlineStatus());
+  check(!display.drewContaining("Expired SSID") && !display.drewContaining("654321"),
+        "stale portal SSID and code must not render after navigation re-entry");
 }
 
 }  // namespace
@@ -271,6 +315,7 @@ int main() {
   testNearbyRoutingPaginationAndRefresh();
   testLateScanResultsDoNotOwnNavigation();
   testNearbyPaginationRetainsMoreThanTwentyResults();
+  testReplacementScanClampsInvalidPage();
   testClearAllHoldCountdownAndReleaseCancellation();
   testBackInactivityPortalAndResultViews();
   return 0;

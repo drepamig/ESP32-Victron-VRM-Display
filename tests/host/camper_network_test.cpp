@@ -262,9 +262,15 @@ void testAcceptCancelAndDisconnectKeepAp() {
   WiFi.connected = false;
   WiFi.stationAddress = IPAddress();
   accepted.poll(2);
-  accepted.poll(60002);
-  check(WiFi.beginSsids.size() == 1 && accepted.status().apReady,
-        "accepted credential copy cannot be reused and AP remains ready");
+  accepted.poll(10001);
+  check(WiFi.beginSsids.size() == 1, "accepted profile retry waits until its deadline");
+  accepted.poll(10002);
+  check(WiFi.beginSsids.size() == 2,
+        "accepted profile remains selected for automatic retry while pending clears");
+  check(WiFi.beginSsids.size() == 2 && WiFi.beginSsids[0] == "selected" &&
+            WiFi.beginSsids[1] == "selected",
+        "accepted profile retry uses the retained selected SSID");
+  check(accepted.status().apReady, "accepted profile retry keeps the AP ready");
 
   resetFakes();
   CamperNetwork cancelled;

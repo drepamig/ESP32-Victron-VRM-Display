@@ -73,6 +73,7 @@ bool WifiSetupRect::contains(const TouchPoint& point) const {
 WifiSetupUi::WifiSetupUi(TFT_eSPI& display) : display_(display) {}
 
 void WifiSetupUi::open() {
+  clearPortalState();
   view_ = WifiSetupView::Saved;
   awaitEntryRelease_ = false;
   selectedProfileIndex_ = -1;
@@ -82,6 +83,7 @@ void WifiSetupUi::open() {
 }
 
 void WifiSetupUi::close() {
+  clearPortalState();
   view_ = WifiSetupView::Closed;
   awaitEntryRelease_ = false;
   selectedProfileIndex_ = -1;
@@ -106,6 +108,12 @@ void WifiSetupUi::cancelHolds() {
   clearActionEmitted_ = false;
 }
 
+void WifiSetupUi::clearPortalState() {
+  portalSsid_ = String();
+  portalCode_ = String();
+  portalExpiresAtMs_ = 0;
+}
+
 WifiSetupAction WifiSetupUi::handleRelease(uint32_t nowMs) {
   lastNowMs_ = nowMs;
   awaitEntryRelease_ = false;
@@ -125,6 +133,11 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
       lastActivityMs_ = nowMs;
     }
     return noAction();
+  }
+
+  if (view_ == WifiSetupView::Portal && isDeadlineReached(nowMs, portalExpiresAtMs_)) {
+    close();
+    return simpleAction(WifiSetupActionType::Exit);
   }
 
   if (clearHoldActive_ && !clearActionEmitted_ &&
@@ -301,14 +314,18 @@ void WifiSetupUi::setScanResults(const ScanResult* results, size_t count) {
   } else {
     scanResults_.assign(results, results + count);
   }
+  const size_t lastPage = scanResults_.empty() ? 0 : (scanResults_.size() - 1) / kRowsPerPage;
+  if (scanPage_ > lastPage) {
+    scanPage_ = lastPage;
+  }
   if (showCompletedScan) {
-    scanPage_ = 0;
     view_ = WifiSetupView::Nearby;
   }
 }
 
 void WifiSetupUi::showPortal(const String& ssid, const String& code,
                              uint32_t expiresAtMs) {
+  clearPortalState();
   portalSsid_ = ssid;
   portalCode_ = code;
   portalExpiresAtMs_ = expiresAtMs;
@@ -318,6 +335,7 @@ void WifiSetupUi::showPortal(const String& ssid, const String& code,
 }
 
 void WifiSetupUi::showResult(const String& message, bool success) {
+  clearPortalState();
   resultMessage_ = message;
   resultSuccess_ = success;
   view_ = WifiSetupView::Result;
