@@ -34,30 +34,46 @@ bool CamperNetwork::begin(const char* apSsid, const char* apPassword, uint32_t) 
     return false;
   }
 
-  beginAttempted_ = true;
-  validationQueue_ = xQueueCreate(1, sizeof(bool));
+  if (validationQueue_ == nullptr) {
+    validationQueue_ = xQueueCreate(1, sizeof(bool));
+    if (validationQueue_ == nullptr) {
+      return false;
+    }
+  }
   WiFi.mode(WIFI_AP_STA);
-  WiFi.AP.config(IPAddress(192, 168, 50, 1), IPAddress(192, 168, 50, 1),
-                 IPAddress(255, 255, 255, 0), IPAddress(192, 168, 50, 100),
-                 IPAddress(1, 1, 1, 1));
+  const bool configReady =
+      WiFi.AP.config(IPAddress(192, 168, 50, 1), IPAddress(192, 168, 50, 1),
+                     IPAddress(255, 255, 255, 0), IPAddress(192, 168, 50, 100),
+                     IPAddress(1, 1, 1, 1));
+  if (!configReady) {
+    Serial.print("Camper AP failed at ");
+    Serial.println(WiFi.AP.localIP());
+    return false;
+  }
   const bool apReady = WiFi.AP.create(apSsid, apPassword, 6, false, 4);
   const bool naptReady = apReady && WiFi.AP.enableNAPT(true);
   apReady_ = apReady && naptReady;
-  WiFi.setAutoReconnect(false);
+  if (apReady_) {
+    beginAttempted_ = true;
+    WiFi.setAutoReconnect(false);
+  }
 
   Serial.print("Camper AP ");
   Serial.print(apReady_ ? "ready" : "failed");
   Serial.print(" at ");
   Serial.println(WiFi.AP.localIP());
-  return apReady_ && validationQueue_ != nullptr;
+  return apReady_;
 }
 
 void CamperNetwork::poll(uint32_t nowMs) {
   bool validationSucceeded = false;
   if (validationWorkerActive_ &&
       xQueueReceive(validationQueue_, &validationSucceeded, 0) == pdPASS) {
+    const bool resultCurrent = validationResultCurrent_;
     validationWorkerActive_ = false;
-    if (wanPhase_ == WanPhase::Validating && stationReady()) {
+    validationResultCurrent_ = false;
+    if (resultCurrent && stationLifecycleActive_ && wanPhase_ == WanPhase::Validating &&
+        stationReady()) {
       wanPhase_ = validationSucceeded ? WanPhase::Online : WanPhase::Offline;
       if (validationSucceeded) {
         retryBackoff_.reset();
@@ -68,6 +84,9 @@ void CamperNetwork::poll(uint32_t nowMs) {
   }
 
   if (!stationReady()) {
+    if (validationWorkerActive_) {
+      validationResultCurrent_ = false;
+    }
     validationScheduled_ = false;
     if (!selectedProfile_) {
       wanPhase_ = WanPhase::Offline;
@@ -90,8 +109,15 @@ void CamperNetwork::poll(uint32_t nowMs) {
   }
 
   retryScheduled_ = false;
+  if (!stationLifecycleActive_) {
+    wanPhase_ = WanPhase::Offline;
+    validationScheduled_ = false;
+    return;
+  }
   if (validationWorkerActive_) {
-    wanPhase_ = WanPhase::Validating;
+    if (validationResultCurrent_) {
+      wanPhase_ = WanPhase::Validating;
+    }
     return;
   }
   if (wanPhase_ == WanPhase::Connecting ||
@@ -114,6 +140,8 @@ bool CamperNetwork::connect(const NetworkProfile& profile, uint32_t nowMs) {
   std::memcpy(selectedPassphrase_, profile.passphrase.c_str(), passphraseLength + 1);
   selectedProfile_ = true;
   pendingProfile_ = true;
+  stationLifecycleActive_ = true;
+  validationResultCurrent_ = false;
   retryBackoff_.reset();
   retryDeadlineMs_ = nowMs + retryBackoff_.nextDelay();
   retryScheduled_ = true;
@@ -222,6 +250,8 @@ void CamperNetwork::cancelPendingProfile() {
   WiFi.disconnect(false, false);
   pendingProfile_ = false;
   selectedProfile_ = false;
+  stationLifecycleActive_ = false;
+  validationResultCurrent_ = false;
   retryScheduled_ = false;
   validationScheduled_ = false;
   wanPhase_ = WanPhase::Offline;
@@ -232,6 +262,8 @@ void CamperNetwork::disconnectUpstream() {
   WiFi.disconnect(false, false);
   pendingProfile_ = false;
   selectedProfile_ = false;
+  stationLifecycleActive_ = false;
+  validationResultCurrent_ = false;
   retryScheduled_ = false;
   validationScheduled_ = false;
   wanPhase_ = WanPhase::Offline;
@@ -255,11 +287,13 @@ void CamperNetwork::startValidation(uint32_t nowMs) {
     return;
   }
   validationWorkerActive_ = true;
+  validationResultCurrent_ = true;
   validationScheduled_ = false;
   wanPhase_ = WanPhase::Validating;
   if (xTaskCreatePinnedToCore(validationWorker, "wan-validation", kValidationTaskStack, this,
                               kValidationTaskPriority, nullptr, 0) != pdPASS) {
     validationWorkerActive_ = false;
+    validationResultCurrent_ = false;
     wanPhase_ = WanPhase::Offline;
     validationScheduled_ = true;
     validationDeadlineMs_ = nowMs + kValidationIntervalMs;

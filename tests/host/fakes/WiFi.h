@@ -21,6 +21,7 @@ struct FakeAccessPoint {
   };
 
   std::vector<std::string>* events = nullptr;
+  bool configResult = true;
   bool createResult = true;
   bool naptResult = true;
   uint8_t clients = 0;
@@ -36,7 +37,7 @@ struct FakeAccessPoint {
     events->push_back("config");
     configCalls.push_back({local, gateway, subnet, leaseStart, dns});
     address = local;
-    return true;
+    return configResult;
   }
 
   bool create(const char*, const char*, int channel, bool hidden, int maxConnections) {

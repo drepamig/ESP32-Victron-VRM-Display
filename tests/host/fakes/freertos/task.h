@@ -19,6 +19,8 @@ inline void reset() {
   deleteCalls = 0;
   lastQueueLength = 0;
   lastQueueItemSize = 0;
+  queueCreationSucceeds = true;
+  queueCreateCalls = 0;
 }
 inline void runNextTask() { const PendingTask task = pendingTasks.front(); pendingTasks.erase(pendingTasks.begin()); task.function(task.argument); }
 }  // namespace FakeRtos

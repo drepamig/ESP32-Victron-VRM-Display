@@ -104,6 +104,76 @@ void testInitialAssociationAndSingleDnsWorker() {
         "DNS success exposes online station status");
 }
 
+void testStartupFailuresStayHonestAndRetrySafely() {
+  resetFakes();
+  CamperNetwork badConfig;
+  WiFi.AP.configResult = false;
+  check(!badConfig.begin("Camper", "abcdefghijkl", 0), "AP config failure rejects startup");
+  check(WiFi.AP.createCalls == 0 && WiFi.AP.naptCalls == 0 && !badConfig.status().apReady,
+        "AP config failure prevents AP create and NAPT");
+
+  resetFakes();
+  CamperNetwork noQueue;
+  FakeRtos::queueCreationSucceeds = false;
+  check(!noQueue.begin("Camper", "abcdefghijkl", 0), "queue allocation failure rejects startup");
+  check(WiFi.events.empty() && !noQueue.status().apReady,
+        "queue allocation failure has no WiFi side effects and stays not ready");
+  check(!noQueue.connect(profile(), 1) && WiFi.beginSsids.empty(),
+        "queue allocation failure cannot accept an uplink");
+  FakeRtos::queueCreationSucceeds = true;
+  check(noQueue.begin("Camper", "abcdefghijkl", 2), "startup retries after queue allocation recovers");
+  check(FakeRtos::queueCreateCalls == 2 && WiFi.AP.createCalls == 1 && WiFi.AP.naptCalls == 1,
+        "queue retry performs one successful AP startup");
+}
+
+void testStaleDnsResultCannotValidateNewLifecycle() {
+  resetFakes();
+  CamperNetwork replaced;
+  startGateway(replaced);
+  replaced.connect(profile("first"), 0);
+  associateStation();
+  replaced.poll(1);
+  check(FakeRtos::pendingTasks.size() == 1, "first lifecycle starts worker A");
+  replaced.connect(profile("second"), 2);
+  replaced.poll(3);
+  check(replaced.status().wanPhase == WanPhase::Connecting && FakeRtos::createCalls == 1,
+        "replacement stays Connecting while stale worker A is active");
+  if (!FakeRtos::pendingTasks.empty()) FakeRtos::runNextTask();
+  replaced.poll(4);
+  check(replaced.status().wanPhase != WanPhase::Online && FakeRtos::createCalls == 2 &&
+            FakeRtos::pendingTasks.size() == 1,
+        "worker A result is ignored and worker B validates replacement");
+  if (!FakeRtos::pendingTasks.empty()) FakeRtos::runNextTask();
+  replaced.poll(5);
+  check(replaced.status().wanPhase == WanPhase::Online, "worker B can validate replacement");
+
+  resetFakes();
+  CamperNetwork cancelled;
+  startGateway(cancelled);
+  cancelled.connect(profile(), 0);
+  associateStation();
+  cancelled.poll(1);
+  cancelled.cancelPendingProfile();
+  associateStation();
+  if (!FakeRtos::pendingTasks.empty()) FakeRtos::runNextTask();
+  cancelled.poll(2);
+  check(cancelled.status().wanPhase == WanPhase::Offline && FakeRtos::createCalls == 1,
+        "cancelled lifecycle ignores worker A and does not validate unknown station");
+
+  resetFakes();
+  CamperNetwork disconnected;
+  startGateway(disconnected);
+  disconnected.connect(profile(), 0);
+  associateStation();
+  disconnected.poll(1);
+  disconnected.disconnectUpstream();
+  associateStation();
+  if (!FakeRtos::pendingTasks.empty()) FakeRtos::runNextTask();
+  disconnected.poll(2);
+  check(disconnected.status().wanPhase == WanPhase::Offline && FakeRtos::createCalls == 1,
+        "disconnected lifecycle ignores worker A and does not validate unknown station");
+}
+
 void testDnsFailureAndThirtySecondRevalidation() {
   resetFakes();
   CamperNetwork gateway;
@@ -243,7 +313,9 @@ void testAsyncScanGatingFailureAndResults() {
 
 int main() {
   testApValidationOrderAndSingleStartup();
+  testStartupFailuresStayHonestAndRetrySafely();
   testInitialAssociationAndSingleDnsWorker();
+  testStaleDnsResultCannotValidateNewLifecycle();
   testDnsFailureAndThirtySecondRevalidation();
   testRetryCadenceCapResetAndWraparound();
   testAcceptCancelAndDisconnectKeepAp();

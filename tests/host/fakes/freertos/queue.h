@@ -17,11 +17,15 @@ using QueueHandle_t = FakeQueue*;
 namespace FakeRtos {
 inline UBaseType_t lastQueueLength = 0;
 inline UBaseType_t lastQueueItemSize = 0;
+inline bool queueCreationSucceeds = true;
+inline int queueCreateCalls = 0;
 }  // namespace FakeRtos
 
 inline QueueHandle_t xQueueCreate(UBaseType_t length, UBaseType_t itemSize) {
+  ++FakeRtos::queueCreateCalls;
   FakeRtos::lastQueueLength = length;
   FakeRtos::lastQueueItemSize = itemSize;
+  if (!FakeRtos::queueCreationSucceeds) return nullptr;
   return new FakeQueue{length, itemSize, false, std::vector<unsigned char>(itemSize)};
 }
 

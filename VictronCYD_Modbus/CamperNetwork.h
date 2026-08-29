@@ -53,6 +53,8 @@ class CamperNetwork {
   bool retryScheduled_ = false;
   bool validationScheduled_ = false;
   bool validationWorkerActive_ = false;
+  bool validationResultCurrent_ = false;
+  bool stationLifecycleActive_ = false;
   WanPhase wanPhase_ = WanPhase::Offline;
   char selectedSsid_[33] = {};
   char selectedPassphrase_[64] = {};
