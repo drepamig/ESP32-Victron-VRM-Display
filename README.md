@@ -116,6 +116,8 @@ arduino-cli compile --fqbn esp32:esp32:esp32 VictronCYD_Modbus
 arduino-cli upload  --fqbn esp32:esp32:esp32 -p COM3 VictronCYD_Modbus   # your port
 ```
 
+The camper gateway variant requires Arduino-ESP32 3.3.11 and XPT2046_Touchscreen 1.4. The ESP32 core version is required for the supported `WiFi.AP.enableNAPT()` API.
+
 ---
 
 ## Technical notes (VRM cloud version)
