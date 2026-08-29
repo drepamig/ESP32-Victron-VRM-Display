@@ -101,13 +101,25 @@ class Preferences {
 
   static void reset() {
     storage_.clear();
-    failOnMutation_ = 0;
+    clearFaults();
     mutationCount_ = 0;
   }
 
   static void failOnMutation(size_t mutation) {
     failOnMutation_ = mutation;
+    failFromMutation_ = 0;
     mutationCount_ = 0;
+  }
+
+  static void failFromMutation(size_t mutation) {
+    failOnMutation_ = 0;
+    failFromMutation_ = mutation;
+    mutationCount_ = 0;
+  }
+
+  static void clearFaults() {
+    failOnMutation_ = 0;
+    failFromMutation_ = 0;
   }
 
   static void putRawUChar(const char* name, const char* key, uint8_t value) { storage_[name][key] = value; }
@@ -125,6 +137,9 @@ class Preferences {
       return false;
     }
     ++mutationCount_;
+    if (failFromMutation_ != 0 && mutationCount_ >= failFromMutation_) {
+      return false;
+    }
     if (failOnMutation_ != 0 && mutationCount_ == failOnMutation_) {
       failOnMutation_ = 0;
       return false;
@@ -152,6 +167,7 @@ class Preferences {
 
   inline static std::map<std::string, Namespace> storage_;
   inline static size_t failOnMutation_ = 0;
+  inline static size_t failFromMutation_ = 0;
   inline static size_t mutationCount_ = 0;
   std::string namespace_;
   bool readOnly_ = false;

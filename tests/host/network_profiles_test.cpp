@@ -112,6 +112,28 @@ void testTransientWriteFailureRestoresPriorStore() {
         "injected failure preserves prior logical profile");
 }
 
+void testRestartRecoversPersistentFailure() {
+  Preferences::reset();
+  NetworkProfileStore store;
+  check(store.begin(), "restart recovery setup");
+  check(insert(store, profile("durable", "prior", 1, 100)), "restart recovery add initial");
+  check(store.activate(0), "restart recovery activate initial");
+  Preferences::failFromMutation(8);
+  size_t storedIndex = 0;
+  check(!store.upsert(profile("durable", "next", 8, 800), storedIndex),
+        "persistent failure returned");
+  check(!store.begin(), "persistent failure prevents immediate recovery");
+
+  Preferences::clearFaults();
+  NetworkProfileStore restartedStore;
+  check(restartedStore.begin(), "restart recovery begin");
+  NetworkProfile loaded;
+  check(restartedStore.count() == 1 && restartedStore.activeIndex() == 0,
+        "restart recovery preserves count and active index");
+  check(restartedStore.load(0, loaded) && loaded.securityType == 1 && loaded.lastSuccessEpoch == 100,
+        "restart recovery restores prior logical profile");
+}
+
 }  // namespace
 
 int main() {
@@ -121,5 +143,6 @@ int main() {
   testOpenPassword();
   testDeletionAndClear();
   testTransientWriteFailureRestoresPriorStore();
+  testRestartRecoversPersistentFailure();
   return failures == 0 ? 0 : 1;
 }
