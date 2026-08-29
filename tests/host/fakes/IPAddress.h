@@ -11,6 +11,9 @@ class IPAddress {
                  (static_cast<uint32_t>(c) << 16) | (static_cast<uint32_t>(d) << 24)) {}
 
   operator uint32_t() const { return address_; }
+  uint8_t operator[](int index) const {
+    return static_cast<uint8_t>((address_ >> (static_cast<uint32_t>(index) * 8U)) & 0xffU);
+  }
   bool operator==(const IPAddress& other) const { return address_ == other.address_; }
   bool operator!=(const IPAddress& other) const { return !(*this == other); }
 
