@@ -15,6 +15,7 @@ int main() {
 
   assert(!shouldCommitPendingProfile(false, false));
   assert(!shouldCommitPendingProfile(true, false));
+  assert(!shouldCommitPendingProfile(false, true));
   assert(shouldCommitPendingProfile(true, true));
 
   assert(!isDeadlineReached(90, 100));
