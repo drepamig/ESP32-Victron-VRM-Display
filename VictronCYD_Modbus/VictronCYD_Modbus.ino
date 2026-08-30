@@ -439,7 +439,8 @@ uint16_t wanColor(WanPhase phase) {
 int lastDashboardWanHoldCountdown = -1;
 int lastDashboardWanPhase = -1;
 
-void drawDashboardWanIndicator(uint32_t nowMs, bool fullFrameCleared = false) {
+void drawDashboardWanIndicator(uint32_t nowMs, bool fullFrameCleared = false,
+                               bool highlighted = false) {
   const CamperNetworkStatus networkStatus = camperNetwork.status();
   const int countdown = wifiSetupUi.wanHoldCountdown(nowMs);
   const int phase = static_cast<int>(networkStatus.wanPhase);
@@ -447,18 +448,12 @@ void drawDashboardWanIndicator(uint32_t nowMs, bool fullFrameCleared = false) {
                                lastDashboardWanPhase)) {
     return;
   }
-  const uint16_t statusColor = wanColor(networkStatus.wanPhase);
+  const uint16_t statusColor = highlighted ? kAmber : wanColor(networkStatus.wanPhase);
   tft.fillRoundRect(kWifiWanIndicatorBounds.x + 1, 2,
                     kWifiWanIndicatorBounds.width - 3, 20, 4, statusColor);
   tft.setTextColor(kBackground, statusColor);
   tft.setTextDatum(MC_DATUM);
-  char label[4];
-  if (countdown > 0) {
-    std::snprintf(label, sizeof(label), "%d", countdown);
-  } else {
-    std::snprintf(label, sizeof(label), "WAN");
-  }
-  tft.drawString(label, kWifiWanIndicatorBounds.x + kWifiWanIndicatorBounds.width / 2, 12, 2);
+  tft.drawString("WAN", kWifiWanIndicatorBounds.x + kWifiWanIndicatorBounds.width / 2, 12, 2);
   lastDashboardWanHoldCountdown = countdown;
   lastDashboardWanPhase = phase;
 }
@@ -467,10 +462,16 @@ void drawDashboardHeader(uint32_t nowMs, bool fullFrameCleared = false) {
   gxOnline = isRecentValidGxSnapshot(hasValidGxSnapshot, nowMs,
                                      dashboardSnapshot.receivedAtMs,
                                      kGxSnapshotMaximumAgeMs);
-  tft.fillRect(kScreenWidth / 2 - 30, 0, 60, 20, kBackground);
-  tft.setTextColor(gxOnline ? kValue : kUnit, kBackground);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(clockText(), kScreenWidth / 2, 11, 4);
+  const int holdCountdown = wifiSetupUi.wanHoldCountdown(nowMs);
+  coordinateDashboardWanHold(
+      holdCountdown,
+      [&](const char* holdLabel) {
+        tft.fillRect(kScreenWidth / 2 - 30, 0, 60, 20, kBackground);
+        tft.setTextColor(gxOnline ? kValue : kUnit, kBackground);
+        tft.setTextDatum(MC_DATUM);
+        tft.drawString(holdLabel == nullptr ? clockText() : holdLabel, kScreenWidth / 2, 11, 4);
+      },
+      [&](bool highlighted) { drawDashboardWanIndicator(nowMs, fullFrameCleared, highlighted); });
 
   tft.fillRect(224, 0, 50, 22, kBackground);
   tft.setTextColor(kTitle, kBackground);

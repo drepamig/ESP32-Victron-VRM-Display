@@ -180,6 +180,26 @@ void testDashboardRedrawClearsThenForcesHeaderBeforeValues() {
   check(forcedHeader, "full dashboard redraw must force WAN/header painting despite cache");
 }
 
+// Mutation caught: moving the hold label back into WAN or letting normal clock painting
+// overwrite it during a valid hold.
+void testDashboardHeaderCoordinatesHoldLabelsAndCancellation() {
+  const char* label = nullptr;
+  bool highlighted = false;
+  coordinateDashboardWanHold(3, [&](const char* value) { label = value; },
+                            [&](bool value) { highlighted = value; });
+  check(std::string(label) == "HOLD 3" && highlighted,
+        "valid hold must place HOLD 3 in the clock coordination region and highlight WAN");
+  coordinateDashboardWanHold(2, [&](const char* value) { label = value; },
+                            [&](bool value) { highlighted = value; });
+  check(std::string(label) == "HOLD 2" && highlighted, "hold countdown must advance to HOLD 2");
+  coordinateDashboardWanHold(1, [&](const char* value) { label = value; },
+                            [&](bool value) { highlighted = value; });
+  check(std::string(label) == "HOLD 1" && highlighted, "hold countdown must advance to HOLD 1");
+  coordinateDashboardWanHold(0, [&](const char* value) { label = value; },
+                            [&](bool value) { highlighted = value; });
+  check(label == nullptr && !highlighted, "cancelled hold must restore normal clock coordination");
+}
+
 }  // namespace
 
 int main() {
@@ -191,5 +211,6 @@ int main() {
   testScanTerminalRouting();
   testCalibrationExclusivelyOwnsDisplayUntilComplete();
   testDashboardRedrawClearsThenForcesHeaderBeforeValues();
+  testDashboardHeaderCoordinatesHoldLabelsAndCancellation();
   return failures == 0 ? 0 : 1;
 }

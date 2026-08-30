@@ -41,6 +41,14 @@ inline void redrawDashboardSurface(ClearFrame clearFrame, PaintHeader paintHeade
   paintValues();
 }
 
+template <typename PaintClock, typename PaintWan>
+inline void coordinateDashboardWanHold(int countdown, PaintClock paintClock, PaintWan paintWan) {
+  const char* label = countdown == 3 ? "HOLD 3" : countdown == 2 ? "HOLD 2"
+                                     : countdown == 1 ? "HOLD 1" : nullptr;
+  paintClock(label);
+  paintWan(label != nullptr);
+}
+
 inline ScanUiOutcome scanUiOutcome(bool complete, bool failed) {
   if (complete) {
     return ScanUiOutcome::DeliverResults;
