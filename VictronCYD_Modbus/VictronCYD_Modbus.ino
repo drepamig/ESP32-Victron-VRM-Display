@@ -438,6 +438,7 @@ uint16_t wanColor(WanPhase phase) {
 
 int lastDashboardWanHoldCountdown = -1;
 int lastDashboardWanPhase = -1;
+int lastDashboardHeaderHoldCountdown = -1;
 
 void drawDashboardWanIndicator(uint32_t nowMs, bool fullFrameCleared = false,
                                bool highlighted = false) {
@@ -463,6 +464,11 @@ void drawDashboardHeader(uint32_t nowMs, bool fullFrameCleared = false) {
                                      dashboardSnapshot.receivedAtMs,
                                      kGxSnapshotMaximumAgeMs);
   const int holdCountdown = wifiSetupUi.wanHoldCountdown(nowMs);
+  if ((holdCountdown > 0 || lastDashboardHeaderHoldCountdown > 0) &&
+      !shouldRepaintDashboardHold(lastDashboardHeaderHoldCountdown, holdCountdown)) {
+    return;
+  }
+  lastDashboardHeaderHoldCountdown = holdCountdown;
   coordinateDashboardWanHold(
       holdCountdown,
       [&](const char* holdLabel) {
@@ -497,6 +503,7 @@ void redrawCurrentView(uint32_t nowMs) {
     case DisplaySurface::Dashboard:
       lastDashboardWanHoldCountdown = -1;
       lastDashboardWanPhase = -1;
+      lastDashboardHeaderHoldCountdown = -1;
       redrawDashboardSurface(
           [] { drawDashboardFrame(); },
           [nowMs](bool fullFrameCleared) { drawDashboardHeader(nowMs, fullFrameCleared); },

@@ -33,6 +33,10 @@ inline bool shouldPaintDashboardWan(bool fullFrameCleared, int countdown, int ph
   return fullFrameCleared || countdown != previousCountdown || phase != previousPhase;
 }
 
+inline bool shouldRepaintDashboardHold(int previousCountdown, int countdown) {
+  return previousCountdown != countdown;
+}
+
 template <typename ClearFrame, typename PaintHeader, typename PaintValues>
 inline void redrawDashboardSurface(ClearFrame clearFrame, PaintHeader paintHeader,
                                    PaintValues paintValues) {

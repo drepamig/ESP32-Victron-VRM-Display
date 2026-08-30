@@ -213,6 +213,15 @@ void testDashboardInteractionImmediatelyRepaintsHeaderWithoutFrameClear() {
         "dashboard press or cancel must immediately repaint header without a full clear");
 }
 
+// Mutation caught: repainting unchanged HOLD 3 on every five-millisecond loop iteration.
+void testDashboardHoldRepaintCoalescesVisibleStates() {
+  check(shouldRepaintDashboardHold(-1, 3), "press must repaint HOLD 3 once");
+  check(!shouldRepaintDashboardHold(3, 3), "unchanged HOLD 3 must not repaint");
+  check(shouldRepaintDashboardHold(3, 2) && shouldRepaintDashboardHold(2, 1),
+        "visible HOLD transitions must repaint");
+  check(shouldRepaintDashboardHold(1, 0), "release or slide cancellation must repaint normal state");
+}
+
 }  // namespace
 
 int main() {
@@ -226,5 +235,6 @@ int main() {
   testDashboardRedrawClearsThenForcesHeaderBeforeValues();
   testDashboardHeaderCoordinatesHoldLabelsAndCancellation();
   testDashboardInteractionImmediatelyRepaintsHeaderWithoutFrameClear();
+  testDashboardHoldRepaintCoalescesVisibleStates();
   return failures == 0 ? 0 : 1;
 }
