@@ -37,6 +37,19 @@ inline bool shouldRepaintDashboardHold(int previousCountdown, int countdown) {
   return previousCountdown != countdown;
 }
 
+template <typename ClearRegion, typename DrawText>
+inline void paintCenteredHeaderTransition(int& previousWidth, int currentWidth, bool holdLabel,
+                                          ClearRegion clearRegion, DrawText drawText,
+                                          bool fullFrameCleared) {
+  if (fullFrameCleared) {
+    previousWidth = 0;
+  }
+  const int width = previousWidth > currentWidth ? previousWidth : currentWidth;
+  clearRegion(160 - width / 2 - 2, 0, width + 4, 20);
+  drawText(160, holdLabel ? 14 : 11);
+  previousWidth = currentWidth;
+}
+
 template <typename ClearFrame, typename PaintHeader, typename PaintValues>
 inline void redrawDashboardSurface(ClearFrame clearFrame, PaintHeader paintHeader,
                                    PaintValues paintValues) {

@@ -439,6 +439,7 @@ uint16_t wanColor(WanPhase phase) {
 int lastDashboardWanHoldCountdown = -1;
 int lastDashboardWanPhase = -1;
 int lastDashboardHeaderHoldCountdown = -1;
+int lastDashboardCenterTextWidth = 0;
 
 void drawDashboardWanIndicator(uint32_t nowMs, bool fullFrameCleared = false,
                                bool highlighted = false) {
@@ -472,10 +473,17 @@ void drawDashboardHeader(uint32_t nowMs, bool fullFrameCleared = false) {
   coordinateDashboardWanHold(
       holdCountdown,
       [&](const char* holdLabel) {
-        tft.fillRect(kScreenWidth / 2 - 30, 0, 60, 20, kBackground);
+        const String normalClock = clockText();
+        const char* text = holdLabel == nullptr ? normalClock.c_str() : holdLabel;
+        const int width = tft.textWidth(text, 4);
         tft.setTextColor(gxOnline ? kValue : kUnit, kBackground);
         tft.setTextDatum(MC_DATUM);
-        tft.drawString(holdLabel == nullptr ? clockText() : holdLabel, kScreenWidth / 2, 11, 4);
+        paintCenteredHeaderTransition(
+            lastDashboardCenterTextWidth, width, holdLabel != nullptr,
+            [&](int x, int y, int clearWidth, int clearHeight) {
+              tft.fillRect(x, y, clearWidth, clearHeight, kBackground);
+            },
+            [&](int x, int y) { tft.drawString(text, x, y, 4); }, fullFrameCleared);
       },
       [&](bool highlighted) { drawDashboardWanIndicator(nowMs, fullFrameCleared, highlighted); });
 
@@ -504,6 +512,7 @@ void redrawCurrentView(uint32_t nowMs) {
       lastDashboardWanHoldCountdown = -1;
       lastDashboardWanPhase = -1;
       lastDashboardHeaderHoldCountdown = -1;
+      lastDashboardCenterTextWidth = 0;
       redrawDashboardSurface(
           [] { drawDashboardFrame(); },
           [nowMs](bool fullFrameCleared) { drawDashboardHeader(nowMs, fullFrameCleared); },
