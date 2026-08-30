@@ -167,6 +167,14 @@ void testCalibrationExclusivelyOwnsDisplayUntilComplete() {
         "failed touch initialization preserves dashboard rendering");
 }
 
+// Mutation caught: retaining dashboard WAN paint cache across a full-frame clear.
+void testFullDashboardFrameForcesWanIndicatorPaint() {
+  check(shouldPaintDashboardWan(true, 2, 2, 2, 2),
+        "a full dashboard clear must repaint unchanged WAN state");
+  check(!shouldPaintDashboardWan(false, 2, 2, 2, 2),
+        "unchanged WAN state may remain coalesced without a full clear");
+}
+
 }  // namespace
 
 int main() {
@@ -177,5 +185,6 @@ int main() {
   testExitPreservesPendingButCancelsPhysicalPortal();
   testScanTerminalRouting();
   testCalibrationExclusivelyOwnsDisplayUntilComplete();
+  testFullDashboardFrameForcesWanIndicatorPaint();
   return failures == 0 ? 0 : 1;
 }

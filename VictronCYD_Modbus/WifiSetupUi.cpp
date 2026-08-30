@@ -103,6 +103,7 @@ WifiSetupAction WifiSetupUi::simpleAction(WifiSetupActionType type, int profileI
 }
 
 void WifiSetupUi::cancelHolds() {
+  clearHoldNeedsRedraw_ = clearHoldNeedsRedraw_ || clearHoldActive_;
   wanHoldActive_ = false;
   clearHoldActive_ = false;
   clearActionEmitted_ = false;
@@ -417,6 +418,10 @@ void WifiSetupUi::drawPortalExpiry() {
 }
 
 void WifiSetupUi::drawClearHoldCountdown() {
+  if (!clearHoldActive_) {
+    drawButton(kClearBounds, "Clear Saved");
+    return;
+  }
   const uint32_t elapsed = lastNowMs_ - clearHoldStartedMs_;
   const uint32_t remaining = elapsed >= kClearHoldMs ? 0 : kClearHoldMs - elapsed;
   const unsigned long seconds = static_cast<unsigned long>((remaining + 999) / 1000);
@@ -480,13 +485,14 @@ void WifiSetupUi::renderDynamic(const CamperNetworkStatus& networkStatus) {
       lastPortalCountdown_ = countdown;
     }
   }
-  if (view_ == WifiSetupView::Saved && clearHoldActive_) {
+  if (view_ == WifiSetupView::Saved && (clearHoldActive_ || clearHoldNeedsRedraw_)) {
     const int countdown = static_cast<int>((kClearHoldMs - (lastNowMs_ - clearHoldStartedMs_) +
                                             999) / 1000);
     if (countdown != lastClearCountdown_) {
       drawClearHoldCountdown();
       lastClearCountdown_ = countdown;
     }
+    clearHoldNeedsRedraw_ = false;
   }
 }
 

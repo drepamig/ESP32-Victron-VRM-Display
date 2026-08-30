@@ -28,6 +28,11 @@ inline DisplaySurface displaySurfaceFor(bool touchReady, bool calibrated, bool s
   return setupOpen ? DisplaySurface::Setup : DisplaySurface::Dashboard;
 }
 
+inline bool shouldPaintDashboardWan(bool fullFrameCleared, int countdown, int phase,
+                                    int previousCountdown, int previousPhase) {
+  return fullFrameCleared || countdown != previousCountdown || phase != previousPhase;
+}
+
 inline ScanUiOutcome scanUiOutcome(bool complete, bool failed) {
   if (complete) {
     return ScanUiOutcome::DeliverResults;

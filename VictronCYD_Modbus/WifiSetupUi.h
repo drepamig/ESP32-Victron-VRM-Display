@@ -107,6 +107,7 @@ class WifiSetupUi {
   bool awaitEntryRelease_ = false;
   bool clearHoldActive_ = false;
   bool clearActionEmitted_ = false;
+  bool clearHoldNeedsRedraw_ = false;
   bool fullRenderRequested_ = false;
   uint32_t wanHoldStartedMs_ = 0;
   uint32_t clearHoldStartedMs_ = 0;

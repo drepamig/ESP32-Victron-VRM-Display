@@ -443,7 +443,8 @@ void drawDashboardWanIndicator(uint32_t nowMs) {
   const CamperNetworkStatus networkStatus = camperNetwork.status();
   const int countdown = wifiSetupUi.wanHoldCountdown(nowMs);
   const int phase = static_cast<int>(networkStatus.wanPhase);
-  if (countdown == lastDashboardWanHoldCountdown && phase == lastDashboardWanPhase) {
+  if (!shouldPaintDashboardWan(false, countdown, phase, lastDashboardWanHoldCountdown,
+                               lastDashboardWanPhase)) {
     return;
   }
   const uint16_t statusColor = wanColor(networkStatus.wanPhase);
@@ -494,6 +495,8 @@ void redrawCurrentView(uint32_t nowMs) {
       wifiSetupUi.render(camperNetwork.status());
       return;
     case DisplaySurface::Dashboard:
+      lastDashboardWanHoldCountdown = -1;
+      lastDashboardWanPhase = -1;
       drawDashboardFrame();
       drawDashboardHeader(nowMs);
       drawDashboardValues();

@@ -121,6 +121,19 @@ void testDynamicSetupRefreshAvoidsFullScreenButUpdatesChangingRegions() {
         "clear-saved countdown must remain refreshable without a full clear");
 }
 
+// Mutation caught: cancelling Clear Saved without repainting its normal button label.
+void testCancelledClearHoldRestoresPartialButton() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ui.open(); ui.render(offlineStatus());
+  ui.handleTouch({270, 218}, 0); ui.poll(1000); ui.renderDynamic(offlineStatus());
+  check(display.drew("Clear in 9s"), "armed clear hold must show its countdown");
+  const uint32_t fullRenders = display.fillScreenCount;
+  ui.handleRelease(1100); ui.renderDynamic(offlineStatus());
+  check(display.drew("Clear Saved") && display.fillScreenCount == fullRenders,
+        "cancelled clear hold must restore its label without a full clear");
+}
+
 void testSavedSelectionConnectAndDeleteConfirmation() {
   TFT_eSPI display;
   WifiSetupUi ui(display);
@@ -422,6 +435,7 @@ int main() {
   testWanHoldCountdownAndImmediateSetupTransition();
   testWanHoldCancellationRestoresIndicatorState();
   testDynamicSetupRefreshAvoidsFullScreenButUpdatesChangingRegions();
+  testCancelledClearHoldRestoresPartialButton();
   testSavedSelectionConnectAndDeleteConfirmation();
   testNearbyRoutingPaginationAndRefresh();
   testLateScanResultsDoNotOwnNavigation();
