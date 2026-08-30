@@ -436,8 +436,33 @@ uint16_t wanColor(WanPhase phase) {
   }
 }
 
-void drawDashboardHeader(uint32_t nowMs) {
+int lastDashboardWanHoldCountdown = -1;
+int lastDashboardWanPhase = -1;
+
+void drawDashboardWanIndicator(uint32_t nowMs) {
   const CamperNetworkStatus networkStatus = camperNetwork.status();
+  const int countdown = wifiSetupUi.wanHoldCountdown(nowMs);
+  const int phase = static_cast<int>(networkStatus.wanPhase);
+  if (countdown == lastDashboardWanHoldCountdown && phase == lastDashboardWanPhase) {
+    return;
+  }
+  const uint16_t statusColor = wanColor(networkStatus.wanPhase);
+  tft.fillRoundRect(kWifiWanIndicatorBounds.x + 1, 2,
+                    kWifiWanIndicatorBounds.width - 3, 20, 4, statusColor);
+  tft.setTextColor(kBackground, statusColor);
+  tft.setTextDatum(MC_DATUM);
+  char label[4];
+  if (countdown > 0) {
+    std::snprintf(label, sizeof(label), "%d", countdown);
+  } else {
+    std::snprintf(label, sizeof(label), "WAN");
+  }
+  tft.drawString(label, kWifiWanIndicatorBounds.x + kWifiWanIndicatorBounds.width / 2, 12, 2);
+  lastDashboardWanHoldCountdown = countdown;
+  lastDashboardWanPhase = phase;
+}
+
+void drawDashboardHeader(uint32_t nowMs) {
   gxOnline = isRecentValidGxSnapshot(hasValidGxSnapshot, nowMs,
                                      dashboardSnapshot.receivedAtMs,
                                      kGxSnapshotMaximumAgeMs);
@@ -452,13 +477,7 @@ void drawDashboardHeader(uint32_t nowMs) {
   tft.drawString("GX", 228, 11, 2);
   tft.fillCircle(268, 10, 3, gxOnline ? kGreen : kRed);
 
-  const uint16_t statusColor = wanColor(networkStatus.wanPhase);
-  tft.fillRoundRect(kWifiWanIndicatorBounds.x + 1, 2,
-                    kWifiWanIndicatorBounds.width - 3, 20, 4, statusColor);
-  tft.setTextColor(kBackground, statusColor);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString("WAN", kWifiWanIndicatorBounds.x + kWifiWanIndicatorBounds.width / 2,
-                 12, 2);
+  drawDashboardWanIndicator(nowMs);
   tft.fillCircle(216, 10, 2, blink ? kLine : kBackground);
 }
 
@@ -722,6 +741,19 @@ void handleTouchAndUiActions(uint32_t nowMs) {
     }
   }
   handleUiAction(wifiSetupUi.poll(nowMs), nowMs);
+  if (wifiSetupUi.takeFullRenderRequest()) {
+    redrawCurrentView(nowMs);
+  }
+  switch (currentDisplaySurface()) {
+    case DisplaySurface::Calibration:
+      return;
+    case DisplaySurface::Setup:
+      wifiSetupUi.renderDynamic(camperNetwork.status());
+      return;
+    case DisplaySurface::Dashboard:
+      drawDashboardWanIndicator(nowMs);
+      return;
+  }
 }
 
 void collectScanTerminal() {
@@ -786,7 +818,7 @@ void updateClockAndStatusWhenDue(uint32_t nowMs) {
     case DisplaySurface::Calibration:
       return;
     case DisplaySurface::Setup:
-      wifiSetupUi.render(camperNetwork.status());
+      wifiSetupUi.renderDynamic(camperNetwork.status());
       return;
     case DisplaySurface::Dashboard:
       drawDashboardHeader(nowMs);

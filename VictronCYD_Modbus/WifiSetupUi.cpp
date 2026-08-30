@@ -131,6 +131,7 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
       open();
       awaitEntryRelease_ = true;
       lastActivityMs_ = nowMs;
+      fullRenderRequested_ = true;
     }
     return noAction();
   }
@@ -152,6 +153,23 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
     return simpleAction(WifiSetupActionType::Exit);
   }
   return noAction();
+}
+
+uint8_t WifiSetupUi::wanHoldCountdown(uint32_t nowMs) const {
+  if (!wanHoldActive_) {
+    return 0;
+  }
+  const uint32_t elapsed = nowMs - wanHoldStartedMs_;
+  if (elapsed >= kWanHoldMs) {
+    return 0;
+  }
+  return static_cast<uint8_t>((kWanHoldMs - elapsed + 999) / 1000);
+}
+
+bool WifiSetupUi::takeFullRenderRequest() {
+  const bool requested = fullRenderRequested_;
+  fullRenderRequested_ = false;
+  return requested;
 }
 
 WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs) {
@@ -377,7 +395,34 @@ void WifiSetupUi::drawHeader(WanPhase wanPhase) {
     drawButton(kNearbyTabBounds, "Nearby",
                view_ == WifiSetupView::Nearby || view_ == WifiSetupView::Scanning);
   }
+  drawWanStatusLine(wanPhase);
+}
+
+void WifiSetupUi::drawWanStatusLine(WanPhase wanPhase) {
   display_.drawLine(0, 35, display_.width() - 1, 35, wanPhaseColor(wanPhase));
+}
+
+void WifiSetupUi::drawPortalExpiry() {
+  display_.fillRect(70, 215, 180, 20, kBackground);
+  if (static_cast<int32_t>(portalExpiresAtMs_ - lastNowMs_) <= 0) {
+    return;
+  }
+  char expiry[32];
+  const unsigned long seconds =
+      static_cast<unsigned long>((portalExpiresAtMs_ - lastNowMs_ + 999) / 1000);
+  std::snprintf(expiry, sizeof(expiry), "Expires in %lus", seconds);
+  display_.setTextColor(TFT_WHITE, kBackground);
+  display_.setTextDatum(MC_DATUM);
+  display_.drawString(expiry, display_.width() / 2, 224, 1);
+}
+
+void WifiSetupUi::drawClearHoldCountdown() {
+  const uint32_t elapsed = lastNowMs_ - clearHoldStartedMs_;
+  const uint32_t remaining = elapsed >= kClearHoldMs ? 0 : kClearHoldMs - elapsed;
+  const unsigned long seconds = static_cast<unsigned long>((remaining + 999) / 1000);
+  char clearLabel[32];
+  std::snprintf(clearLabel, sizeof(clearLabel), "Clear in %lus", seconds);
+  drawButton(kClearBounds, clearLabel, true);
 }
 
 void WifiSetupUi::render(const CamperNetworkStatus& networkStatus) {
@@ -408,6 +453,40 @@ void WifiSetupUi::render(const CamperNetworkStatus& networkStatus) {
     case WifiSetupView::Closed:
     default:
       break;
+  }
+  lastDynamicWanPhase_ = static_cast<int>(networkStatus.wanPhase);
+  const int32_t portalRemainingMs = static_cast<int32_t>(portalExpiresAtMs_ - lastNowMs_);
+  lastPortalCountdown_ = view_ == WifiSetupView::Portal && portalRemainingMs > 0
+                              ? static_cast<int>((portalRemainingMs + 999) / 1000)
+                              : -1;
+  lastClearCountdown_ = clearHoldActive_ ? static_cast<int>((kClearHoldMs -
+      (lastNowMs_ - clearHoldStartedMs_) + 999) / 1000) : -1;
+}
+
+void WifiSetupUi::renderDynamic(const CamperNetworkStatus& networkStatus) {
+  if (!isOpen()) {
+    return;
+  }
+  const int wanPhase = static_cast<int>(networkStatus.wanPhase);
+  if (wanPhase != lastDynamicWanPhase_) {
+    drawWanStatusLine(networkStatus.wanPhase);
+    lastDynamicWanPhase_ = wanPhase;
+  }
+  if (view_ == WifiSetupView::Portal) {
+    const int32_t remainingMs = static_cast<int32_t>(portalExpiresAtMs_ - lastNowMs_);
+    const int countdown = remainingMs > 0 ? static_cast<int>((remainingMs + 999) / 1000) : 0;
+    if (countdown != lastPortalCountdown_) {
+      drawPortalExpiry();
+      lastPortalCountdown_ = countdown;
+    }
+  }
+  if (view_ == WifiSetupView::Saved && clearHoldActive_) {
+    const int countdown = static_cast<int>((kClearHoldMs - (lastNowMs_ - clearHoldStartedMs_) +
+                                            999) / 1000);
+    if (countdown != lastClearCountdown_) {
+      drawClearHoldCountdown();
+      lastClearCountdown_ = countdown;
+    }
   }
 }
 
@@ -531,13 +610,7 @@ void WifiSetupUi::renderPortal() {
   display_.setTextColor(TFT_WHITE, kBackground);
   display_.drawString("Pairing code", display_.width() / 2, 168, 2);
   display_.drawString(portalCode_, display_.width() / 2, 191, 4);
-  if (static_cast<int32_t>(portalExpiresAtMs_ - lastNowMs_) > 0) {
-    char expiry[32];
-    const unsigned long minutes =
-        static_cast<unsigned long>((portalExpiresAtMs_ - lastNowMs_ + 59999) / 60000);
-    std::snprintf(expiry, sizeof(expiry), "Expires in %lu min", minutes);
-    display_.drawString(expiry, display_.width() / 2, 224, 1);
-  }
+  drawPortalExpiry();
 }
 
 void WifiSetupUi::renderResult() {

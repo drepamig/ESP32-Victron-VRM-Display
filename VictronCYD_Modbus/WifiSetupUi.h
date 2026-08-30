@@ -55,6 +55,9 @@ class WifiSetupUi {
   void close();
   bool isOpen() const;
   void render(const CamperNetworkStatus& networkStatus);
+  void renderDynamic(const CamperNetworkStatus& networkStatus);
+  bool takeFullRenderRequest();
+  uint8_t wanHoldCountdown(uint32_t nowMs) const;
   WifiSetupAction handleTouch(const TouchPoint& point, uint32_t nowMs);
   WifiSetupAction handleRelease(uint32_t nowMs);
   WifiSetupAction poll(uint32_t nowMs);
@@ -78,6 +81,9 @@ class WifiSetupUi {
   static WifiSetupAction noAction();
   static WifiSetupAction simpleAction(WifiSetupActionType type, int profileIndex = -1);
   void drawHeader(WanPhase wanPhase);
+  void drawWanStatusLine(WanPhase wanPhase);
+  void drawPortalExpiry();
+  void drawClearHoldCountdown();
   void drawButton(const WifiSetupRect& bounds, const char* label, bool selected = false);
   void renderSaved();
   void renderScanning();
@@ -101,10 +107,14 @@ class WifiSetupUi {
   bool awaitEntryRelease_ = false;
   bool clearHoldActive_ = false;
   bool clearActionEmitted_ = false;
+  bool fullRenderRequested_ = false;
   uint32_t wanHoldStartedMs_ = 0;
   uint32_t clearHoldStartedMs_ = 0;
   uint32_t lastActivityMs_ = 0;
   uint32_t lastNowMs_ = 0;
+  int lastDynamicWanPhase_ = -1;
+  int lastPortalCountdown_ = -1;
+  int lastClearCountdown_ = -1;
   String portalSsid_;
   String portalCode_;
   uint32_t portalExpiresAtMs_ = 0;

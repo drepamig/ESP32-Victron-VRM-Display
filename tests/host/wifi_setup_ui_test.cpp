@@ -48,6 +48,79 @@ void testWanHoldRequiresContinuousContact() {
         "setup navigation must work after the entry contact releases");
 }
 
+// Mutation caught: removing remaining-time countdown progression or the immediate
+// transition request leaves the dashboard without visible hold feedback or setup redraw.
+void testWanHoldCountdownAndImmediateSetupTransition() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ui.handleTouch({300, 10}, 1000);
+  check(ui.wanHoldCountdown(1000) == 3 && ui.wanHoldCountdown(2000) == 2 &&
+            ui.wanHoldCountdown(3000) == 1 && ui.wanHoldCountdown(3999) == 1,
+        "WAN hold must show hand-derived 3, 2, 1 countdown values without zero");
+  check(ui.poll(4000).type == WifiSetupActionType::None && ui.isOpen() &&
+            ui.takeFullRenderRequest(),
+        "three-second WAN hold must open and request an immediate full setup render");
+  check(!ui.takeFullRenderRequest(), "setup transition render request must be consumed once");
+  check(ui.handleTouch({210, 18}, 4001).type == WifiSetupActionType::None,
+        "entry contact must remain gated until release");
+  ui.handleRelease(4002);
+  check(ui.handleTouch({210, 18}, 4003).type == WifiSetupActionType::Refresh,
+        "release must unlock setup controls after entry");
+}
+
+// Mutation caught: retaining WAN hold state after release or leaving the indicator bounds
+// would allow a cancelled contact to open setup later.
+void testWanHoldCancellationRestoresIndicatorState() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ui.handleTouch({300, 10}, 1000);
+  ui.handleRelease(1500);
+  check(ui.wanHoldCountdown(1500) == 0 && !ui.isOpen() &&
+            ui.poll(5000).type == WifiSetupActionType::None,
+        "early release must cancel the hold and prevent delayed setup opening");
+  ui.handleTouch({300, 10}, 6000);
+  ui.handleTouch({100, 100}, 6500);
+  check(ui.wanHoldCountdown(6500) == 0 && !ui.isOpen() &&
+            ui.poll(10000).type == WifiSetupActionType::None,
+        "moving outside WAN bounds must cancel the hold and restore dashboard state");
+}
+
+// Mutation caught: restoring periodic full render increments fillScreen while a stable
+// setup surface only needs WAN, portal-expiry, and clear-hold regions refreshed.
+void testDynamicSetupRefreshAvoidsFullScreenButUpdatesChangingRegions() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ui.open();
+  ui.render(offlineStatus());
+  const uint32_t savedFullRenders = display.fillScreenCount;
+  ui.renderDynamic(offlineStatus());
+  ui.renderDynamic(offlineStatus());
+  check(display.fillScreenCount == savedFullRenders,
+        "stable setup dynamic refresh must not clear the full display");
+  CamperNetworkStatus online = offlineStatus();
+  online.wanPhase = WanPhase::Online;
+  ui.renderDynamic(online);
+  check(display.fillScreenCount == savedFullRenders,
+        "WAN phase update must use partial drawing without a full clear");
+
+  ui.showPortal("Test", "123456", 10000);
+  ui.render(offlineStatus());
+  const uint32_t portalFullRenders = display.fillScreenCount;
+  ui.poll(1000);
+  ui.renderDynamic(offlineStatus());
+  check(display.fillScreenCount == portalFullRenders && display.drew("Expires in 9s"),
+        "portal expiry countdown must remain refreshable through partial drawing");
+
+  ui.open();
+  ui.render(offlineStatus());
+  ui.handleTouch({270, 218}, 0);
+  ui.poll(1000);
+  const uint32_t clearFullRenders = display.fillScreenCount;
+  ui.renderDynamic(offlineStatus());
+  check(display.fillScreenCount == clearFullRenders && display.drew("Clear in 9s"),
+        "clear-saved countdown must remain refreshable without a full clear");
+}
+
 void testSavedSelectionConnectAndDeleteConfirmation() {
   TFT_eSPI display;
   WifiSetupUi ui(display);
@@ -346,6 +419,9 @@ void testBackInactivityPortalAndResultViews() {
 
 int main() {
   testWanHoldRequiresContinuousContact();
+  testWanHoldCountdownAndImmediateSetupTransition();
+  testWanHoldCancellationRestoresIndicatorState();
+  testDynamicSetupRefreshAvoidsFullScreenButUpdatesChangingRegions();
   testSavedSelectionConnectAndDeleteConfirmation();
   testNearbyRoutingPaginationAndRefresh();
   testLateScanResultsDoNotOwnNavigation();

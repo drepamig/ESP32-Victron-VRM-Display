@@ -40,6 +40,7 @@ class TFT_eSPI {
   int16_t height() const { return 240; }
 
   void fillScreen(uint16_t) {
+    ++fillScreenCount;
     drawnStrings.clear();
     filledRects.clear();
     drawnCircles.clear();
@@ -106,4 +107,5 @@ class TFT_eSPI {
   std::vector<std::string> drawnStrings;
   std::vector<RectCall> filledRects;
   std::vector<CircleCall> drawnCircles;
+  uint32_t fillScreenCount = 0;
 };
