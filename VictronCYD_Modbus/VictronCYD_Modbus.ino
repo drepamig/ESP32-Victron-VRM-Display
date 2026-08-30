@@ -462,14 +462,24 @@ void drawDashboardHeader(uint32_t nowMs) {
   tft.fillCircle(216, 10, 2, blink ? kLine : kBackground);
 }
 
+DisplaySurface currentDisplaySurface() {
+  return displaySurfaceFor(touchInputReady, touchInputReady && touchInput.calibrated(),
+                           wifiSetupUi.isOpen());
+}
+
 void redrawCurrentView(uint32_t nowMs) {
-  if (wifiSetupUi.isOpen()) {
-    wifiSetupUi.render(camperNetwork.status());
-    return;
+  switch (currentDisplaySurface()) {
+    case DisplaySurface::Calibration:
+      return;
+    case DisplaySurface::Setup:
+      wifiSetupUi.render(camperNetwork.status());
+      return;
+    case DisplaySurface::Dashboard:
+      drawDashboardFrame();
+      drawDashboardHeader(nowMs);
+      drawDashboardValues();
+      return;
   }
-  drawDashboardFrame();
-  drawDashboardHeader(nowMs);
-  drawDashboardValues();
 }
 
 void refreshSavedProfiles() {
@@ -571,9 +581,7 @@ void beginPendingProfile(const String& ssid, String& passphrase, uint8_t securit
   pendingProfile.lastSuccessEpoch = 0;
   secureClearString(passphrase);
   wifiSetupUi.close();
-  drawDashboardFrame();
-  drawDashboardHeader(nowMs);
-  drawDashboardValues();
+  redrawCurrentView(nowMs);
   if (!camperNetwork.connect(pendingProfile, nowMs)) {
     showPendingFailure("Connection rejected", gatewayLifecycle.pendingImmediateFailure(), nowMs);
   }
@@ -753,7 +761,7 @@ void pollModbusWhenDue(uint32_t nowMs) {
     if (received.valid) {
       dashboardSnapshot = received;
       hasValidGxSnapshot = true;
-      if (!wifiSetupUi.isOpen()) {
+      if (currentDisplaySurface() == DisplaySurface::Dashboard) {
         drawDashboardValues();
       }
     }
@@ -774,10 +782,15 @@ void updateClockAndStatusWhenDue(uint32_t nowMs) {
   }
   lastClockMs = nowMs;
   blink = !blink;
-  if (wifiSetupUi.isOpen()) {
-    wifiSetupUi.render(camperNetwork.status());
-  } else {
-    drawDashboardHeader(nowMs);
+  switch (currentDisplaySurface()) {
+    case DisplaySurface::Calibration:
+      return;
+    case DisplaySurface::Setup:
+      wifiSetupUi.render(camperNetwork.status());
+      return;
+    case DisplaySurface::Dashboard:
+      drawDashboardHeader(nowMs);
+      return;
   }
 }
 
@@ -827,7 +840,7 @@ void setup() {
   refreshSavedProfiles();
   copyText(dashboardSnapshot.battState, sizeof(dashboardSnapshot.battState), "-");
   copyText(dashboardSnapshot.sysState, sizeof(dashboardSnapshot.sysState), "-");
-  if (touchInputReady && touchInput.calibrated()) {
+  if (currentDisplaySurface() != DisplaySurface::Calibration) {
     redrawCurrentView(millis());
   }
 

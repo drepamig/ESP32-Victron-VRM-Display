@@ -150,6 +150,23 @@ void testScanTerminalRouting() {
         "failed scan routes to a retryable failure result");
 }
 
+// Mutation caught: removing calibration priority would let the setup or dashboard
+// renderer overwrite the touch calibration targets while calibration is incomplete.
+void testCalibrationExclusivelyOwnsDisplayUntilComplete() {
+  check(displaySurfaceFor(true, false, false) == DisplaySurface::Calibration,
+        "uncalibrated touch owns the display instead of dashboard rendering");
+  check(displaySurfaceFor(true, false, true) == DisplaySurface::Calibration,
+        "uncalibrated touch owns the display instead of setup rendering");
+  check(displaySurfaceFor(true, true, true) == DisplaySurface::Setup,
+        "completed calibration lets an open setup UI own the display");
+  check(displaySurfaceFor(true, true, false) == DisplaySurface::Dashboard,
+        "completed calibration lets the dashboard own a closed setup UI");
+  check(displaySurfaceFor(false, false, true) == DisplaySurface::Setup,
+        "failed touch initialization preserves setup rendering");
+  check(displaySurfaceFor(false, false, false) == DisplaySurface::Dashboard,
+        "failed touch initialization preserves dashboard rendering");
+}
+
 }  // namespace
 
 int main() {
@@ -159,5 +176,6 @@ int main() {
   testReplacingPendingLifecycleInvalidatesOldDeadline();
   testExitPreservesPendingButCancelsPhysicalPortal();
   testScanTerminalRouting();
+  testCalibrationExclusivelyOwnsDisplayUntilComplete();
   return failures == 0 ? 0 : 1;
 }

@@ -15,6 +15,19 @@ enum class ScanUiOutcome : uint8_t {
   ShowRetryableFailure,
 };
 
+enum class DisplaySurface : uint8_t {
+  Calibration,
+  Setup,
+  Dashboard,
+};
+
+inline DisplaySurface displaySurfaceFor(bool touchReady, bool calibrated, bool setupOpen) {
+  if (touchReady && !calibrated) {
+    return DisplaySurface::Calibration;
+  }
+  return setupOpen ? DisplaySurface::Setup : DisplaySurface::Dashboard;
+}
+
 inline ScanUiOutcome scanUiOutcome(bool complete, bool failed) {
   if (complete) {
     return ScanUiOutcome::DeliverResults;
