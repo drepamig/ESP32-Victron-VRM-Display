@@ -323,6 +323,14 @@ void WifiSetupUi::setScanResults(const ScanResult* results, size_t count) {
   }
 }
 
+bool WifiSetupUi::showScanFailure(const String& message) {
+  if (!isOpen() || view_ != WifiSetupView::Scanning) {
+    return false;
+  }
+  showResult(message, false);
+  return true;
+}
+
 void WifiSetupUi::showPortal(const String& ssid, const String& code,
                              uint32_t expiresAtMs) {
   clearPortalState();

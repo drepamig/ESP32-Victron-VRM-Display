@@ -60,6 +60,7 @@ class WifiSetupUi {
   WifiSetupAction poll(uint32_t nowMs);
   void setSavedProfiles(const NetworkProfile* profiles, size_t count, int activeIndex);
   void setScanResults(const ScanResult* results, size_t count);
+  bool showScanFailure(const String& message);
   void showPortal(const String& ssid, const String& code, uint32_t expiresAtMs);
   void showResult(const String& message, bool success);
 

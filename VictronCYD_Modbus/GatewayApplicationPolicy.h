@@ -107,6 +107,10 @@ class GatewayLifecyclePolicy {
   GatewayLifecycleReplacement replaceWith(GatewayLifecycleTarget target,
                                             uint32_t nowMs = 0,
                                             int previousActiveIndex = -1) {
+    if (target == GatewayLifecycleTarget::Exit &&
+        target_ == GatewayLifecycleTarget::PendingProfile) {
+      return {false, false};
+    }
     const GatewayLifecycleReplacement replacement{
         target_ == GatewayLifecycleTarget::PendingProfile,
         target_ == GatewayLifecycleTarget::PhysicalPortal,

@@ -513,7 +513,9 @@ void replaceGatewayLifecycle(GatewayLifecycleTarget target, uint32_t nowMs = 0,
   if (replacement.cancelPhysicalPortal) {
     portal.cancel();
   }
-  clearPendingApplicationBuffers();
+  if (target != GatewayLifecycleTarget::Exit || !gatewayLifecycle.pendingActive()) {
+    clearPendingApplicationBuffers();
+  }
 }
 
 bool reconnectPreviousProfile(uint32_t nowMs, int previousIndex) {
@@ -729,8 +731,9 @@ void collectScanTerminal() {
     }
     case ScanUiOutcome::ShowRetryableFailure:
       camperNetwork.clearScanFailure();
-      wifiSetupUi.showResult("Scan failed; retry", false);
-      wifiSetupUi.render(camperNetwork.status());
+      if (wifiSetupUi.showScanFailure("Scan failed; retry")) {
+        wifiSetupUi.render(camperNetwork.status());
+      }
       break;
     case ScanUiOutcome::None:
     default:

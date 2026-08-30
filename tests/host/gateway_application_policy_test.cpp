@@ -117,12 +117,28 @@ void testReplacingPendingLifecycleInvalidatesOldDeadline() {
   check(replacement.cancelPendingProfile &&
             lifecycle.evaluatePending(false, 360000).outcome == PendingProfileOutcome::None,
         "clear-all cancels pending without allowing its deadline to restore anything");
+}
 
+void testExitPreservesPendingButCancelsPhysicalPortal() {
+  GatewayLifecyclePolicy lifecycle;
   lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 400000, 1);
-  replacement = lifecycle.replaceWith(GatewayLifecycleTarget::Exit, 401000, -1);
-  check(replacement.cancelPendingProfile &&
-            lifecycle.evaluatePending(true, 460000).outcome == PendingProfileOutcome::None,
-        "exit cancels pending without allowing later success to override the exit");
+  GatewayLifecycleReplacement replacement =
+      lifecycle.replaceWith(GatewayLifecycleTarget::Exit, 401000, -1);
+  check(!replacement.cancelPendingProfile && !replacement.cancelPhysicalPortal &&
+            lifecycle.pendingActive(),
+        "ordinary Exit preserves the pending connection and retained fallback");
+  check(lifecycle.evaluatePending(false, 459999).outcome == PendingProfileOutcome::None,
+        "pending connection continues through its original deadline after Exit");
+  PendingProfileEvaluation timeout = lifecycle.evaluatePending(false, 460000);
+  check(timeout.outcome == PendingProfileOutcome::RestorePrevious &&
+            timeout.previousActiveIndex == 1,
+        "pending timeout after Exit still restores the retained previous profile");
+
+  lifecycle.replaceWith(GatewayLifecycleTarget::PhysicalPortal, 500000, -1);
+  replacement = lifecycle.replaceWith(GatewayLifecycleTarget::Exit, 501000, -1);
+  check(!replacement.cancelPendingProfile && replacement.cancelPhysicalPortal &&
+            lifecycle.target() == GatewayLifecycleTarget::Exit,
+        "Exit from Portal still cancels the physical portal lifecycle");
 }
 
 void testScanTerminalRouting() {
@@ -141,6 +157,7 @@ int main() {
   testPendingCommitAndTimeoutRetainPriorSelection();
   testPendingDeadlineAndGxFreshnessWraparound();
   testReplacingPendingLifecycleInvalidatesOldDeadline();
+  testExitPreservesPendingButCancelsPhysicalPortal();
   testScanTerminalRouting();
   return failures == 0 ? 0 : 1;
 }

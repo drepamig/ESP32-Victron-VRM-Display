@@ -183,6 +183,41 @@ void testLateScanResultsDoNotOwnNavigation() {
         "Saved controls must remain active after late scan results");
 }
 
+void testLateScanFailureDoesNotOwnNavigation() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+
+  ui.open();
+  check(ui.handleTouch({210, 18}, 10).type == WifiSetupActionType::Refresh,
+        "Nearby should enter Scanning before late-failure Back test");
+  check(ui.handleTouch({30, 18}, 20).type == WifiSetupActionType::Exit && !ui.isOpen(),
+        "Back must close while the failing scan is outstanding");
+  check(!ui.showScanFailure("Scan failed; retry") && !ui.isOpen(),
+        "late scan failure must not reopen a Back-closed UI");
+
+  NetworkProfile saved[1]{{"Saved", "not-rendered", 3, 7}};
+  ui.setSavedProfiles(saved, 1, 0);
+  ui.open();
+  check(ui.handleTouch({210, 18}, 100).type == WifiSetupActionType::Refresh,
+        "Nearby should enter Scanning before late-failure navigation test");
+  check(ui.handleTouch({100, 18}, 101).type == WifiSetupActionType::None,
+        "Saved tab should take ownership from the failing scan");
+  check(!ui.showScanFailure("Scan failed; retry"),
+        "late scan failure must not replace the newer Saved view");
+  check(ui.handleTouch({100, 56}, 102).type == WifiSetupActionType::None &&
+            ui.handleTouch({55, 218}, 103).type == WifiSetupActionType::ConnectSaved,
+        "Saved controls must remain active after a late scan failure");
+
+  ui.open();
+  check(ui.handleTouch({210, 18}, 200).type == WifiSetupActionType::Refresh,
+        "Nearby should enter Scanning before owned-failure test");
+  check(ui.showScanFailure("Scan failed; retry"),
+        "scan failure should be presented while UI still owns Scanning");
+  ui.render(offlineStatus());
+  check(display.drewContaining("Scan failed; retry") && display.drewContaining("Failed"),
+        "owned scan failure should render a retryable result");
+}
+
 void testNearbyPaginationRetainsMoreThanTwentyResults() {
   TFT_eSPI display;
   WifiSetupUi ui(display);
@@ -314,6 +349,7 @@ int main() {
   testSavedSelectionConnectAndDeleteConfirmation();
   testNearbyRoutingPaginationAndRefresh();
   testLateScanResultsDoNotOwnNavigation();
+  testLateScanFailureDoesNotOwnNavigation();
   testNearbyPaginationRetainsMoreThanTwentyResults();
   testReplacementScanClampsInvalidPage();
   testClearAllHoldCountdownAndReleaseCancellation();
