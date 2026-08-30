@@ -134,6 +134,78 @@ void testRestartRecoversPersistentFailure() {
         "restart recovery restores prior logical profile");
 }
 
+void testAtomicUpsertAndActivateSuccessCases() {
+  Preferences::reset();
+  NetworkProfileStore store;
+  check(store.begin(), "atomic success setup");
+  check(insert(store, profile("zero", "a", 1, 10)), "atomic add zero");
+  check(insert(store, profile("one", "b", 1, 20)), "atomic add one");
+  check(store.activate(1), "atomic activate initial one");
+
+  size_t storedIndex = NetworkProfileStore::kMaxProfiles;
+  check(store.upsertAndActivate(profile("new", "c", 3, 30), storedIndex) &&
+            storedIndex == 2 && store.count() == 3 && store.activeIndex() == 2,
+        "atomic append stores and activates in one operation");
+
+  check(store.upsertAndActivate(profile("new", "updated", 8, 80), storedIndex) &&
+            storedIndex == 2 && store.count() == 3 && store.activeIndex() == 2,
+        "atomic reprovision of active SSID updates in place and stays active");
+  NetworkProfile loaded;
+  check(store.load(2, loaded) && loaded.passphrase == String("updated") &&
+            loaded.securityType == 8 && loaded.lastSuccessEpoch == 80,
+        "atomic active-SSID reprovision persists exact replacement profile");
+}
+
+void testAtomicFullCapacityEvictionBecomesActive() {
+  Preferences::reset();
+  NetworkProfileStore store;
+  check(store.begin(), "atomic full setup");
+  check(insert(store, profile("zero", "a", 1, 10)), "atomic full add zero");
+  check(insert(store, profile("one", "b", 1, 20)), "atomic full add one");
+  check(insert(store, profile("two", "c", 1, 30)), "atomic full add two");
+  check(insert(store, profile("three", "d", 1, 40)), "atomic full add three");
+  check(insert(store, profile("four", "e", 1, 50)), "atomic full add four");
+  check(store.activate(2), "atomic full activate protected profile");
+
+  size_t storedIndex = NetworkProfileStore::kMaxProfiles;
+  check(store.upsertAndActivate(profile("replacement", "f", 4, 60), storedIndex) &&
+            storedIndex == 0 && store.count() == 5 && store.activeIndex() == 0,
+        "atomic full insert evicts oldest non-active and activates replacement");
+  NetworkProfile loaded;
+  check(store.load(0, loaded) && loaded.ssid == String("replacement") &&
+            store.load(2, loaded) && loaded.ssid == String("two"),
+        "atomic full insert preserves the formerly active protected record");
+}
+
+void testAtomicCommitFailurePreservesExactPriorSnapshot() {
+  Preferences::reset();
+  NetworkProfileStore store;
+  check(store.begin(), "atomic rollback setup");
+  check(insert(store, profile("zero", "a", 1, 10)), "atomic rollback add zero");
+  check(insert(store, profile("one", "b", 2, 20)), "atomic rollback add one");
+  check(insert(store, profile("two", "c", 3, 30)), "atomic rollback add two");
+  check(store.activate(1), "atomic rollback activate one");
+
+  Preferences::failOnMutation(16);
+  size_t storedIndex = 77;
+  check(!store.upsertAndActivate(profile("replacement", "new", 9, 90), storedIndex) &&
+            storedIndex == 77,
+        "atomic injected canonical-write failure returns without publishing an index");
+  check(store.count() == 3 && store.activeIndex() == 1,
+        "atomic failure preserves exact prior count and active index");
+  const NetworkProfile expected[3]{{"zero", "a", 1, 10},
+                                   {"one", "b", 2, 20},
+                                   {"two", "c", 3, 30}};
+  for (size_t index = 0; index < 3; ++index) {
+    NetworkProfile loaded;
+    check(store.load(index, loaded) && loaded.ssid == expected[index].ssid &&
+              loaded.passphrase == expected[index].passphrase &&
+              loaded.securityType == expected[index].securityType &&
+              loaded.lastSuccessEpoch == expected[index].lastSuccessEpoch,
+          "atomic failure preserves every prior profile field");
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -144,5 +216,8 @@ int main() {
   testDeletionAndClear();
   testTransientWriteFailureRestoresPriorStore();
   testRestartRecoversPersistentFailure();
+  testAtomicUpsertAndActivateSuccessCases();
+  testAtomicFullCapacityEvictionBecomesActive();
+  testAtomicCommitFailurePreservesExactPriorSnapshot();
   return failures == 0 ? 0 : 1;
 }

@@ -298,20 +298,36 @@ void testAsyncScanGatingFailureAndResults() {
   resetFakes();
   CamperNetwork gateway;
   startGateway(gateway);
+  WiFi.scanStartResult = WIFI_SCAN_FAILED;
+  check(!gateway.startScan() && gateway.scanPhase() == ScanPhase::Failed &&
+            gateway.status().apReady,
+        "immediate scan rejection latches Failed without stopping AP");
+  gateway.clearScanFailure();
+  check(gateway.scanPhase() == ScanPhase::Idle,
+        "acknowledging scan failure returns scan lifecycle to Idle");
+
+  WiFi.scanStartResult = WIFI_SCAN_RUNNING;
   check(gateway.startScan(), "async scan starts");
-  check(!gateway.startScan() && WiFi.scanStartCalls == 1, "active scan gates duplicate start");
+  check(gateway.scanPhase() == ScanPhase::Running,
+        "successful scan start clears old failure and reports Running");
+  check(!gateway.startScan() && WiFi.scanStartCalls == 2, "active scan gates duplicate start");
   check(WiFi.lastScanAsync && !WiFi.lastScanShowHidden, "scan is asynchronous and excludes hidden networks");
   WiFi.scanCompleteValue = WIFI_SCAN_RUNNING;
   check(!gateway.scanComplete(), "running scan is incomplete");
   WiFi.scanCompleteValue = WIFI_SCAN_FAILED;
   check(!gateway.scanComplete(), "failed scan is not complete");
-  check(gateway.startScan() && WiFi.scanStartCalls == 2, "failed scan releases start gate");
+  check(gateway.scanPhase() == ScanPhase::Failed && gateway.status().apReady,
+        "asynchronous scan failure is terminal and keeps AP ready");
+  check(gateway.startScan() && WiFi.scanStartCalls == 3, "failed scan releases start gate");
+  check(gateway.scanPhase() == ScanPhase::Running,
+        "new successful scan resets asynchronous failure");
 
   WiFi.scanRecords = {{String(""), -10, 1, 1}, {String("A"), -70, 2, 1},
                       {String("B"), -40, 4, 11}, {String("A"), -30, 3, 6},
                       {String("C"), -50, 5, 3}};
   WiFi.scanCompleteValue = 5;
   check(gateway.scanComplete(), "completed scan reports ready");
+  check(gateway.scanPhase() == ScanPhase::Complete, "completed scan latches Complete");
   ScanResult output[2];
   const size_t copied = gateway.scanResults(output, 2);
   check(copied == 2, "scan respects output capacity");
@@ -321,6 +337,7 @@ void testAsyncScanGatingFailureAndResults() {
   check(output[1].ssid == String("B") && output[1].rssi == -40,
         "scan excludes empty SSID and sorts descending by RSSI");
   check(WiFi.scanDeleteCalls == 1, "scan storage deleted after copying");
+  check(gateway.scanPhase() == ScanPhase::Idle, "consumed scan returns to Idle");
   check(gateway.scanResults(output, 2) == 0 && WiFi.scanDeleteCalls == 1,
         "consumed scan cannot be copied or deleted twice");
 }

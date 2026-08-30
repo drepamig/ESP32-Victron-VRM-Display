@@ -152,15 +152,20 @@ bool CamperNetwork::connect(const NetworkProfile& profile, uint32_t nowMs) {
 }
 
 bool CamperNetwork::startScan() {
-  if (scanActive_) {
+  if (scanPhase_ == ScanPhase::Running) {
     return false;
   }
-  scanActive_ = WiFi.scanNetworks(true, false) == WIFI_SCAN_RUNNING;
-  return scanActive_;
+  scanPhase_ = WiFi.scanNetworks(true, false) == WIFI_SCAN_RUNNING
+                   ? ScanPhase::Running
+                   : ScanPhase::Failed;
+  return scanPhase_ == ScanPhase::Running;
 }
 
 bool CamperNetwork::scanComplete() const {
-  if (!scanActive_) {
+  if (scanPhase_ == ScanPhase::Complete) {
+    return true;
+  }
+  if (scanPhase_ != ScanPhase::Running) {
     return false;
   }
   const int16_t result = WiFi.scanComplete();
@@ -168,22 +173,33 @@ bool CamperNetwork::scanComplete() const {
     return false;
   }
   if (result == WIFI_SCAN_FAILED) {
-    scanActive_ = false;
+    scanPhase_ = ScanPhase::Failed;
     return false;
   }
+  scanPhase_ = ScanPhase::Complete;
   return true;
 }
 
+ScanPhase CamperNetwork::scanPhase() const {
+  return scanPhase_;
+}
+
+void CamperNetwork::clearScanFailure() {
+  if (scanPhase_ == ScanPhase::Failed) {
+    scanPhase_ = ScanPhase::Idle;
+  }
+}
+
 size_t CamperNetwork::scanResults(ScanResult* output, size_t capacity) {
-  if (!scanActive_) {
+  if (scanPhase_ != ScanPhase::Complete) {
     return 0;
   }
   const int16_t scanCount = WiFi.scanComplete();
   if (scanCount == WIFI_SCAN_RUNNING) {
     return 0;
   }
-  scanActive_ = false;
   if (scanCount == WIFI_SCAN_FAILED) {
+    scanPhase_ = ScanPhase::Failed;
     WiFi.scanDelete();
     return 0;
   }
@@ -219,6 +235,7 @@ size_t CamperNetwork::scanResults(ScanResult* output, size_t capacity) {
     output[index] = unique[index];
   }
   WiFi.scanDelete();
+  scanPhase_ = ScanPhase::Idle;
   return copied;
 }
 

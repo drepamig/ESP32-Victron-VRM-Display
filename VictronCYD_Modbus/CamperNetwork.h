@@ -16,6 +16,8 @@ struct ScanResult {
   int32_t channel;
 };
 
+enum class ScanPhase : uint8_t { Idle, Running, Complete, Failed };
+
 struct CamperNetworkStatus {
   bool apReady;
   WanPhase wanPhase;
@@ -37,6 +39,8 @@ class CamperNetwork {
   bool connect(const NetworkProfile& profile, uint32_t nowMs);
   bool startScan();
   bool scanComplete() const;
+  ScanPhase scanPhase() const;
+  void clearScanFailure();
   size_t scanResults(ScanResult* output, size_t capacity);
   CamperNetworkStatus status() const;
   bool pendingProfileConnected() const;
@@ -55,7 +59,7 @@ class CamperNetwork {
   bool apReady_ = false;
   bool selectedProfile_ = false;
   bool pendingProfile_ = false;
-  mutable bool scanActive_ = false;
+  mutable ScanPhase scanPhase_ = ScanPhase::Idle;
   bool retryScheduled_ = false;
   bool validationScheduled_ = false;
   bool validationWorkerActive_ = false;

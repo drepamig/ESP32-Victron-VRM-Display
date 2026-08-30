@@ -79,11 +79,68 @@ void testPendingDeadlineAndGxFreshnessWraparound() {
         "GX snapshot freshness is wraparound-safe");
 }
 
+void testReplacingPendingLifecycleInvalidatesOldDeadline() {
+  GatewayLifecyclePolicy lifecycle;
+  GatewayLifecycleReplacement replacement =
+      lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 1000, 1);
+  check(!replacement.cancelPendingProfile && !replacement.cancelPhysicalPortal,
+        "first pending lifecycle has nothing older to cancel");
+
+  replacement = lifecycle.replaceWith(GatewayLifecycleTarget::SavedConnection, 2000, -1);
+  check(replacement.cancelPendingProfile && !replacement.cancelPhysicalPortal &&
+            lifecycle.target() == GatewayLifecycleTarget::SavedConnection,
+        "pending to saved replacement cancels only the old pending attempt");
+  check(lifecycle.evaluatePending(false, 61000).outcome == PendingProfileOutcome::None,
+        "saved replacement makes the old pending deadline inert");
+
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 100000, 2);
+  replacement = lifecycle.replaceWith(GatewayLifecycleTarget::PhysicalPortal, 101000, -1);
+  check(replacement.cancelPendingProfile && !replacement.cancelPhysicalPortal &&
+            lifecycle.physicalPortalActive(),
+        "pending to portal replacement cancels pending and transfers ownership to portal");
+  check(lifecycle.evaluatePending(true, 160000).outcome == PendingProfileOutcome::None,
+        "portal replacement prevents old pending success from replacing portal UI");
+
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 200000, 3);
+  replacement = lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 230000, 4);
+  check(replacement.cancelPendingProfile && !replacement.cancelPhysicalPortal,
+        "new open pending flow cancels the older pending attempt");
+  check(lifecycle.evaluatePending(false, 260000).outcome == PendingProfileOutcome::None,
+        "new pending flow does not inherit the old deadline");
+  PendingProfileEvaluation newTimeout = lifecycle.evaluatePending(false, 290000);
+  check(newTimeout.outcome == PendingProfileOutcome::RestorePrevious &&
+            newTimeout.previousActiveIndex == 4,
+        "new pending flow owns its own deadline and previous selection");
+
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 300000, 1);
+  replacement = lifecycle.replaceWith(GatewayLifecycleTarget::ClearAll, 301000, -1);
+  check(replacement.cancelPendingProfile &&
+            lifecycle.evaluatePending(false, 360000).outcome == PendingProfileOutcome::None,
+        "clear-all cancels pending without allowing its deadline to restore anything");
+
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 400000, 1);
+  replacement = lifecycle.replaceWith(GatewayLifecycleTarget::Exit, 401000, -1);
+  check(replacement.cancelPendingProfile &&
+            lifecycle.evaluatePending(true, 460000).outcome == PendingProfileOutcome::None,
+        "exit cancels pending without allowing later success to override the exit");
+}
+
+void testScanTerminalRouting() {
+  check(scanUiOutcome(false, false) == ScanUiOutcome::None,
+        "running or idle scan state has no terminal UI action");
+  check(scanUiOutcome(true, false) == ScanUiOutcome::DeliverResults,
+        "completed scan routes results to Nearby");
+  check(scanUiOutcome(false, true) == ScanUiOutcome::ShowRetryableFailure,
+        "failed scan routes to a retryable failure result");
+}
+
 }  // namespace
 
 int main() {
   testUnknownNetworkRouting();
   testPendingCommitAndTimeoutRetainPriorSelection();
   testPendingDeadlineAndGxFreshnessWraparound();
+  testReplacingPendingLifecycleInvalidatesOldDeadline();
+  testScanTerminalRouting();
   return failures == 0 ? 0 : 1;
 }

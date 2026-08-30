@@ -16,6 +16,7 @@
 
 #include "CamperNetwork.h"
 #include "GatewayApplicationPolicy.h"
+#include "ModbusSnapshotPolicy.h"
 #include "NetworkProfiles.h"
 #include "TouchInput.h"
 #include "WifiSetupUi.h"
@@ -54,22 +55,6 @@ struct Box {
   int height;
 };
 
-struct ModbusSnapshot {
-  double gridW;
-  double acW;
-  double dcW;
-  double battV;
-  double battA;
-  double battW;
-  double soc;
-  double battT;
-  double pvW;
-  char battState[16];
-  char sysState[20];
-  uint32_t receivedAtMs;
-  bool valid;
-};
-
 TFT_eSPI tft;
 TouchInput touchInput(tft);
 WifiSetupUi wifiSetupUi(tft);
@@ -85,16 +70,15 @@ bool modbusWorkerReady = false;
 bool modbusRequestInFlight = false;
 bool touchInputReady = false;
 
-ModbusSnapshot dashboardSnapshot{};
+ModbusSnapshot dashboardSnapshot = makeDefaultModbusSnapshot();
 bool hasValidGxSnapshot = false;
 bool gxOnline = false;
 bool profileStoreReady = false;
-bool portalPresented = false;
 bool blink = false;
 uint32_t lastModbusRequestMs = 0;
 uint32_t lastClockMs = 0;
 
-PendingProfileLifecycle pendingLifecycle;
+GatewayLifecyclePolicy gatewayLifecycle;
 NetworkProfile pendingProfile;
 NetworkProfile previousProfile;
 bool previousProfileAvailable = false;
@@ -248,59 +232,63 @@ bool readModbusRegisters(uint8_t unit, uint16_t address, uint16_t count,
   return true;
 }
 
-bool fetchModbusSnapshot(ModbusSnapshot& snapshot) {
-  snapshot = {};
-  copyText(snapshot.battState, sizeof(snapshot.battState), "-");
-  copyText(snapshot.sysState, sizeof(snapshot.sysState), "-");
+void fetchModbusReadCycle(ModbusReadCycle& cycle) {
+  cycle = {};
+  copyText(cycle.battState, sizeof(cycle.battState), "-");
+  copyText(cycle.sysState, sizeof(cycle.sysState), "-");
 
   uint16_t registers[8];
-  bool requiredValuesReady = true;
+  bool acValuesReady = false;
+  bool batteryValuesReady = false;
   if (readModbusRegisters(100, 817, 4, registers)) {
-    snapshot.acW = signedRegister(registers[0]);
-    snapshot.gridW = signedRegister(registers[3]);
-  } else {
-    requiredValuesReady = false;
+    cycle.acW = signedRegister(registers[0]);
+    cycle.gridW = signedRegister(registers[3]);
+    acValuesReady = true;
   }
   if (readModbusRegisters(100, 840, 5, registers)) {
-    snapshot.battV = registers[0] / 10.0;
-    snapshot.battA = signedRegister(registers[1]) / 10.0;
-    snapshot.battW = signedRegister(registers[2]);
-    snapshot.soc = registers[3] > 100 ? registers[3] / 10.0 : registers[3];
-    copyText(snapshot.battState, sizeof(snapshot.battState),
+    cycle.battV = registers[0] / 10.0;
+    cycle.battA = signedRegister(registers[1]) / 10.0;
+    cycle.battW = signedRegister(registers[2]);
+    cycle.soc = registers[3] > 100 ? registers[3] / 10.0 : registers[3];
+    copyText(cycle.battState, sizeof(cycle.battState),
              batteryStateText(registers[4]));
-  } else {
-    requiredValuesReady = false;
+    batteryValuesReady = true;
   }
+  cycle.requiredValid = acValuesReady && batteryValuesReady;
 
   uint16_t value[1];
   if (readModbusRegisters(100, 850, 1, value)) {
-    snapshot.pvW = value[0];
+    cycle.pvReady = true;
+    cycle.pvW = value[0];
   }
   if (readModbusRegisters(100, 860, 1, value)) {
-    snapshot.dcW = signedRegister(value[0]);
+    cycle.dcReady = true;
+    cycle.dcW = signedRegister(value[0]);
   }
   if (readModbusRegisters(228, 31, 1, value)) {
-    setVebusStateText(value[0], snapshot.sysState);
+    cycle.systemStateReady = true;
+    setVebusStateText(value[0], cycle.sysState);
   }
   if (readModbusRegisters(225, 262, 1, value)) {
-    snapshot.battT = signedRegister(value[0]) / 10.0;
+    cycle.batteryTemperatureReady = true;
+    cycle.battT = signedRegister(value[0]) / 10.0;
   }
 
-  snapshot.receivedAtMs = millis();
-  snapshot.valid = requiredValuesReady;
-  Serial.printf("[MB] result=%s\n", snapshot.valid ? "valid" : "invalid");
-  return snapshot.valid;
+  cycle.receivedAtMs = millis();
 }
 
 void modbusWorker(void*) {
   uint8_t request = 0;
+  ModbusSnapshot retainedSnapshot = makeDefaultModbusSnapshot();
   for (;;) {
     if (xQueueReceive(modbusRequestQueue, &request, portMAX_DELAY) != pdPASS) {
       continue;
     }
-    ModbusSnapshot snapshot;
-    fetchModbusSnapshot(snapshot);
-    xQueueOverwrite(modbusResultQueue, &snapshot);
+    ModbusReadCycle cycle;
+    fetchModbusReadCycle(cycle);
+    retainedSnapshot = mergeModbusSnapshot(retainedSnapshot, cycle);
+    Serial.printf("[MB] result=%s\n", retainedSnapshot.valid ? "valid" : "invalid");
+    xQueueOverwrite(modbusResultQueue, &retainedSnapshot);
   }
 }
 
@@ -509,11 +497,23 @@ void refreshSavedProfiles() {
   }
 }
 
-void clearPendingApplicationState() {
+void clearPendingApplicationBuffers() {
   clearProfile(pendingProfile);
   clearProfile(previousProfile);
   previousProfileAvailable = false;
-  pendingLifecycle.finish();
+}
+
+void replaceGatewayLifecycle(GatewayLifecycleTarget target, uint32_t nowMs = 0,
+                             int previousActiveIndex = -1) {
+  const GatewayLifecycleReplacement replacement =
+      gatewayLifecycle.replaceWith(target, nowMs, previousActiveIndex);
+  if (replacement.cancelPendingProfile) {
+    camperNetwork.cancelPendingProfile();
+  }
+  if (replacement.cancelPhysicalPortal) {
+    portal.cancel();
+  }
+  clearPendingApplicationBuffers();
 }
 
 bool reconnectPreviousProfile(uint32_t nowMs, int previousIndex) {
@@ -533,7 +533,8 @@ void showPendingFailure(const char* message, const PendingProfileEvaluation& eva
   if (evaluation.outcome == PendingProfileOutcome::RestorePrevious) {
     reconnectPreviousProfile(nowMs, evaluation.previousActiveIndex);
   }
-  clearPendingApplicationState();
+  gatewayLifecycle.completePending();
+  clearPendingApplicationBuffers();
   refreshSavedProfiles();
   wifiSetupUi.showResult(message, false);
   wifiSetupUi.render(camperNetwork.status());
@@ -541,39 +542,47 @@ void showPendingFailure(const char* message, const PendingProfileEvaluation& eva
 
 void beginPendingProfile(const String& ssid, String& passphrase, uint8_t securityType,
                          uint32_t nowMs) {
-  clearPendingApplicationState();
+  NetworkProfile retainedPreviousProfile;
+  bool retainedPreviousAvailable = false;
   int previousActiveIndex = -1;
   if (profileStoreReady) {
     previousActiveIndex = profileStore.activeIndex();
-    previousProfileAvailable = previousActiveIndex >= 0 &&
-                               profileStore.load(static_cast<size_t>(previousActiveIndex),
-                                                 previousProfile);
-    if (!previousProfileAvailable) {
+    retainedPreviousAvailable = previousActiveIndex >= 0 &&
+                                profileStore.load(static_cast<size_t>(previousActiveIndex),
+                                                  retainedPreviousProfile);
+    if (!retainedPreviousAvailable) {
       previousActiveIndex = -1;
     }
   }
+
+  replaceGatewayLifecycle(GatewayLifecycleTarget::PendingProfile, nowMs,
+                          previousActiveIndex);
+  previousProfileAvailable = retainedPreviousAvailable;
+  if (retainedPreviousAvailable) {
+    previousProfile = retainedPreviousProfile;
+  }
+  clearProfile(retainedPreviousProfile);
 
   pendingProfile.ssid = ssid;
   pendingProfile.passphrase = passphrase;
   pendingProfile.securityType = securityType;
   pendingProfile.lastSuccessEpoch = 0;
   secureClearString(passphrase);
-  pendingLifecycle.begin(nowMs, previousActiveIndex);
   wifiSetupUi.close();
   drawDashboardFrame();
   drawDashboardHeader(nowMs);
   drawDashboardValues();
   if (!camperNetwork.connect(pendingProfile, nowMs)) {
-    showPendingFailure("Connection rejected", pendingLifecycle.immediateFailure(), nowMs);
+    showPendingFailure("Connection rejected", gatewayLifecycle.pendingImmediateFailure(), nowMs);
   }
 }
 
 void handlePendingProfileCommit(uint32_t nowMs) {
-  if (!pendingLifecycle.active()) {
+  if (!gatewayLifecycle.pendingActive()) {
     return;
   }
   const PendingProfileEvaluation evaluation =
-      pendingLifecycle.evaluate(camperNetwork.pendingProfileConnected(), nowMs);
+      gatewayLifecycle.evaluatePending(camperNetwork.pendingProfileConnected(), nowMs);
   if (evaluation.outcome == PendingProfileOutcome::None) {
     return;
   }
@@ -585,20 +594,16 @@ void handlePendingProfileCommit(uint32_t nowMs) {
   const time_t currentEpoch = time(nullptr);
   pendingProfile.lastSuccessEpoch = currentEpoch > 0 ? static_cast<uint32_t>(currentEpoch) : 0;
   size_t storedIndex = 0;
-  if (!profileStoreReady || !profileStore.upsert(pendingProfile, storedIndex)) {
-    showPendingFailure("Credential save failed", pendingLifecycle.immediateFailure(), nowMs);
-    return;
-  }
-  if (!profileStore.activate(storedIndex)) {
-    showPendingFailure("Profile activation failed", pendingLifecycle.immediateFailure(), nowMs);
+  if (!profileStoreReady || !profileStore.upsertAndActivate(pendingProfile, storedIndex)) {
+    showPendingFailure("Credential persistence failed",
+                       gatewayLifecycle.pendingImmediateFailure(), nowMs);
     return;
   }
 
   camperNetwork.acceptPendingProfile();
-  clearPendingApplicationState();
+  gatewayLifecycle.completePending();
+  clearPendingApplicationBuffers();
   refreshSavedProfiles();
-  portal.cancel();
-  portalPresented = false;
   wifiSetupUi.showResult("Upstream connected", true);
   wifiSetupUi.render(camperNetwork.status());
 }
@@ -606,15 +611,14 @@ void handlePendingProfileCommit(uint32_t nowMs) {
 void handlePortalLifecycle(uint32_t nowMs) {
   ProvisioningSubmission submission;
   if (portal.takeSubmission(submission)) {
-    portalPresented = false;
     beginPendingProfile(submission.ssid, submission.passphrase,
                         submission.securityType, nowMs);
     secureClearString(submission.passphrase);
     submission.ssid = String();
     return;
   }
-  if (portalPresented && !portal.active()) {
-    portalPresented = false;
+  if (gatewayLifecycle.physicalPortalActive() && !portal.active()) {
+    replaceGatewayLifecycle(GatewayLifecycleTarget::Idle);
     wifiSetupUi.showResult("Setup portal expired", false);
     wifiSetupUi.render(camperNetwork.status());
   }
@@ -623,6 +627,7 @@ void handlePortalLifecycle(uint32_t nowMs) {
 void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
   switch (action.type) {
     case WifiSetupActionType::ConnectSaved: {
+      replaceGatewayLifecycle(GatewayLifecycleTarget::SavedConnection);
       NetworkProfile profile;
       const bool loaded = profileStoreReady && action.profileIndex >= 0 &&
                           profileStore.load(static_cast<size_t>(action.profileIndex), profile);
@@ -642,13 +647,14 @@ void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
           ProvisioningRoute::DirectPending) {
         String emptyPassphrase;
         beginPendingProfile(action.ssid, emptyPassphrase, action.securityType, nowMs);
-      } else if (portal.begin(action.ssid, action.securityType, nowMs)) {
-        portalPresented = true;
-        wifiSetupUi.showPortal(action.ssid, portal.pairingCode(), portal.expiresAtMs());
-        wifiSetupUi.render(camperNetwork.status());
       } else {
-        portalPresented = false;
-        wifiSetupUi.showResult("Setup portal failed", false);
+        replaceGatewayLifecycle(GatewayLifecycleTarget::PhysicalPortal);
+        if (portal.begin(action.ssid, action.securityType, nowMs)) {
+          wifiSetupUi.showPortal(action.ssid, portal.pairingCode(), portal.expiresAtMs());
+        } else {
+          replaceGatewayLifecycle(GatewayLifecycleTarget::Idle);
+          wifiSetupUi.showResult("Setup portal failed", false);
+        }
         wifiSetupUi.render(camperNetwork.status());
       }
       break;
@@ -663,15 +669,11 @@ void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
       break;
     }
     case WifiSetupActionType::Refresh:
-      if (!camperNetwork.startScan() && !camperNetwork.scanComplete()) {
-        wifiSetupUi.render(camperNetwork.status());
-      }
+      camperNetwork.startScan();
       break;
     case WifiSetupActionType::ClearAll: {
-      portal.cancel();
-      portalPresented = false;
+      replaceGatewayLifecycle(GatewayLifecycleTarget::ClearAll);
       camperNetwork.disconnectUpstream();
-      clearPendingApplicationState();
       const bool cleared = profileStoreReady && profileStore.clearUpstreamProfiles();
       refreshSavedProfiles();
       wifiSetupUi.showResult(cleared ? "Saved networks cleared" : "Clear failed", cleared);
@@ -679,10 +681,7 @@ void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
       break;
     }
     case WifiSetupActionType::Exit:
-      if (portalPresented) {
-        portal.cancel();
-        portalPresented = false;
-      }
+      replaceGatewayLifecycle(GatewayLifecycleTarget::Exit);
       wifiSetupUi.close();
       redrawCurrentView(nowMs);
       break;
@@ -715,15 +714,27 @@ void handleTouchAndUiActions(uint32_t nowMs) {
   handleUiAction(wifiSetupUi.poll(nowMs), nowMs);
 }
 
-void collectCompletedScan() {
-  if (!camperNetwork.scanComplete()) {
-    return;
-  }
-  ScanResult results[kMaximumScanResults];
-  const size_t count = camperNetwork.scanResults(results, kMaximumScanResults);
-  wifiSetupUi.setScanResults(results, count);
-  if (wifiSetupUi.isOpen()) {
-    wifiSetupUi.render(camperNetwork.status());
+void collectScanTerminal() {
+  camperNetwork.scanComplete();
+  const ScanPhase phase = camperNetwork.scanPhase();
+  switch (scanUiOutcome(phase == ScanPhase::Complete, phase == ScanPhase::Failed)) {
+    case ScanUiOutcome::DeliverResults: {
+      ScanResult results[kMaximumScanResults];
+      const size_t count = camperNetwork.scanResults(results, kMaximumScanResults);
+      wifiSetupUi.setScanResults(results, count);
+      if (wifiSetupUi.isOpen()) {
+        wifiSetupUi.render(camperNetwork.status());
+      }
+      break;
+    }
+    case ScanUiOutcome::ShowRetryableFailure:
+      camperNetwork.clearScanFailure();
+      wifiSetupUi.showResult("Scan failed; retry", false);
+      wifiSetupUi.render(camperNetwork.status());
+      break;
+    case ScanUiOutcome::None:
+    default:
+      break;
   }
 }
 
@@ -837,7 +848,7 @@ void loop() {
   portal.poll(nowMs);
   handlePortalLifecycle(nowMs);
   handleTouchAndUiActions(nowMs);
-  collectCompletedScan();
+  collectScanTerminal();
   handlePendingProfileCommit(nowMs);
   pollModbusWhenDue(nowMs);
   updateClockAndStatusWhenDue(nowMs);

@@ -19,6 +19,7 @@ class NetworkProfileStore {
   bool load(size_t index, NetworkProfile& out) const;
   bool activate(size_t index);
   bool upsert(const NetworkProfile& profile, size_t& storedIndex);
+  bool upsertAndActivate(const NetworkProfile& profile, size_t& storedIndex);
   bool erase(size_t index);
   bool clearUpstreamProfiles();
 };

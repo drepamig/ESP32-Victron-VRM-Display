@@ -244,6 +244,44 @@ bool commitSnapshot(Preferences& preferences, const StoreSnapshot& previous, con
   return true;
 }
 
+bool makeUpsertSnapshot(const StoreSnapshot& previous, const NetworkProfile& profile,
+                        bool activate, StoreSnapshot& next, size_t& target) {
+  next = previous;
+  target = previous.count;
+  for (size_t index = 0; index < previous.count; ++index) {
+    if (previous.profiles[index].ssid == profile.ssid) {
+      target = index;
+      break;
+    }
+  }
+
+  if (target == previous.count && previous.count == NetworkProfileStore::kMaxProfiles) {
+    uint32_t oldestEpoch = 0;
+    bool foundReplacement = false;
+    for (size_t index = 0; index < previous.count; ++index) {
+      if (static_cast<int>(index) == previous.active) {
+        continue;
+      }
+      if (!foundReplacement || previous.profiles[index].lastSuccessEpoch < oldestEpoch) {
+        target = index;
+        oldestEpoch = previous.profiles[index].lastSuccessEpoch;
+        foundReplacement = true;
+      }
+    }
+    if (!foundReplacement) {
+      return false;
+    }
+  } else if (target == previous.count) {
+    ++next.count;
+  }
+
+  next.profiles[target] = profile;
+  if (activate) {
+    next.active = static_cast<int>(target);
+  }
+  return true;
+}
+
 }  // namespace
 
 bool NetworkProfileStore::begin() {
@@ -340,37 +378,43 @@ bool NetworkProfileStore::upsert(const NetworkProfile& profile, size_t& storedIn
     return false;
   }
 
-  StoreSnapshot next = previous;
-  size_t target = previous.count;
-  for (size_t index = 0; index < previous.count; ++index) {
-    if (previous.profiles[index].ssid == profile.ssid) {
-      target = index;
-      break;
-    }
+  StoreSnapshot next;
+  size_t target = 0;
+  if (!makeUpsertSnapshot(previous, profile, false, next, target)) {
+    preferences.end();
+    return false;
+  }
+  const bool stored = commitSnapshot(preferences, previous, next);
+  preferences.end();
+  if (stored) {
+    storedIndex = target;
+  }
+  return stored;
+}
+
+bool NetworkProfileStore::upsertAndActivate(const NetworkProfile& profile,
+                                            size_t& storedIndex) {
+  if (profile.ssid.isEmpty() || profile.passphrase.length() > 63) {
+    return false;
   }
 
-  if (target == previous.count && previous.count == kMaxProfiles) {
-    uint32_t oldestEpoch = 0;
-    bool foundReplacement = false;
-    for (size_t index = 0; index < previous.count; ++index) {
-      if (static_cast<int>(index) == previous.active) {
-        continue;
-      }
-      if (!foundReplacement || previous.profiles[index].lastSuccessEpoch < oldestEpoch) {
-        target = index;
-        oldestEpoch = previous.profiles[index].lastSuccessEpoch;
-        foundReplacement = true;
-      }
-    }
-    if (!foundReplacement) {
-      preferences.end();
-      return false;
-    }
-  } else if (target == previous.count) {
-    ++next.count;
+  Preferences preferences;
+  if (!preferences.begin(kNamespace, false)) {
+    return false;
   }
 
-  next.profiles[target] = profile;
+  StoreSnapshot previous;
+  if (!prepareStore(preferences, previous)) {
+    preferences.end();
+    return false;
+  }
+
+  StoreSnapshot next;
+  size_t target = 0;
+  if (!makeUpsertSnapshot(previous, profile, true, next, target)) {
+    preferences.end();
+    return false;
+  }
   const bool stored = commitSnapshot(preferences, previous, next);
   preferences.end();
   if (stored) {
