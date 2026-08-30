@@ -167,12 +167,17 @@ void testCalibrationExclusivelyOwnsDisplayUntilComplete() {
         "failed touch initialization preserves dashboard rendering");
 }
 
-// Mutation caught: omitting the real full-frame force signal retains WAN paint cache after clear.
-void testFullDashboardFrameForcesWanIndicatorPaint() {
-  check(shouldPaintDashboardWan(true, 2, 2, 2, 2),
-        "a full dashboard clear must repaint unchanged WAN state");
-  check(!shouldPaintDashboardWan(false, 2, 2, 2, 2),
-        "unchanged WAN state may remain coalesced without a full clear");
+// Mutation caught: removing the full-frame force from the sketch redraw sequence leaves WAN
+// blank after setup returns even though cached state is unchanged.
+void testDashboardRedrawClearsThenForcesHeaderBeforeValues() {
+  int sequence = 0;
+  bool forcedHeader = false;
+  redrawDashboardSurface(
+      [&] { check(++sequence == 1, "dashboard redraw must clear frame first"); },
+      [&](bool forceWan) { forcedHeader = forceWan; check(++sequence == 2,
+          "dashboard redraw must paint header after frame clear"); },
+      [&] { check(++sequence == 3, "dashboard redraw must paint values after header"); });
+  check(forcedHeader, "full dashboard redraw must force WAN/header painting despite cache");
 }
 
 }  // namespace
@@ -185,6 +190,6 @@ int main() {
   testExitPreservesPendingButCancelsPhysicalPortal();
   testScanTerminalRouting();
   testCalibrationExclusivelyOwnsDisplayUntilComplete();
-  testFullDashboardFrameForcesWanIndicatorPaint();
+  testDashboardRedrawClearsThenForcesHeaderBeforeValues();
   return failures == 0 ? 0 : 1;
 }

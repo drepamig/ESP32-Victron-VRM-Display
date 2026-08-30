@@ -497,9 +497,10 @@ void redrawCurrentView(uint32_t nowMs) {
     case DisplaySurface::Dashboard:
       lastDashboardWanHoldCountdown = -1;
       lastDashboardWanPhase = -1;
-      drawDashboardFrame();
-      drawDashboardHeader(nowMs, true);
-      drawDashboardValues();
+      redrawDashboardSurface(
+          [] { drawDashboardFrame(); },
+          [nowMs](bool fullFrameCleared) { drawDashboardHeader(nowMs, fullFrameCleared); },
+          [] { drawDashboardValues(); });
       return;
   }
 }

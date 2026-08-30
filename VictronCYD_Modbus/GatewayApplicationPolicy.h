@@ -33,6 +33,14 @@ inline bool shouldPaintDashboardWan(bool fullFrameCleared, int countdown, int ph
   return fullFrameCleared || countdown != previousCountdown || phase != previousPhase;
 }
 
+template <typename ClearFrame, typename PaintHeader, typename PaintValues>
+inline void redrawDashboardSurface(ClearFrame clearFrame, PaintHeader paintHeader,
+                                   PaintValues paintValues) {
+  clearFrame();
+  paintHeader(true);
+  paintValues();
+}
+
 inline ScanUiOutcome scanUiOutcome(bool complete, bool failed) {
   if (complete) {
     return ScanUiOutcome::DeliverResults;
