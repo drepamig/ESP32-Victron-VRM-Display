@@ -200,6 +200,19 @@ void testDashboardHeaderCoordinatesHoldLabelsAndCancellation() {
   check(label == nullptr && !highlighted, "cancelled hold must restore normal clock coordination");
 }
 
+// Mutation caught: omitting the immediate interaction repaint leaves HOLD/normal clock stale
+// until the periodic tick and may replace highlighted WAN with stale state.
+void testDashboardInteractionImmediatelyRepaintsHeaderWithoutFrameClear() {
+  bool actionRan = false;
+  int headerPaints = 0;
+  int frameClears = 0;
+  coordinateDashboardInteraction([&] { actionRan = true; },
+                                 [&] { ++headerPaints; },
+                                 [&] { ++frameClears; });
+  check(actionRan && headerPaints == 1 && frameClears == 0,
+        "dashboard press or cancel must immediately repaint header without a full clear");
+}
+
 }  // namespace
 
 int main() {
@@ -212,5 +225,6 @@ int main() {
   testCalibrationExclusivelyOwnsDisplayUntilComplete();
   testDashboardRedrawClearsThenForcesHeaderBeforeValues();
   testDashboardHeaderCoordinatesHoldLabelsAndCancellation();
+  testDashboardInteractionImmediatelyRepaintsHeaderWithoutFrameClear();
   return failures == 0 ? 0 : 1;
 }

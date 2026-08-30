@@ -49,6 +49,13 @@ inline void coordinateDashboardWanHold(int countdown, PaintClock paintClock, Pai
   paintWan(label != nullptr);
 }
 
+template <typename ApplyInteraction, typename PaintHeader, typename ClearFrame>
+inline void coordinateDashboardInteraction(ApplyInteraction applyInteraction,
+                                           PaintHeader paintHeader, ClearFrame) {
+  applyInteraction();
+  paintHeader();
+}
+
 inline ScanUiOutcome scanUiOutcome(bool complete, bool failed) {
   if (complete) {
     return ScanUiOutcome::DeliverResults;

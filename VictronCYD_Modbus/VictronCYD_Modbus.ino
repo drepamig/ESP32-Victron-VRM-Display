@@ -479,7 +479,6 @@ void drawDashboardHeader(uint32_t nowMs, bool fullFrameCleared = false) {
   tft.drawString("GX", 228, 11, 2);
   tft.fillCircle(268, 10, 3, gxOnline ? kGreen : kRed);
 
-  drawDashboardWanIndicator(nowMs, fullFrameCleared);
   tft.fillCircle(216, 10, 2, blink ? kLine : kBackground);
 }
 
@@ -731,10 +730,16 @@ void handleTouchAndUiActions(uint32_t nowMs) {
     switch (event.type) {
       case TouchEventType::Press:
       case TouchEventType::Scroll:
-        handleUiAction(wifiSetupUi.handleTouch(event.point, nowMs), nowMs);
+        coordinateDashboardInteraction(
+            [&] { handleUiAction(wifiSetupUi.handleTouch(event.point, nowMs), nowMs); },
+            [&] { if (currentDisplaySurface() == DisplaySurface::Dashboard) drawDashboardHeader(nowMs); },
+            [] {});
         break;
       case TouchEventType::Release:
-        handleUiAction(wifiSetupUi.handleRelease(nowMs), nowMs);
+        coordinateDashboardInteraction(
+            [&] { handleUiAction(wifiSetupUi.handleRelease(nowMs), nowMs); },
+            [&] { if (currentDisplaySurface() == DisplaySurface::Dashboard) drawDashboardHeader(nowMs); },
+            [] {});
         break;
       case TouchEventType::CalibrationComplete:
         refreshSavedProfiles();
@@ -756,7 +761,9 @@ void handleTouchAndUiActions(uint32_t nowMs) {
       wifiSetupUi.renderDynamic(camperNetwork.status());
       return;
     case DisplaySurface::Dashboard:
-      drawDashboardWanIndicator(nowMs);
+      if (wifiSetupUi.wanHoldCountdown(nowMs) > 0) {
+        drawDashboardHeader(nowMs);
+      }
       return;
   }
 }
