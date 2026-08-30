@@ -86,6 +86,15 @@ class TFT_eSPI {
     return false;
   }
 
+  bool drewSince(const std::string& value, size_t checkpoint) const {
+    for (size_t index = checkpoint; index < drawnStrings.size(); ++index) {
+      if (drawnStrings[index] == value) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool filledRectAt(int32_t x, int32_t y, int32_t width, int32_t height) const {
     for (const RectCall& call : filledRects) {
       if (call.x == x && call.y == y && call.width == width && call.height == height) {

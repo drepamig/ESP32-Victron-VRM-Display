@@ -439,11 +439,11 @@ uint16_t wanColor(WanPhase phase) {
 int lastDashboardWanHoldCountdown = -1;
 int lastDashboardWanPhase = -1;
 
-void drawDashboardWanIndicator(uint32_t nowMs) {
+void drawDashboardWanIndicator(uint32_t nowMs, bool fullFrameCleared = false) {
   const CamperNetworkStatus networkStatus = camperNetwork.status();
   const int countdown = wifiSetupUi.wanHoldCountdown(nowMs);
   const int phase = static_cast<int>(networkStatus.wanPhase);
-  if (!shouldPaintDashboardWan(false, countdown, phase, lastDashboardWanHoldCountdown,
+  if (!shouldPaintDashboardWan(fullFrameCleared, countdown, phase, lastDashboardWanHoldCountdown,
                                lastDashboardWanPhase)) {
     return;
   }
@@ -463,7 +463,7 @@ void drawDashboardWanIndicator(uint32_t nowMs) {
   lastDashboardWanPhase = phase;
 }
 
-void drawDashboardHeader(uint32_t nowMs) {
+void drawDashboardHeader(uint32_t nowMs, bool fullFrameCleared = false) {
   gxOnline = isRecentValidGxSnapshot(hasValidGxSnapshot, nowMs,
                                      dashboardSnapshot.receivedAtMs,
                                      kGxSnapshotMaximumAgeMs);
@@ -478,7 +478,7 @@ void drawDashboardHeader(uint32_t nowMs) {
   tft.drawString("GX", 228, 11, 2);
   tft.fillCircle(268, 10, 3, gxOnline ? kGreen : kRed);
 
-  drawDashboardWanIndicator(nowMs);
+  drawDashboardWanIndicator(nowMs, fullFrameCleared);
   tft.fillCircle(216, 10, 2, blink ? kLine : kBackground);
 }
 
@@ -498,7 +498,7 @@ void redrawCurrentView(uint32_t nowMs) {
       lastDashboardWanHoldCountdown = -1;
       lastDashboardWanPhase = -1;
       drawDashboardFrame();
-      drawDashboardHeader(nowMs);
+      drawDashboardHeader(nowMs, true);
       drawDashboardValues();
       return;
   }

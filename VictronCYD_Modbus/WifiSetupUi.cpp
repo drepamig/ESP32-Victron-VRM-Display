@@ -486,13 +486,18 @@ void WifiSetupUi::renderDynamic(const CamperNetworkStatus& networkStatus) {
     }
   }
   if (view_ == WifiSetupView::Saved && (clearHoldActive_ || clearHoldNeedsRedraw_)) {
+    if (clearHoldNeedsRedraw_) {
+      drawClearHoldCountdown();
+      lastClearCountdown_ = -1;
+      clearHoldNeedsRedraw_ = false;
+      return;
+    }
     const int countdown = static_cast<int>((kClearHoldMs - (lastNowMs_ - clearHoldStartedMs_) +
                                             999) / 1000);
     if (countdown != lastClearCountdown_) {
       drawClearHoldCountdown();
       lastClearCountdown_ = countdown;
     }
-    clearHoldNeedsRedraw_ = false;
   }
 }
 

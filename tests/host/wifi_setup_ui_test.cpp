@@ -129,8 +129,10 @@ void testCancelledClearHoldRestoresPartialButton() {
   ui.handleTouch({270, 218}, 0); ui.poll(1000); ui.renderDynamic(offlineStatus());
   check(display.drew("Clear in 9s"), "armed clear hold must show its countdown");
   const uint32_t fullRenders = display.fillScreenCount;
+  const size_t cancellationCheckpoint = display.drawnStrings.size();
   ui.handleRelease(1100); ui.renderDynamic(offlineStatus());
-  check(display.drew("Clear Saved") && display.fillScreenCount == fullRenders,
+  check(display.drewSince("Clear Saved", cancellationCheckpoint) &&
+            display.fillScreenCount == fullRenders,
         "cancelled clear hold must restore its label without a full clear");
 }
 

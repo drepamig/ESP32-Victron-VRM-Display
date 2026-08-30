@@ -167,7 +167,7 @@ void testCalibrationExclusivelyOwnsDisplayUntilComplete() {
         "failed touch initialization preserves dashboard rendering");
 }
 
-// Mutation caught: retaining dashboard WAN paint cache across a full-frame clear.
+// Mutation caught: omitting the real full-frame force signal retains WAN paint cache after clear.
 void testFullDashboardFrameForcesWanIndicatorPaint() {
   check(shouldPaintDashboardWan(true, 2, 2, 2, 2),
         "a full dashboard clear must repaint unchanged WAN state");
