@@ -475,15 +475,10 @@ void drawDashboardHeader(uint32_t nowMs, bool fullFrameCleared = false) {
       [&](const char* holdLabel) {
         const String normalClock = clockText();
         const char* text = holdLabel == nullptr ? normalClock.c_str() : holdLabel;
-        const int width = tft.textWidth(text, 4);
         tft.setTextColor(gxOnline ? kValue : kUnit, kBackground);
         tft.setTextDatum(MC_DATUM);
-        paintCenteredHeaderTransition(
-            lastDashboardCenterTextWidth, width, holdLabel != nullptr,
-            [&](int x, int y, int clearWidth, int clearHeight) {
-              tft.fillRect(x, y, clearWidth, clearHeight, kBackground);
-            },
-            [&](int x, int y) { tft.drawString(text, x, y, 4); }, fullFrameCleared);
+        paintCenterHeaderText(tft, lastDashboardCenterTextWidth, text, holdLabel != nullptr,
+                              fullFrameCleared, kBackground);
       },
       [&](bool highlighted) { drawDashboardWanIndicator(nowMs, fullFrameCleared, highlighted); });
 

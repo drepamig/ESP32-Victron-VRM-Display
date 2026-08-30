@@ -50,6 +50,19 @@ inline void paintCenteredHeaderTransition(int& previousWidth, int currentWidth, 
   previousWidth = currentWidth;
 }
 
+template <typename Display>
+inline void paintCenterHeaderText(Display& display, int& previousWidth, const char* text,
+                                  bool holdLabel, bool fullFrameCleared, int background = 0) {
+  if (fullFrameCleared) {
+    previousWidth = 0;
+  }
+  const int currentWidth = display.textWidth(text, 4);
+  const int width = previousWidth > currentWidth ? previousWidth : currentWidth;
+  display.fillRect(160 - width / 2 - 2, 0, width + 4, 20, background);
+  display.drawString(text, 160, holdLabel ? 14 : 11, 4);
+  previousWidth = currentWidth;
+}
+
 template <typename ClearFrame, typename PaintHeader, typename PaintValues>
 inline void redrawDashboardSurface(ClearFrame clearFrame, PaintHeader paintHeader,
                                    PaintValues paintValues) {

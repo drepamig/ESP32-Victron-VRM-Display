@@ -241,6 +241,32 @@ void testCenterHeaderTransitionClearsUnionAndAlignsHold() {
   check(priorWidth == 39, "full frame transition must reset retained width before paint");
 }
 
+// Mutation caught: bypassing the production display painter loses measured geometry, anchor,
+// font, ordering, full-frame reset, or replaces partial clear with fillScreen.
+void testRecordedCenterHeaderPainter() {
+  struct Display {
+    int fillScreenCount = 0, clearX = 0, clearWidth = 0, drawX = 0, drawY = 0, drawFont = 0;
+    int order = 0, clearOrder = 0, drawOrder = 0;
+    int textWidth(const char* text, int) { return std::string(text) == "HOLD 3" ? 87 : 39; }
+    void fillRect(int x, int, int width, int, int) { clearX=x; clearWidth=width; clearOrder=++order; }
+    void drawString(const char*, int x, int y, int font) { drawX=x; drawY=y; drawFont=font; drawOrder=++order; }
+    void fillScreen(int) { ++fillScreenCount; }
+  } display;
+  int prior = 87;
+  paintCenterHeaderText(display, prior, "--:--", false, false);
+  check(display.clearX == 115 && display.clearWidth == 91 && display.drawX == 160 &&
+            display.drawY == 11 && display.drawFont == 4 && display.clearOrder < display.drawOrder &&
+            display.fillScreenCount == 0 && prior == 39,
+        "recorded clock transition must partially clear union before font-4 centered draw");
+  paintCenterHeaderText(display, prior, "HOLD 3", true, false);
+  check(display.clearX == 115 && display.clearWidth == 91 && display.drawX == 160 &&
+            display.drawY == 14 && display.drawFont == 4, "recorded HOLD transition must use y 14");
+  prior = 87;
+  paintCenterHeaderText(display, prior, "--:--", false, true);
+  check(display.clearX == 139 && display.clearWidth == 43 && prior == 39,
+        "full frame must reset retained width before current clock paint");
+}
+
 }  // namespace
 
 int main() {
@@ -256,5 +282,6 @@ int main() {
   testDashboardInteractionImmediatelyRepaintsHeaderWithoutFrameClear();
   testDashboardHoldRepaintCoalescesVisibleStates();
   testCenterHeaderTransitionClearsUnionAndAlignsHold();
+  testRecordedCenterHeaderPainter();
   return failures == 0 ? 0 : 1;
 }
