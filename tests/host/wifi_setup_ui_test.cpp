@@ -80,7 +80,7 @@ void testLocalSetupTransitionsRequestExactlyOneFullRender() {
 // Mutation caught: stale Nearby pagination creates redraws for visually unchanged Saved/Scanning tabs.
 void testStaleNearbyPageDoesNotDefeatTransitionCoalescing() {
   TFT_eSPI display; WifiSetupUi ui(display);
-  NetworkProfile profiles[1]{{"Known", "hidden", 3, 1}}; ui.setSavedProfiles(profiles, 1, 0); ui.open();
+  NetworkProfile profiles[1]{{"Six", "hidden", 3, 1}}; ui.setSavedProfiles(profiles, 1, 0); ui.open();
   ScanResult results[6]{{"Known", -40, 3, 1}, {"Two", -50, 3, 1}, {"Three", -60, 3, 1},
                         {"Four", -70, 3, 1}, {"Five", -80, 3, 1}, {"Six", -85, 3, 1}};
   ui.handleTouch({210,18},1); ui.takeFullRenderRequest(); ui.setScanResults(results,6);

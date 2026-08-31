@@ -213,7 +213,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   }
 
   if (kSavedTabBounds.contains(point)) {
-    if (view_ != WifiSetupView::Saved || scanPage_ != 0) {
+    if (view_ != WifiSetupView::Saved) {
       view_ = WifiSetupView::Saved;
       scanPage_ = 0;
       requestFullRender();
@@ -221,7 +221,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
     return noAction();
   }
   if (kNearbyTabBounds.contains(point)) {
-    if (view_ != WifiSetupView::Scanning || scanPage_ != 0) {
+    if (view_ != WifiSetupView::Scanning) {
       view_ = WifiSetupView::Scanning;
       scanPage_ = 0;
       requestFullRender();
@@ -310,7 +310,6 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
     }
     if (kRefreshBounds.contains(point)) {
       view_ = WifiSetupView::Scanning;
-      scanPage_ = 0;
       requestFullRender();
       return simpleAction(WifiSetupActionType::Refresh);
     }
