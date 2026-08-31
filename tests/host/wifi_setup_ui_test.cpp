@@ -77,6 +77,27 @@ void testLocalSetupTransitionsRequestExactlyOneFullRender() {
   check(!ui.takeFullRenderRequest(), "full render must satisfy a pending transition request");
 }
 
+// Mutation caught: unchanged local contacts schedule redundant full setup redraws or omit Saved/Cancel repaint.
+void testSetupTransitionRequestsOnlyForActualVisibleChanges() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  NetworkProfile profiles[1]{{"Saved", "hidden", 3, 1}};
+  ui.setSavedProfiles(profiles, 1, 0); ui.open(); ui.render(offlineStatus());
+  check(ui.handleTouch({210, 18}, 10).type == WifiSetupActionType::Refresh && ui.takeFullRenderRequest(),
+        "Nearby must request its first Scanning repaint");
+  check(ui.handleTouch({210, 18}, 11).type == WifiSetupActionType::Refresh && !ui.takeFullRenderRequest(),
+        "unchanged Scanning contact must not request another repaint");
+  check(ui.handleTouch({100, 18}, 12).type == WifiSetupActionType::None && ui.takeFullRenderRequest(),
+        "Scanning to Saved must request an immediate repaint");
+  check(ui.handleTouch({100, 56}, 13).type == WifiSetupActionType::None && ui.takeFullRenderRequest(),
+        "first Saved-row selection must repaint highlight");
+  check(ui.handleTouch({100, 56}, 14).type == WifiSetupActionType::None && !ui.takeFullRenderRequest(),
+        "unchanged Saved-row contact must not request another repaint");
+  ui.handleTouch({160, 218}, 15); check(ui.takeFullRenderRequest(), "delete confirmation must repaint");
+  ui.handleTouch({80, 218}, 16);
+  check(ui.takeFullRenderRequest(), "bottom Cancel must request Saved repaint");
+}
+
 // Mutation caught: removing remaining-time countdown progression or the immediate
 // transition request leaves the dashboard without visible hold feedback or setup redraw.
 void testWanHoldCountdownAndImmediateSetupTransition() {
@@ -464,6 +485,7 @@ void testBackInactivityPortalAndResultViews() {
 int main() {
   testWanHoldRequiresContinuousContact();
   testLocalSetupTransitionsRequestExactlyOneFullRender();
+  testSetupTransitionRequestsOnlyForActualVisibleChanges();
   testWanHoldCountdownAndImmediateSetupTransition();
   testWanHoldCancellationRestoresIndicatorState();
   testDynamicSetupRefreshAvoidsFullScreenButUpdatesChangingRegions();

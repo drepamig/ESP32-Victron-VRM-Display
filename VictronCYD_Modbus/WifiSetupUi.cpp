@@ -213,14 +213,19 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   }
 
   if (kSavedTabBounds.contains(point)) {
-    view_ = WifiSetupView::Saved;
-    scanPage_ = 0;
+    if (view_ != WifiSetupView::Saved || scanPage_ != 0) {
+      view_ = WifiSetupView::Saved;
+      scanPage_ = 0;
+      requestFullRender();
+    }
     return noAction();
   }
   if (kNearbyTabBounds.contains(point)) {
-    view_ = WifiSetupView::Scanning;
-    scanPage_ = 0;
-    requestFullRender();
+    if (view_ != WifiSetupView::Scanning || scanPage_ != 0) {
+      view_ = WifiSetupView::Scanning;
+      scanPage_ = 0;
+      requestFullRender();
+    }
     return simpleAction(WifiSetupActionType::Refresh);
   }
 
@@ -242,8 +247,10 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   if (view_ == WifiSetupView::Saved) {
     for (size_t row = 0; row < savedProfileCount_; ++row) {
       if (rowBounds(row).contains(point)) {
-        selectedProfileIndex_ = static_cast<int>(row);
-        requestFullRender();
+        if (selectedProfileIndex_ != static_cast<int>(row)) {
+          selectedProfileIndex_ = static_cast<int>(row);
+          requestFullRender();
+        }
         return noAction();
       }
     }
