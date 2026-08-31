@@ -68,7 +68,7 @@ void testLocalSetupTransitionsRequestExactlyOneFullRender() {
   check(ui.handleTouch({100, 56}, 22).type == WifiSetupActionType::None &&
             ui.takeFullRenderRequest(), "known Nearby routing must request selected Saved repaint");
   check(ui.handleTouch({100, 56}, 23).type == WifiSetupActionType::None &&
-            ui.takeFullRenderRequest(), "Saved selection must request highlight repaint");
+            !ui.takeFullRenderRequest(), "unchanged Saved selection must not request repaint");
   check(ui.handleTouch({160, 218}, 24).type == WifiSetupActionType::None &&
             ui.takeFullRenderRequest(), "delete confirmation must request repaint");
   check(ui.handleTouch({30, 18}, 25).type == WifiSetupActionType::None &&
