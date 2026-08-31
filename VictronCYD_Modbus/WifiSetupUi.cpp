@@ -243,6 +243,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
     for (size_t row = 0; row < savedProfileCount_; ++row) {
       if (rowBounds(row).contains(point)) {
         selectedProfileIndex_ = static_cast<int>(row);
+        requestFullRender();
         return noAction();
       }
     }
