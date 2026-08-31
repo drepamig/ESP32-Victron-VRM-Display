@@ -287,6 +287,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
       if (savedProfileIndex >= 0) {
         selectedProfileIndex_ = savedProfileIndex;
         view_ = WifiSetupView::Saved;
+        requestFullRender();
         return noAction();
       }
       return {WifiSetupActionType::ProvisionNew, -1, selected.ssid, selected.encryptionType};
