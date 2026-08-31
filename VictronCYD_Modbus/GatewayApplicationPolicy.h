@@ -37,29 +37,17 @@ inline bool shouldRepaintDashboardHold(int previousCountdown, int countdown) {
   return previousCountdown != countdown;
 }
 
-template <typename ClearRegion, typename DrawText>
-inline void paintCenteredHeaderTransition(int& previousWidth, int currentWidth, bool holdLabel,
-                                          ClearRegion clearRegion, DrawText drawText,
-                                          bool fullFrameCleared) {
-  if (fullFrameCleared) {
-    previousWidth = 0;
-  }
-  const int width = previousWidth > currentWidth ? previousWidth : currentWidth;
-  clearRegion(160 - width / 2 - 2, 0, width + 4, 20);
-  drawText(160, holdLabel ? 14 : 11);
-  previousWidth = currentWidth;
-}
-
 template <typename Display>
 inline void paintCenterHeaderText(Display& display, int& previousWidth, const char* text,
                                   bool holdLabel, bool fullFrameCleared, int background = 0) {
   if (fullFrameCleared) {
     previousWidth = 0;
   }
-  const int currentWidth = display.textWidth(text, 4);
+  const int font = holdLabel ? 2 : 4;
+  const int currentWidth = display.textWidth(text, font);
   const int width = previousWidth > currentWidth ? previousWidth : currentWidth;
   display.fillRect(160 - width / 2 - 2, 0, width + 4, 20, background);
-  display.drawString(text, 160, holdLabel ? 14 : 11, 4);
+  display.drawString(text, 160, holdLabel ? 12 : 11, font);
   previousWidth = currentWidth;
 }
 

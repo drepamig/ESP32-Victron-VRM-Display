@@ -245,23 +245,24 @@ void testCenterHeaderTransitionClearsUnionAndAlignsHold() {
 // font, ordering, full-frame reset, or replaces partial clear with fillScreen.
 void testRecordedCenterHeaderPainter() {
   struct Display {
-    int fillScreenCount = 0, clearX = 0, clearWidth = 0, drawX = 0, drawY = 0, drawFont = 0;
+    int fillScreenCount = 0, clearX = 0, clearWidth = 0, drawX = 0, drawY = 0, drawFont = 0, measuredFont = 0;
     int order = 0, clearOrder = 0, drawOrder = 0;
-    int textWidth(const char* text, int) { return std::string(text) == "HOLD 3" ? 87 : 39; }
+    int textWidth(const char* text, int font) { measuredFont = font; return std::string(text) == "HOLD 3" ? 45 : std::string(text) == "23:59" ? 63 : 39; }
     void fillRect(int x, int, int width, int, int) { clearX=x; clearWidth=width; clearOrder=++order; }
     void drawString(const char*, int x, int y, int font) { drawX=x; drawY=y; drawFont=font; drawOrder=++order; }
     void fillScreen(int) { ++fillScreenCount; }
   } display;
-  int prior = 87;
-  paintCenterHeaderText(display, prior, "--:--", false, false);
-  check(display.clearX == 115 && display.clearWidth == 91 && display.drawX == 160 &&
-            display.drawY == 11 && display.drawFont == 4 && display.clearOrder < display.drawOrder &&
-            display.fillScreenCount == 0 && prior == 39,
-        "recorded clock transition must partially clear union before font-4 centered draw");
+  int prior = 63;
   paintCenterHeaderText(display, prior, "HOLD 3", true, false);
-  check(display.clearX == 115 && display.clearWidth == 91 && display.drawX == 160 &&
-            display.drawY == 14 && display.drawFont == 4, "recorded HOLD transition must use y 14");
-  prior = 87;
+  check(display.clearX == 127 && display.clearWidth == 67 && display.drawX == 160 &&
+            display.drawY == 12 && display.drawFont == 2 && display.measuredFont == 2 &&
+            display.clearOrder < display.drawOrder && display.fillScreenCount == 0 && prior == 45,
+        "recorded HOLD transition must measure and draw font 2 safely in header");
+  paintCenterHeaderText(display, prior, "--:--", false, false);
+  check(display.clearX == 136 && display.clearWidth == 49 && display.drawX == 160 &&
+            display.drawY == 11 && display.drawFont == 4 && display.measuredFont == 4,
+        "recorded clock transition must measure and draw font 4");
+  prior = 63;
   paintCenterHeaderText(display, prior, "--:--", false, true);
   check(display.clearX == 139 && display.clearWidth == 43 && prior == 39,
         "full frame must reset retained width before current clock paint");
