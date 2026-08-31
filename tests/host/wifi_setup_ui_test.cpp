@@ -72,7 +72,10 @@ void testLocalSetupTransitionsRequestExactlyOneFullRender() {
   check(ui.handleTouch({160, 218}, 24).type == WifiSetupActionType::None &&
             ui.takeFullRenderRequest(), "delete confirmation must request repaint");
   check(ui.handleTouch({30, 18}, 25).type == WifiSetupActionType::None &&
-            ui.isOpen(), "confirmation Back must return to Saved with repaint pending");
+            ui.takeFullRenderRequest() && !ui.takeFullRenderRequest(),
+        "confirmation Back must request exactly one immediate Saved repaint");
+  ui.handleTouch({160, 218}, 26);
+  check(ui.takeFullRenderRequest(), "second delete confirmation must leave a render request pending");
   ui.render(offlineStatus());
   check(!ui.takeFullRenderRequest(), "full render must satisfy a pending transition request");
 }
