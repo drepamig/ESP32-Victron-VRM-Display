@@ -72,9 +72,27 @@ void testLocalSetupTransitionsRequestExactlyOneFullRender() {
   check(ui.handleTouch({160, 218}, 24).type == WifiSetupActionType::None &&
             ui.takeFullRenderRequest(), "delete confirmation must request repaint");
   check(ui.handleTouch({30, 18}, 25).type == WifiSetupActionType::None &&
-            ui.takeFullRenderRequest(), "confirmation Back must request Saved repaint");
+            ui.isOpen(), "confirmation Back must return to Saved with repaint pending");
   ui.render(offlineStatus());
   check(!ui.takeFullRenderRequest(), "full render must satisfy a pending transition request");
+}
+
+// Mutation caught: stale Nearby pagination creates redraws for visually unchanged Saved/Scanning tabs.
+void testStaleNearbyPageDoesNotDefeatTransitionCoalescing() {
+  TFT_eSPI display; WifiSetupUi ui(display);
+  NetworkProfile profiles[1]{{"Known", "hidden", 3, 1}}; ui.setSavedProfiles(profiles, 1, 0); ui.open();
+  ScanResult results[6]{{"Known", -40, 3, 1}, {"Two", -50, 3, 1}, {"Three", -60, 3, 1},
+                        {"Four", -70, 3, 1}, {"Five", -80, 3, 1}, {"Six", -85, 3, 1}};
+  ui.handleTouch({210,18},1); ui.takeFullRenderRequest(); ui.setScanResults(results,6);
+  ui.handleTouch({278,218},2); ui.takeFullRenderRequest();
+  ui.handleTouch({100,56},3); ui.takeFullRenderRequest();
+  check(ui.handleTouch({100,18},4).type == WifiSetupActionType::None && !ui.takeFullRenderRequest(),
+        "known route must clear stale page so unchanged Saved contact does not repaint");
+  ui.open(); ui.handleTouch({210,18},5); ui.takeFullRenderRequest(); ui.setScanResults(results,6);
+  ui.handleTouch({278,218},6); ui.takeFullRenderRequest();
+  ui.handleTouch({160,218},7); ui.takeFullRenderRequest();
+  check(ui.handleTouch({210,18},8).type == WifiSetupActionType::Refresh && !ui.takeFullRenderRequest(),
+        "refresh must clear stale page so unchanged Scanning contact does not repaint");
 }
 
 // Mutation caught: unchanged local contacts schedule redundant full setup redraws or omit Saved/Cancel repaint.
@@ -485,6 +503,7 @@ void testBackInactivityPortalAndResultViews() {
 int main() {
   testWanHoldRequiresContinuousContact();
   testLocalSetupTransitionsRequestExactlyOneFullRender();
+  testStaleNearbyPageDoesNotDefeatTransitionCoalescing();
   testSetupTransitionRequestsOnlyForActualVisibleChanges();
   testWanHoldCountdownAndImmediateSetupTransition();
   testWanHoldCancellationRestoresIndicatorState();

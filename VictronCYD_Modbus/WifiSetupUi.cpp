@@ -295,6 +295,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
       if (savedProfileIndex >= 0) {
         selectedProfileIndex_ = savedProfileIndex;
         view_ = WifiSetupView::Saved;
+        scanPage_ = 0;
         requestFullRender();
         return noAction();
       }
@@ -309,6 +310,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
     }
     if (kRefreshBounds.contains(point)) {
       view_ = WifiSetupView::Scanning;
+      scanPage_ = 0;
       requestFullRender();
       return simpleAction(WifiSetupActionType::Refresh);
     }
