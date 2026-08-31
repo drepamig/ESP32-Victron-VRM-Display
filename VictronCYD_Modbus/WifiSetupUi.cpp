@@ -94,6 +94,8 @@ bool WifiSetupUi::isOpen() const {
   return view_ != WifiSetupView::Closed;
 }
 
+void WifiSetupUi::requestFullRender() { fullRenderRequested_ = true; }
+
 WifiSetupAction WifiSetupUi::noAction() {
   return {WifiSetupActionType::None, -1, String(), 0};
 }
@@ -199,6 +201,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   if (kBackBounds.contains(point)) {
     if (view_ == WifiSetupView::ConfirmDelete) {
       view_ = WifiSetupView::Saved;
+      requestFullRender();
       return noAction();
     }
     close();
@@ -217,12 +220,14 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   if (kNearbyTabBounds.contains(point)) {
     view_ = WifiSetupView::Scanning;
     scanPage_ = 0;
+    requestFullRender();
     return simpleAction(WifiSetupActionType::Refresh);
   }
 
   if (view_ == WifiSetupView::ConfirmDelete) {
     if (kCancelDeleteBounds.contains(point)) {
       view_ = WifiSetupView::Saved;
+      requestFullRender();
       return noAction();
     }
     if (kConfirmDeleteBounds.contains(point) && selectedProfileIndex_ >= 0) {
@@ -246,6 +251,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
     }
     if (kDeleteBounds.contains(point) && selectedProfileIndex_ >= 0) {
       view_ = WifiSetupView::ConfirmDelete;
+      requestFullRender();
       return noAction();
     }
     if (kClearBounds.contains(point)) {
@@ -288,16 +294,19 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
     if (kPreviousBounds.contains(point)) {
       if (scanPage_ > 0) {
         --scanPage_;
+        requestFullRender();
       }
       return noAction();
     }
     if (kRefreshBounds.contains(point)) {
       view_ = WifiSetupView::Scanning;
+      requestFullRender();
       return simpleAction(WifiSetupActionType::Refresh);
     }
     if (kNextBounds.contains(point)) {
       if ((scanPage_ + 1) * kRowsPerPage < scanResults_.size()) {
         ++scanPage_;
+        requestFullRender();
       }
       return noAction();
     }
@@ -435,6 +444,7 @@ void WifiSetupUi::render(const CamperNetworkStatus& networkStatus) {
     return;
   }
   display_.fillScreen(kBackground);
+  fullRenderRequested_ = false;
   drawHeader(networkStatus.wanPhase);
   switch (view_) {
     case WifiSetupView::Saved:

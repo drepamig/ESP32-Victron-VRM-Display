@@ -93,6 +93,7 @@ class WifiSetupUi {
   void renderResult();
   void cancelHolds();
   void clearPortalState();
+  void requestFullRender();
   int savedProfileForSsid(const String& ssid) const;
 
   TFT_eSPI& display_;

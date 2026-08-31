@@ -48,6 +48,35 @@ void testWanHoldRequiresContinuousContact() {
         "setup navigation must work after the entry contact releases");
 }
 
+// Mutation caught: visible local setup transitions wait for the old periodic full repaint.
+void testLocalSetupTransitionsRequestExactlyOneFullRender() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  NetworkProfile profiles[1]{{"Known", "hidden", 3, 1}};
+  ui.setSavedProfiles(profiles, 1, 0);
+  ui.open(); ui.render(offlineStatus());
+  check(ui.handleTouch({210, 18}, 10).type == WifiSetupActionType::Refresh &&
+            ui.takeFullRenderRequest() && !ui.takeFullRenderRequest(),
+        "Nearby transition must request one immediate Scanning render");
+  ScanResult results[6]{{"Known", -40, 3, 1}, {"Two", -50, 3, 1}, {"Three", -60, 3, 1},
+                        {"Four", -70, 3, 1}, {"Five", -80, 3, 1}, {"Six", -85, 3, 1}};
+  ui.setScanResults(results, 6);
+  check(ui.handleTouch({278, 218}, 20).type == WifiSetupActionType::None &&
+            ui.takeFullRenderRequest(), "Nearby Next must request a page repaint");
+  check(ui.handleTouch({55, 218}, 21).type == WifiSetupActionType::None &&
+            ui.takeFullRenderRequest(), "Nearby Previous must request a page repaint");
+  check(ui.handleTouch({100, 56}, 22).type == WifiSetupActionType::None &&
+            ui.takeFullRenderRequest(), "known Nearby routing must request selected Saved repaint");
+  check(ui.handleTouch({100, 56}, 23).type == WifiSetupActionType::None &&
+            ui.takeFullRenderRequest(), "Saved selection must request highlight repaint");
+  check(ui.handleTouch({160, 218}, 24).type == WifiSetupActionType::None &&
+            ui.takeFullRenderRequest(), "delete confirmation must request repaint");
+  check(ui.handleTouch({30, 18}, 25).type == WifiSetupActionType::None &&
+            ui.takeFullRenderRequest(), "confirmation Back must request Saved repaint");
+  ui.render(offlineStatus());
+  check(!ui.takeFullRenderRequest(), "full render must satisfy a pending transition request");
+}
+
 // Mutation caught: removing remaining-time countdown progression or the immediate
 // transition request leaves the dashboard without visible hold feedback or setup redraw.
 void testWanHoldCountdownAndImmediateSetupTransition() {
@@ -434,6 +463,7 @@ void testBackInactivityPortalAndResultViews() {
 
 int main() {
   testWanHoldRequiresContinuousContact();
+  testLocalSetupTransitionsRequestExactlyOneFullRender();
   testWanHoldCountdownAndImmediateSetupTransition();
   testWanHoldCancellationRestoresIndicatorState();
   testDynamicSetupRefreshAvoidsFullScreenButUpdatesChangingRegions();
