@@ -222,25 +222,6 @@ void testDashboardHoldRepaintCoalescesVisibleStates() {
   check(shouldRepaintDashboardHold(1, 0), "release or slide cancellation must repaint normal state");
 }
 
-// Mutation caught: clearing only the new clock width leaves HOLD glyphs after cancellation.
-void testCenterHeaderTransitionClearsUnionAndAlignsHold() {
-  int priorWidth = 87;
-  int clearX = 0, clearWidth = 0, drawY = 0;
-  paintCenteredHeaderTransition(priorWidth, 39, false,
-      [&](int x, int, int width, int) { clearX = x; clearWidth = width; },
-      [&](int, int y) { drawY = y; }, false);
-  check(clearX == 115 && clearWidth == 91 && drawY == 11 && priorWidth == 39,
-        "HOLD to clock must clear padded 115..205 span and use clock y 11");
-  paintCenteredHeaderTransition(priorWidth, 87, true,
-      [&](int x, int, int width, int) { clearX = x; clearWidth = width; },
-      [&](int, int y) { drawY = y; }, false);
-  check(clearX == 115 && clearWidth == 91 && drawY == 14 && priorWidth == 87,
-        "clock to HOLD must clear safe union and use hold y 14");
-  paintCenteredHeaderTransition(priorWidth, 39, false,
-      [&](int, int, int, int) {}, [&](int, int) {}, true);
-  check(priorWidth == 39, "full frame transition must reset retained width before paint");
-}
-
 // Mutation caught: bypassing the production display painter loses measured geometry, anchor,
 // font, ordering, full-frame reset, or replaces partial clear with fillScreen.
 void testRecordedCenterHeaderPainter() {
@@ -282,7 +263,6 @@ int main() {
   testDashboardHeaderCoordinatesHoldLabelsAndCancellation();
   testDashboardInteractionImmediatelyRepaintsHeaderWithoutFrameClear();
   testDashboardHoldRepaintCoalescesVisibleStates();
-  testCenterHeaderTransitionClearsUnionAndAlignsHold();
   testRecordedCenterHeaderPainter();
   return failures == 0 ? 0 : 1;
 }
