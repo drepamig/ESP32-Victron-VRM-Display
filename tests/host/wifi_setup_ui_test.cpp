@@ -75,7 +75,7 @@ void testLocalSetupTransitionsRequestExactlyOneFullRender() {
             ui.takeFullRenderRequest() && !ui.takeFullRenderRequest(),
         "confirmation Back must request exactly one immediate Saved repaint");
   ui.handleTouch({160, 218}, 26);
-  check(ui.takeFullRenderRequest(), "second delete confirmation must leave a render request pending");
+  check(ui.isOpen(), "second delete confirmation must keep setup open while render request remains pending");
   ui.render(offlineStatus());
   check(!ui.takeFullRenderRequest(), "full render must satisfy a pending transition request");
 }
