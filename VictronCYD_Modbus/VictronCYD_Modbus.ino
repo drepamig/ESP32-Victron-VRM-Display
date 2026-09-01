@@ -741,10 +741,11 @@ void handleTouchAndUiActions(uint32_t nowMs) {
     switch (event.type) {
       case TouchEventType::Press:
       case TouchEventType::Scroll:
-        coordinateDashboardInteraction(
-            [&] { handleUiAction(wifiSetupUi.handleTouch(event.point, nowMs), nowMs); },
-            [&] { if (currentDisplaySurface() == DisplaySurface::Dashboard) drawDashboardHeader(nowMs); },
-            [] {});
+        coordinateSetupInteraction(
+            [&] { return wifiSetupUi.handleTouch(event.point, nowMs); },
+            [&] { return wifiSetupUi.takeFullRenderRequest(); },
+            [&] { redrawCurrentView(nowMs); },
+            [&](const WifiSetupAction& action) { handleUiAction(action, nowMs); });
         break;
       case TouchEventType::Release:
         coordinateDashboardInteraction(

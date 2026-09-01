@@ -222,6 +222,17 @@ void testDashboardHoldRepaintCoalescesVisibleStates() {
   check(shouldRepaintDashboardHold(1, 0), "release or slide cancellation must repaint normal state");
 }
 
+// Mutation caught: applying scan action before consuming pending Scanning repaint.
+void testSetupInteractionPaintsBeforeExactActionSideEffect() {
+  int step = 0, delivered = 0;
+  coordinateSetupInteraction(
+      [&] { check(++step == 1, "touch capture must occur first"); return 42; },
+      [] { return true; },
+      [&] { check(++step == 2, "pending setup repaint must precede side effect"); },
+      [&](int action) { delivered = action; check(++step == 3, "action side effect must follow repaint"); });
+  check(delivered == 42, "coordinator must deliver exact captured action");
+}
+
 // Mutation caught: bypassing the production display painter loses measured geometry, anchor,
 // font, ordering, full-frame reset, or replaces partial clear with fillScreen.
 void testRecordedCenterHeaderPainter() {
@@ -263,6 +274,7 @@ int main() {
   testDashboardHeaderCoordinatesHoldLabelsAndCancellation();
   testDashboardInteractionImmediatelyRepaintsHeaderWithoutFrameClear();
   testDashboardHoldRepaintCoalescesVisibleStates();
+  testSetupInteractionPaintsBeforeExactActionSideEffect();
   testRecordedCenterHeaderPainter();
   return failures == 0 ? 0 : 1;
 }
