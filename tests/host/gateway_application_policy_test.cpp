@@ -233,6 +233,15 @@ void testSetupInteractionPaintsBeforeExactActionSideEffect() {
   check(delivered == 42, "coordinator must deliver exact captured action");
 }
 
+// Mutation caught: omitting Dashboard repaint after a no-pending touch leaves cancelled WAN hold stale.
+void testSetupInteractionRepaintsDashboardWhenNoSetupRenderIsPending() {
+  int dashboardPaints = 0;
+  coordinateSetupInteraction(
+      [] { return 1; }, [] { return false; }, [] {}, [](int) {},
+      [&] { ++dashboardPaints; });
+  check(dashboardPaints == 1, "no-pending dashboard interaction must repaint header immediately");
+}
+
 // Mutation caught: bypassing the production display painter loses measured geometry, anchor,
 // font, ordering, full-frame reset, or replaces partial clear with fillScreen.
 void testRecordedCenterHeaderPainter() {
@@ -275,6 +284,7 @@ int main() {
   testDashboardInteractionImmediatelyRepaintsHeaderWithoutFrameClear();
   testDashboardHoldRepaintCoalescesVisibleStates();
   testSetupInteractionPaintsBeforeExactActionSideEffect();
+  testSetupInteractionRepaintsDashboardWhenNoSetupRenderIsPending();
   testRecordedCenterHeaderPainter();
   return failures == 0 ? 0 : 1;
 }

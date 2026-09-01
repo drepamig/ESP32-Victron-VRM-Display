@@ -47,6 +47,16 @@ inline void coordinateSetupInteraction(CaptureTouch captureTouch, HasPendingRend
   applyAction(action);
 }
 
+template <typename CaptureTouch, typename HasPendingRender, typename Paint, typename ApplyAction,
+          typename PaintDashboard>
+inline void coordinateSetupInteraction(CaptureTouch captureTouch, HasPendingRender hasPendingRender,
+                                       Paint paint, ApplyAction applyAction,
+                                       PaintDashboard paintDashboard) {
+  const auto action = captureTouch();
+  if (hasPendingRender()) { paint(); } else { paintDashboard(); }
+  applyAction(action);
+}
+
 template <typename Display>
 inline void paintCenterHeaderText(Display& display, int& previousWidth, const char* text,
                                   bool holdLabel, bool fullFrameCleared, int background = 0) {
