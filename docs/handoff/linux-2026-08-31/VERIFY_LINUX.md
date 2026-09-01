@@ -1,0 +1,136 @@
+# Linux setup and verification
+
+These commands rebuild the repository state on Linux. Adjust only the serial
+port and the local TFT_eSPI configuration.
+
+## Toolchain
+
+Install Arduino CLI, a C++17 compiler, Git, and the pinned ESP32 dependencies:
+
+```bash
+arduino-cli core update-index
+arduino-cli core install esp32:esp32@3.3.11
+arduino-cli lib install "TFT_eSPI"
+arduino-cli lib install "XPT2046_Touchscreen@1.4"
+arduino-cli core list
+arduino-cli lib list
+```
+
+Configure TFT_eSPI for the ESP32-2432S028R exactly as documented in the root
+`README.md`. The XPT2046 controller uses its own SPI bus and library; the
+TFT_eSPI `TOUCH_CS` warning is therefore expected for this project.
+
+If the serial device is permission-denied, use the serial-access group or udev
+rule appropriate for the Linux distribution, then log out and back in. Do not
+run the desktop app or the whole development workflow as root.
+
+## Repository and secret checks
+
+```bash
+git switch codex/esp32-venus-starlink-touch-bridge
+git status --short --branch
+git log --oneline --decorate -12
+git merge-base --is-ancestor 1d5f95cb10aeee5b76dd7c4b1c9081cf9260231e HEAD
+git remote -v
+
+cp -n VictronCYD_Modbus/secrets.example.h VictronCYD_Modbus/secrets.h
+git check-ignore -v VictronCYD_Modbus/secrets.h
+```
+
+Populate `secrets.h` locally or transfer it privately. Never print it while
+recording terminal output.
+
+## Host suites
+
+Run from the repository root:
+
+```bash
+set -euo pipefail
+mkdir -p build/host
+CXXFLAGS=(-std=c++17 -Wall -Wextra -Werror)
+INCLUDES=(-Itests/host/fakes -IVictronCYD_Modbus)
+
+g++ "${CXXFLAGS[@]}" -IVictronCYD_Modbus \
+  tests/host/gateway_policy_test.cpp \
+  -o build/host/gateway_policy_test
+./build/host/gateway_policy_test
+
+g++ "${CXXFLAGS[@]}" -IVictronCYD_Modbus \
+  tests/host/gateway_application_policy_test.cpp \
+  -o build/host/gateway_application_policy_test
+./build/host/gateway_application_policy_test
+
+g++ "${CXXFLAGS[@]}" -IVictronCYD_Modbus \
+  tests/host/modbus_snapshot_policy_test.cpp \
+  -o build/host/modbus_snapshot_policy_test
+./build/host/modbus_snapshot_policy_test
+
+g++ "${CXXFLAGS[@]}" -IVictronCYD_Modbus \
+  tests/host/touch_mapping_test.cpp \
+  -o build/host/touch_mapping_test
+./build/host/touch_mapping_test
+
+g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
+  tests/host/network_profiles_test.cpp VictronCYD_Modbus/NetworkProfiles.cpp \
+  -o build/host/network_profiles_test
+./build/host/network_profiles_test
+
+g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
+  tests/host/camper_network_test.cpp VictronCYD_Modbus/CamperNetwork.cpp \
+  -o build/host/camper_network_test
+./build/host/camper_network_test
+
+g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
+  tests/host/touch_input_release_test.cpp VictronCYD_Modbus/TouchInput.cpp \
+  -o build/host/touch_input_release_test
+./build/host/touch_input_release_test
+
+g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
+  tests/host/wifi_setup_ui_test.cpp VictronCYD_Modbus/WifiSetupUi.cpp \
+  -o build/host/wifi_setup_ui_test
+./build/host/wifi_setup_ui_test
+
+g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
+  tests/host/provisioning_portal_test.cpp VictronCYD_Modbus/ProvisioningPortal.cpp \
+  -o build/host/provisioning_portal_test
+./build/host/provisioning_portal_test
+
+echo "host suites: 9/9 passed"
+```
+
+## Firmware build
+
+```bash
+arduino-cli compile \
+  --warnings all \
+  --fqbn esp32:esp32:esp32 \
+  --build-path build/linux-review \
+  VictronCYD_Modbus
+```
+
+Before claiming a reproducible baseline, also run:
+
+```bash
+git diff --check
+git status --short --branch
+```
+
+## Optional hardware upload
+
+Do not upload merely to establish the Linux checkout: the bench board already
+contains reviewed firmware `1d5f95c`. Upload only when the board is connected to
+Linux and a reviewed firmware change or explicit reflash is required.
+
+```bash
+arduino-cli board list
+
+# Replace /dev/ttyUSB0 with the detected port.
+arduino-cli upload \
+  --port /dev/ttyUSB0 \
+  --fqbn esp32:esp32:esp32 \
+  --build-path build/linux-review \
+  --verify \
+  VictronCYD_Modbus
+```
+
+An ordinary upload must not erase NVS at `0x9000..0xDFFF`.
