@@ -37,16 +37,6 @@ inline bool shouldRepaintDashboardHold(int previousCountdown, int countdown) {
   return previousCountdown != countdown;
 }
 
-template <typename CaptureTouch, typename HasPendingRender, typename Paint, typename ApplyAction>
-inline void coordinateSetupInteraction(CaptureTouch captureTouch, HasPendingRender hasPendingRender,
-                                       Paint paint, ApplyAction applyAction) {
-  const auto action = captureTouch();
-  if (hasPendingRender()) {
-    paint();
-  }
-  applyAction(action);
-}
-
 template <typename CaptureTouch, typename HasPendingRender, typename Paint, typename ApplyAction,
           typename PaintDashboard>
 inline void coordinateSetupInteraction(CaptureTouch captureTouch, HasPendingRender hasPendingRender,

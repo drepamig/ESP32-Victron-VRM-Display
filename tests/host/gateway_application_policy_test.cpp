@@ -224,13 +224,15 @@ void testDashboardHoldRepaintCoalescesVisibleStates() {
 
 // Mutation caught: applying scan action before consuming pending Scanning repaint.
 void testSetupInteractionPaintsBeforeExactActionSideEffect() {
-  int step = 0, delivered = 0;
+  int step = 0, delivered = 0, dashboardPaints = 0;
   coordinateSetupInteraction(
       [&] { check(++step == 1, "touch capture must occur first"); return 42; },
       [] { return true; },
       [&] { check(++step == 2, "pending setup repaint must precede side effect"); },
-      [&](int action) { delivered = action; check(++step == 3, "action side effect must follow repaint"); });
+      [&](int action) { delivered = action; check(++step == 3, "action side effect must follow repaint"); },
+      [&] { ++dashboardPaints; });
   check(delivered == 42, "coordinator must deliver exact captured action");
+  check(dashboardPaints == 0, "pending setup repaint must not invoke Dashboard fallback");
 }
 
 // Mutation caught: omitting Dashboard repaint after a no-pending touch leaves cancelled WAN hold stale.
