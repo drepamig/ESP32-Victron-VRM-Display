@@ -61,6 +61,7 @@ struct TouchCalibrationContactState {
 };
 
 constexpr int32_t kMinimumTouchCalibrationSpan = 1500;
+constexpr int16_t kTouchCalibrationTargetInset = 20;
 
 inline bool isValidTouchCalibration(const TouchCalibration& calibration) {
   return calibration.minX >= 0 && calibration.maxX <= 4095 && calibration.minY >= 0 &&
@@ -192,6 +193,10 @@ inline int32_t clampTouchValue(int32_t value, int32_t minimum, int32_t maximum) 
   return value < minimum ? minimum : (value > maximum ? maximum : value);
 }
 
+inline int32_t touchCalibrationMappingInset(int16_t dimension) {
+  return dimension > 2 * kTouchCalibrationTargetInset ? kTouchCalibrationTargetInset : 0;
+}
+
 inline TouchPoint mapTouchPoint(int32_t rawX, int32_t rawY,
                                 const TouchCalibration& calibration, int16_t width,
                                 int16_t height) {
@@ -207,10 +212,16 @@ inline TouchPoint mapTouchPoint(int32_t rawX, int32_t rawY,
   const int32_t maxY = calibration.swapAxes ? calibration.maxX : calibration.maxY;
   const int32_t clampedX = clampTouchValue(sourceX, minX, maxX);
   const int32_t clampedY = clampTouchValue(sourceY, minY, maxY);
-  const int32_t x = static_cast<int32_t>(
-      (static_cast<int64_t>(clampedX - minX) * (width - 1)) / (maxX - minX));
-  const int32_t y = static_cast<int32_t>(
-      (static_cast<int64_t>(clampedY - minY) * (height - 1)) / (maxY - minY));
+  const int32_t minimumDisplayX = touchCalibrationMappingInset(width);
+  const int32_t maximumDisplayX = width - 1 - minimumDisplayX;
+  const int32_t minimumDisplayY = touchCalibrationMappingInset(height);
+  const int32_t maximumDisplayY = height - 1 - minimumDisplayY;
+  const int32_t x = minimumDisplayX + static_cast<int32_t>(
+      (static_cast<int64_t>(clampedX - minX) * (maximumDisplayX - minimumDisplayX)) /
+      (maxX - minX));
+  const int32_t y = minimumDisplayY + static_cast<int32_t>(
+      (static_cast<int64_t>(clampedY - minY) * (maximumDisplayY - minimumDisplayY)) /
+      (maxY - minY));
   const int32_t mappedX = calibration.invertX ? width - 1 - x : x;
   const int32_t mappedY = calibration.invertY ? height - 1 - y : y;
   return {static_cast<int16_t>(clampTouchValue(mappedX, 0, width - 1)),

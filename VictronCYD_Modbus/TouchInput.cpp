@@ -215,10 +215,13 @@ TouchCalibration TouchInput::makeCalibration() const {
 void TouchInput::drawCalibrationScreen(bool invalidCalibration) {
   const int16_t width = static_cast<int16_t>(display_.width());
   const int16_t height = static_cast<int16_t>(display_.height());
-  calibrationTargets_[0] = {20, 20};
-  calibrationTargets_[1] = {static_cast<int16_t>(width - 21), 20};
-  calibrationTargets_[2] = {static_cast<int16_t>(width - 21), static_cast<int16_t>(height - 21)};
-  calibrationTargets_[3] = {20, static_cast<int16_t>(height - 21)};
+  calibrationTargets_[0] = {kTouchCalibrationTargetInset, kTouchCalibrationTargetInset};
+  calibrationTargets_[1] = {static_cast<int16_t>(width - 1 - kTouchCalibrationTargetInset),
+                            kTouchCalibrationTargetInset};
+  calibrationTargets_[2] = {static_cast<int16_t>(width - 1 - kTouchCalibrationTargetInset),
+                            static_cast<int16_t>(height - 1 - kTouchCalibrationTargetInset)};
+  calibrationTargets_[3] = {kTouchCalibrationTargetInset,
+                            static_cast<int16_t>(height - 1 - kTouchCalibrationTargetInset)};
   display_.fillScreen(TFT_BLACK);
   display_.setTextColor(invalidCalibration ? TFT_RED : TFT_WHITE, TFT_BLACK);
   display_.setTextDatum(MC_DATUM);

@@ -67,20 +67,29 @@ int main() {
   TouchCalibration calibration{200, 3800, 250, 3750, false, false, false};
   const TouchPoint topLeft = mapTouchPoint(200, 250, calibration, 320, 240);
   const TouchPoint bottomRight = mapTouchPoint(3800, 3750, calibration, 320, 240);
-  assert(topLeft.x == 0 && topLeft.y == 0);
-  assert(bottomRight.x == 319 && bottomRight.y == 239);
+  assert(topLeft.x == 20 && topLeft.y == 20);
+  assert(bottomRight.x == 299 && bottomRight.y == 219);
 
   const TouchPoint clamped = mapTouchPoint(0, 4095, calibration, 320, 240);
   assert(clamped.x >= 0 && clamped.x < 320);
   assert(clamped.y >= 0 && clamped.y < 240);
 
   const TouchCalibration swapped{200, 3800, 250, 3750, true, false, false};
+  const TouchPoint swappedTopLeft = mapTouchPoint(200, 250, swapped, 320, 240);
   const TouchPoint swappedBottomRight = mapTouchPoint(3800, 3750, swapped, 320, 240);
-  assert(swappedBottomRight.x == 319 && swappedBottomRight.y == 239);
+  assert(swappedTopLeft.x == 20 && swappedTopLeft.y == 20);
+  assert(swappedBottomRight.x == 299 && swappedBottomRight.y == 219);
 
   const TouchCalibration inverted{200, 3800, 250, 3750, false, true, true};
   const TouchPoint invertedTopLeft = mapTouchPoint(200, 250, inverted, 320, 240);
-  assert(invertedTopLeft.x == 319 && invertedTopLeft.y == 239);
+  const TouchPoint invertedBottomRight = mapTouchPoint(3800, 3750, inverted, 320, 240);
+  assert(invertedTopLeft.x == 299 && invertedTopLeft.y == 219);
+  assert(invertedBottomRight.x == 20 && invertedBottomRight.y == 20);
+
+  const TouchPoint smallTopLeft = mapTouchPoint(200, 250, calibration, 20, 30);
+  const TouchPoint smallBottomRight = mapTouchPoint(3800, 3750, calibration, 20, 30);
+  assert(smallTopLeft.x == 0 && smallTopLeft.y == 0);
+  assert(smallBottomRight.x == 19 && smallBottomRight.y == 29);
 
   assert(isValidTouchCalibration(calibration));
   assert(!isValidTouchCalibration(TouchCalibration{200, 200, 250, 3750, false, false, false}));
