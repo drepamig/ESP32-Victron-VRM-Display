@@ -97,7 +97,7 @@ class WifiSetupUi {
   void drawPortalExpiry();
   void drawClearHoldCountdown();
   void drawButton(const WifiSetupRect& bounds, const char* label, bool selected = false,
-                  bool enabled = true);
+                  bool enabled = true, uint8_t font = 2);
   void renderSaved();
   void renderScanning();
   void renderNearby();

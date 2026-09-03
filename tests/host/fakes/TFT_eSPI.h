@@ -36,12 +36,20 @@ class TFT_eSPI {
     int32_t radius;
   };
 
+  struct StringCall {
+    std::string value;
+    int32_t x;
+    int32_t y;
+    uint8_t font;
+  };
+
   int16_t width() const { return 320; }
   int16_t height() const { return 240; }
 
   void fillScreen(uint16_t) {
     ++fillScreenCount;
     drawnStrings.clear();
+    stringCalls.clear();
     filledRects.clear();
     drawnCircles.clear();
   }
@@ -59,8 +67,10 @@ class TFT_eSPI {
   void setTextColor(uint16_t, uint16_t = TFT_BLACK) {}
   void setTextDatum(uint8_t) {}
 
-  int16_t drawString(const char* value, int32_t, int32_t, uint8_t = 1) {
-    drawnStrings.emplace_back(value == nullptr ? "" : value);
+  int16_t drawString(const char* value, int32_t x, int32_t y, uint8_t font = 1) {
+    const std::string drawn = value == nullptr ? "" : value;
+    drawnStrings.push_back(drawn);
+    stringCalls.push_back({drawn, x, y, font});
     return 0;
   }
 
@@ -95,6 +105,15 @@ class TFT_eSPI {
     return false;
   }
 
+  bool drewWithFont(const std::string& value, uint8_t font) const {
+    for (const StringCall& call : stringCalls) {
+      if (call.value == value && call.font == font) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool filledRectAt(int32_t x, int32_t y, int32_t width, int32_t height) const {
     for (const RectCall& call : filledRects) {
       if (call.x == x && call.y == y && call.width == width && call.height == height) {
@@ -114,6 +133,7 @@ class TFT_eSPI {
   }
 
   std::vector<std::string> drawnStrings;
+  std::vector<StringCall> stringCalls;
   std::vector<RectCall> filledRects;
   std::vector<CircleCall> drawnCircles;
   uint32_t fillScreenCount = 0;

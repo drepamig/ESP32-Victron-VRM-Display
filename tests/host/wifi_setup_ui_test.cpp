@@ -595,6 +595,18 @@ void testProtectedCredentialRenderingMaskingAndFixedKeyboardRouting() {
         "Show must reveal the retained text through a partial repaint");
 }
 
+// Mutation caught: rendering the nine-character Backspace label in the default
+// button font overflows its fixed 60-pixel utility-key bounds on the CYD display.
+void testBackspaceLabelUsesCompactFontWithinItsFixedButton() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ui.showCredentialEntry("SyntheticNet", 3, 100);
+  ui.render(offlineStatus());
+
+  check(display.drewWithFont("Backspace", 1),
+        "Backspace must use the compact built-in font within its fixed button");
+}
+
 // Mutation caught: routing Scroll through the credential keyboard would dispatch a second key
 // when one physical contact drifts by the touch input's six-pixel motion threshold.
 void testCredentialContactDispatchesOnceWhileListMotionStillRoutes() {
@@ -834,6 +846,7 @@ int main() {
   testClearAllHoldCountdownAndReleaseCancellation();
   testBackInactivityPortalAndResultViews();
   testProtectedCredentialRenderingMaskingAndFixedKeyboardRouting();
+  testBackspaceLabelUsesCompactFontWithinItsFixedButton();
   testCredentialContactDispatchesOnceWhileListMotionStillRoutes();
   testConnectGatingConnectingLockFailureAndCancelRouting();
   testUsePhoneAndExplicitCancellationClearCredentialState();

@@ -588,14 +588,14 @@ void WifiSetupUi::returnToNearby() {
 }
 
 void WifiSetupUi::drawButton(const WifiSetupRect& bounds, const char* label, bool selected,
-                             bool enabled) {
+                             bool enabled, uint8_t font) {
   display_.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 4,
                          selected && enabled ? kSelected : kPanel);
   display_.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 4, kBorder);
   display_.setTextColor(enabled ? TFT_WHITE : kMuted,
                         selected && enabled ? kSelected : kPanel);
   display_.setTextDatum(MC_DATUM);
-  display_.drawString(label, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, 2);
+  display_.drawString(label, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, font);
 }
 
 void WifiSetupUi::drawHeader(WanPhase wanPhase) {
@@ -683,7 +683,7 @@ void WifiSetupUi::drawCredentialControls() {
   drawButton(wifiRect(kCredentialPageBounds), credentialPageLabel(credentialEntry_.page()),
              false, editing);
   drawButton(wifiRect(kCredentialSpaceBounds), "Space", false, editing);
-  drawButton(wifiRect(kCredentialBackspaceBounds), "Backspace", false, editing);
+  drawButton(wifiRect(kCredentialBackspaceBounds), "Backspace", false, editing, 1);
   drawButton(wifiRect(kCredentialUsePhoneBounds), "Use phone", false, editing);
   drawCredentialConnectControl();
 }
