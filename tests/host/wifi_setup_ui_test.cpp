@@ -19,6 +19,25 @@ CamperNetworkStatus offlineStatus() {
   return {true, WanPhase::Offline, IPAddress(), 0, 1};
 }
 
+WifiSetupAction enterProtectedNetwork(WifiSetupUi& ui, uint32_t nowMs = 10) {
+  ui.open();
+  check(ui.handleTouch({210, 18}, nowMs).type == WifiSetupActionType::Refresh,
+        "Nearby entry must request a scan before credential routing");
+  const ScanResult result[1]{{"SyntheticNet", -55, 3, 1}};
+  ui.setScanResults(result, 1);
+  return ui.handleTouch({100, 56}, nowMs + 1);
+}
+
+void typeLowerA(WifiSetupUi& ui, uint32_t& nowMs) {
+  ui.handleTouch({35, 115}, nowMs++);
+}
+
+void typeEightLowerAs(WifiSetupUi& ui, uint32_t& nowMs) {
+  for (int index = 0; index < 8; ++index) {
+    typeLowerA(ui, nowMs);
+  }
+}
+
 void holdWanToOpen(WifiSetupUi& ui, uint32_t startedAtMs = 1000) {
   check(ui.handleTouch({300, 10}, startedAtMs).type == WifiSetupActionType::None,
         "WAN press must not immediately open setup");
@@ -501,6 +520,246 @@ void testBackInactivityPortalAndResultViews() {
         "stale portal SSID and code must not render after navigation re-entry");
 }
 
+// Mutations caught: bypassing protected routing, omitting the fixed keyboard, drawing clear
+// credential text while masked, breaking page/shift routing, or rounding Space/Backspace hits.
+void testProtectedCredentialRenderingMaskingAndFixedKeyboardRouting() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  const WifiSetupAction provision = enterProtectedNetwork(ui, 10);
+  check(provision.type == WifiSetupActionType::ProvisionNew &&
+            provision.ssid == String("SyntheticNet") && provision.securityType == 3,
+        "unknown protected Nearby selection must preserve SSID and security");
+
+  ui.showCredentialEntry("SyntheticNet", 3, 100);
+  check(ui.takeFullRenderRequest() && !ui.takeFullRenderRequest(),
+        "credential entry must request exactly one initial full repaint");
+  ui.render(offlineStatus());
+  check(display.drewContaining("SyntheticNet") && display.drew("Show") &&
+            display.drew("q") && display.drew("w") && display.drew("Shift") &&
+            display.drew("123") && display.drew("Space") && display.drew("Use phone") &&
+            display.drew("Connect") && display.drew("0/63"),
+        "protected selection renders local credential entry with the fixed controls");
+
+  uint32_t nowMs = 101;
+  ui.handleTouch({31, 172}, nowMs++);  // Shift
+  ui.handleTouch({35, 115}, nowMs++);  // A
+  ui.handleTouch({89, 172}, nowMs++);  // 123
+  check(ui.takeFullRenderRequest(), "alphabet-to-number page change must request a full repaint");
+  ui.render(offlineStatus());
+  check(display.drew("1") && display.drew("#+=") && display.drew("ABC"),
+        "number page must expose digits, symbols routing, and ABC");
+  ui.handleTouch({20, 88}, nowMs++);   // 1
+  ui.handleTouch({159, 142}, nowMs++); // !
+  ui.handleTouch({89, 172}, nowMs++);  // #+=
+  check(ui.takeFullRenderRequest(), "number-to-symbol page change must request a full repaint");
+  ui.render(offlineStatus());
+  check(display.drew("*") && display.drew("+") && display.drew("123"),
+        "symbol page must render symbols and the 123 return control");
+  ui.handleTouch({31, 172}, nowMs++);  // ABC
+  check(ui.takeFullRenderRequest(), "ABC must return to the alphabet page with a full repaint");
+  ui.render(offlineStatus());
+
+  for (int repeat = 0; repeat < 2; ++repeat) {
+    ui.handleTouch({35, 115}, nowMs++);   // A (shift remains enabled)
+    ui.handleTouch({89, 172}, nowMs++);   // 123
+    ui.render(offlineStatus());
+    ui.handleTouch({20, 88}, nowMs++);    // 1
+    ui.handleTouch({159, 142}, nowMs++);  // !
+    ui.handleTouch({31, 172}, nowMs++);   // ABC
+    ui.render(offlineStatus());
+  }
+  const uint32_t maskedFullRenders = display.fillScreenCount;
+  ui.renderDynamic(offlineStatus());
+  check(display.fillScreenCount == maskedFullRenders,
+        "masked stable refresh must not repaint the full credential screen");
+  check(display.drew("*********") && display.drew("9/63") &&
+            !display.drewContaining("A1!A1!A1!"),
+        "masked entry must render nine stars and never send the clear fixture to the display");
+
+  ui.handleTouch({186, 172}, nowMs++);  // exact Space center
+  ui.renderDynamic(offlineStatus());
+  check(display.drew("10/63"), "Space center must append one exact space byte");
+  ui.handleTouch({286, 172}, nowMs++);  // Backspace
+  ui.renderDynamic(offlineStatus());
+  check(display.drew("9/63"), "Backspace must remove the exact Space byte");
+
+  const uint32_t fullRenders = display.fillScreenCount;
+  ui.renderDynamic(offlineStatus());
+  ui.renderDynamic(offlineStatus());
+  check(display.fillScreenCount == fullRenders,
+        "stable credential keyboard refresh must not clear the full display");
+  ui.handleTouch({284, 18}, nowMs++);  // Show
+  ui.renderDynamic(offlineStatus());
+  check(display.drewContaining("A1!A1!A1!") && display.drew("Hide") &&
+            display.fillScreenCount == fullRenders,
+        "Show must reveal the retained text through a partial repaint");
+}
+
+// Mutations caught: enabling Connect at seven bytes, emitting twice, leaking edits while
+// connecting, clearing the failed password, or making connecting Back cancel locally.
+void testConnectGatingConnectingLockFailureAndCancelRouting() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  const WifiSetupAction provision = enterProtectedNetwork(ui, 10);
+  check(provision.type == WifiSetupActionType::ProvisionNew,
+        "connecting fixture must route through an unknown protected network");
+  ui.showCredentialEntry("SyntheticNet", 3, 100);
+  ui.render(offlineStatus());
+  uint32_t nowMs = 101;
+  for (int index = 0; index < 7; ++index) {
+    typeLowerA(ui, nowMs);
+  }
+  check(ui.handleTouch({240, 213}, nowMs++).type == WifiSetupActionType::None,
+        "Connect must stay disabled below eight bytes");
+  typeLowerA(ui, nowMs);
+  ui.renderDynamic(offlineStatus());
+  check(display.drew("8/63"), "eight-byte password must update the independent count");
+
+  WifiSetupAction action = ui.handleTouch({240, 213}, nowMs++);
+  check(action.type == WifiSetupActionType::SubmitCredentials,
+        "Connect must emit SubmitCredentials at eight bytes");
+  check(ui.handleTouch({240, 213}, nowMs++).type == WifiSetupActionType::None,
+        "connecting Connect must emit only once");
+  CredentialSubmission submission;
+  check(ui.takeCredentialSubmission(submission) && submission.ready &&
+            std::string(submission.ssid) == "SyntheticNet" &&
+            std::string(submission.passphrase) == "aaaaaaaa" && submission.securityType == 3,
+        "credential submission must preserve exact selected network and eight-byte password");
+  check(!ui.takeCredentialSubmission(submission),
+        "credential submission must be consumable exactly once");
+
+  ui.handleTouch({35, 115}, nowMs++);   // character
+  ui.handleTouch({286, 172}, nowMs++);  // backspace
+  ui.handleTouch({284, 18}, nowMs++);   // visibility
+  ui.handleTouch({89, 172}, nowMs++);   // page
+  ui.renderDynamic(offlineStatus());
+  check(display.drew("8/63") && !display.drewContaining("aaaaaaaa"),
+        "connecting state must lock characters, Backspace, visibility, and page edits");
+  action = ui.handleTouch({30, 18}, nowMs++);
+  check(action.type == WifiSetupActionType::CancelCredentialAttempt && ui.isOpen(),
+        "connecting Back must request cancellation without closing or editing locally");
+
+  check(ui.showCredentialFailure("Wrong password", 1000),
+        "owned connecting failure must return to credential entry");
+  ui.render(offlineStatus());
+  check(display.drew("********") && display.drew("8/63") &&
+            display.drewContaining("Wrong password") && !display.drewContaining("aaaaaaaa"),
+        "failed entry must retain masked length and render the error");
+  check(ui.handleTouch({30, 18}, 1001).type == WifiSetupActionType::None && ui.isOpen(),
+        "Password Back must cancel locally and return to Nearby");
+  ui.render(offlineStatus());
+  check(display.drewContaining("SyntheticNet") && display.drew("Refresh"),
+        "Password Back must preserve the current Nearby results");
+}
+
+// Mutations caught: carrying credential bytes in the phone route, retaining local entry state,
+// or failing to route explicit external cancellation back to current Nearby results.
+void testUsePhoneAndExplicitCancellationClearCredentialState() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  const ScanResult result[1]{{"SyntheticNet", -55, 3, 1}};
+  ui.open(); ui.handleTouch({210, 18}, 1); ui.setScanResults(result, 1);
+  ui.showCredentialEntry("SyntheticNet", 3, 100);
+  uint32_t nowMs = 101;
+  typeEightLowerAs(ui, nowMs);
+  WifiSetupAction action = ui.handleTouch({80, 213}, nowMs++);
+  check(action.type == WifiSetupActionType::UsePhone && action.ssid == String("SyntheticNet") &&
+            action.securityType == 3 && action.profileIndex == -1,
+        "Use phone must carry only the selected SSID and security type");
+  CredentialSubmission submission;
+  check(!ui.takeCredentialSubmission(submission) && !ui.showCredentialFailure("late", nowMs),
+        "Use phone must clear local credential and reject late failure ownership");
+  ui.showCredentialEntry("SyntheticNet", 3, nowMs++);
+  ui.render(offlineStatus());
+  check(display.drew("0/63"), "new credential entry after Use phone must start empty");
+  typeEightLowerAs(ui, nowMs);
+  check(ui.handleTouch({240, 213}, nowMs++).type == WifiSetupActionType::SubmitCredentials,
+        "second valid entry must reach Connecting");
+  ui.cancelCredentialAttempt();
+  ui.render(offlineStatus());
+  check(display.drewContaining("SyntheticNet") && display.drew("Refresh") &&
+            !ui.showCredentialFailure("late", nowMs),
+        "explicit cancellation must clear credentials and return to current Nearby results");
+}
+
+// Mutations caught: applying the ordinary 60-second timeout in Password/Connecting, failing to
+// show the five-minute notice, or counting connection duration against the restarted entry timer.
+void testCredentialDeadlinesAndConnectionTimeExemption() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  const ScanResult result[1]{{"SyntheticNet", -55, 3, 1}};
+  ui.open(); ui.handleTouch({210, 18}, 1); ui.setScanResults(result, 1);
+  ui.showCredentialEntry("SyntheticNet", 3, 100);
+  check(ui.poll(60100).type == WifiSetupActionType::None && ui.isOpen(),
+        "ordinary sixty-second inactivity must not close Password");
+  check(ui.poll(300099).type == WifiSetupActionType::None && ui.isOpen(),
+        "Password must remain open before its five-minute deadline");
+  check(ui.poll(300100).type == WifiSetupActionType::None && ui.isOpen() &&
+            ui.takeFullRenderRequest(),
+        "Password deadline must return locally to Nearby and request repaint");
+  ui.render(offlineStatus());
+  check(display.drewContaining("Entry timed out") && display.drewContaining("SyntheticNet"),
+        "credential timeout must leave a visible notice over current Nearby results");
+
+  ui.showCredentialEntry("SyntheticNet", 3, 400000);
+  uint32_t nowMs = 400001;
+  typeEightLowerAs(ui, nowMs);
+  check(ui.handleTouch({240, 213}, nowMs++).type == WifiSetupActionType::SubmitCredentials,
+        "valid deadline fixture must enter Connecting");
+  check(ui.poll(1000000).type == WifiSetupActionType::None && ui.isOpen(),
+        "Connecting must ignore ordinary and password inactivity deadlines");
+  check(ui.showCredentialFailure("Retry", 1000000),
+        "late connection failure must restart Password activity at failure time");
+  check(ui.poll(1299999).type == WifiSetupActionType::None && ui.isOpen(),
+        "connection duration must not consume the restarted entry deadline");
+  check(ui.poll(1300000).type == WifiSetupActionType::None && ui.isOpen(),
+        "restarted five-minute deadline must return locally rather than exit setup");
+  ui.render(offlineStatus());
+  check(display.drewContaining("Entry timed out"),
+        "restarted Password timeout must render the Nearby notice");
+}
+
+// Mutations caught: leaving a ready submission or retained entry owned after any terminal
+// transition would allow stale credentials to escape through the Task 5 handoff API.
+void testCredentialStateClearsOnTerminalTransitions() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  CredentialSubmission submission;
+  uint32_t nowMs = 100;
+
+  ui.showCredentialEntry("SyntheticNet", 3, nowMs++);
+  typeEightLowerAs(ui, nowMs);
+  ui.handleTouch({240, 213}, nowMs++);
+  ui.close();
+  check(!ui.takeCredentialSubmission(submission) &&
+            !ui.showCredentialFailure("late close", nowMs),
+        "close must clear ready and retained credential state");
+
+  ui.showCredentialEntry("SyntheticNet", 3, nowMs++);
+  typeEightLowerAs(ui, nowMs);
+  ui.handleTouch({240, 213}, nowMs++);
+  ui.open();
+  check(!ui.takeCredentialSubmission(submission) &&
+            !ui.showCredentialFailure("late open", nowMs),
+        "open must clear ready and retained credential state");
+
+  ui.showCredentialEntry("SyntheticNet", 3, nowMs++);
+  typeEightLowerAs(ui, nowMs);
+  ui.handleTouch({240, 213}, nowMs++);
+  ui.showPortal("SyntheticNet", "123456", nowMs + 10000);
+  check(!ui.takeCredentialSubmission(submission) &&
+            !ui.showCredentialFailure("late portal", nowMs),
+        "portal transition must clear ready and retained credential state");
+
+  ui.showCredentialEntry("SyntheticNet", 3, nowMs++);
+  typeEightLowerAs(ui, nowMs);
+  ui.handleTouch({240, 213}, nowMs++);
+  ui.showResult("Connected", true);
+  check(!ui.takeCredentialSubmission(submission) &&
+            !ui.showCredentialFailure("late result", nowMs),
+        "result transition must clear ready and retained credential state");
+}
+
 }  // namespace
 
 int main() {
@@ -520,5 +779,10 @@ int main() {
   testReplacementScanClampsInvalidPage();
   testClearAllHoldCountdownAndReleaseCancellation();
   testBackInactivityPortalAndResultViews();
+  testProtectedCredentialRenderingMaskingAndFixedKeyboardRouting();
+  testConnectGatingConnectingLockFailureAndCancelRouting();
+  testUsePhoneAndExplicitCancellationClearCredentialState();
+  testCredentialDeadlinesAndConnectionTimeExemption();
+  testCredentialStateClearsOnTerminalTransitions();
   return 0;
 }

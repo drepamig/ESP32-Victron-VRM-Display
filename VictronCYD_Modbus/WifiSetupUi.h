@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "CamperNetwork.h"
+#include "CredentialEntryController.h"
+#include "CredentialKeyboardLayout.h"
 #include "NetworkProfiles.h"
 #include "TouchMapping.h"
 
@@ -26,6 +28,8 @@ enum class WifiSetupView : uint8_t {
   Scanning,
   Nearby,
   ConfirmDelete,
+  Password,
+  Connecting,
   Portal,
   Result,
 };
@@ -34,6 +38,9 @@ enum class WifiSetupActionType : uint8_t {
   None,
   ConnectSaved,
   ProvisionNew,
+  SubmitCredentials,
+  UsePhone,
+  CancelCredentialAttempt,
   DeleteSaved,
   Refresh,
   ClearAll,
@@ -64,6 +71,10 @@ class WifiSetupUi {
   void setSavedProfiles(const NetworkProfile* profiles, size_t count, int activeIndex);
   void setScanResults(const ScanResult* results, size_t count);
   bool showScanFailure(const String& message);
+  void showCredentialEntry(const String& ssid, uint8_t securityType, uint32_t nowMs);
+  bool takeCredentialSubmission(CredentialSubmission& out);
+  bool showCredentialFailure(const String& message, uint32_t nowMs);
+  void cancelCredentialAttempt();
   void showPortal(const String& ssid, const String& code, uint32_t expiresAtMs);
   void showResult(const String& message, bool success);
 
@@ -84,13 +95,25 @@ class WifiSetupUi {
   void drawWanStatusLine(WanPhase wanPhase);
   void drawPortalExpiry();
   void drawClearHoldCountdown();
-  void drawButton(const WifiSetupRect& bounds, const char* label, bool selected = false);
+  void drawButton(const WifiSetupRect& bounds, const char* label, bool selected = false,
+                  bool enabled = true);
   void renderSaved();
   void renderScanning();
   void renderNearby();
   void renderConfirmDelete();
+  void renderCredential();
   void renderPortal();
   void renderResult();
+  void drawCredentialHeader();
+  void drawCredentialField();
+  void drawCredentialStatus();
+  void drawCredentialKeyboard();
+  void drawCredentialControls();
+  void drawCredentialShowControl();
+  void drawCredentialShiftControl();
+  void drawCredentialConnectControl();
+  void clearCredentialState();
+  void returnToNearby();
   void cancelHolds();
   void clearPortalState();
   void requestFullRender();
@@ -117,6 +140,14 @@ class WifiSetupUi {
   int lastDynamicWanPhase_ = -1;
   int lastPortalCountdown_ = -1;
   int lastClearCountdown_ = -1;
+  bool credentialFieldNeedsRedraw_ = false;
+  bool credentialKeyboardNeedsRedraw_ = false;
+  bool credentialShowNeedsRedraw_ = false;
+  bool credentialShiftNeedsRedraw_ = false;
+  bool credentialConnectNeedsRedraw_ = false;
+  CredentialEntryController credentialEntry_;
+  String credentialError_;
+  String nearbyNotice_;
   String portalSsid_;
   String portalCode_;
   uint32_t portalExpiresAtMs_ = 0;

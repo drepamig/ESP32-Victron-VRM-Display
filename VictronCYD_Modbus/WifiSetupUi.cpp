@@ -1,5 +1,7 @@
 #include "WifiSetupUi.h"
 
+#include <cctype>
+#include <cstring>
 #include <cstdio>
 
 #include <TFT_eSPI.h>
@@ -24,6 +26,7 @@ constexpr WifiSetupRect kRefreshBounds{108, 204, 99, 32};
 constexpr WifiSetupRect kNextBounds{212, 204, 104, 32};
 constexpr WifiSetupRect kCancelDeleteBounds{4, 204, 151, 32};
 constexpr WifiSetupRect kConfirmDeleteBounds{164, 204, 152, 32};
+constexpr WifiSetupRect kCredentialFieldBounds{4, 39, 312, 24};
 
 constexpr int16_t kRowX = 4;
 constexpr int16_t kFirstRowY = 42;
@@ -47,6 +50,10 @@ uint16_t wanPhaseColor(WanPhase phase) {
 WifiSetupRect rowBounds(size_t row) {
   return {kRowX, static_cast<int16_t>(kFirstRowY + static_cast<int16_t>(row) * kRowStride),
           kRowWidth, kRowHeight};
+}
+
+WifiSetupRect wifiRect(const CredentialKeyRect& bounds) {
+  return {bounds.x, bounds.y, bounds.width, bounds.height};
 }
 
 void drawLockGlyph(TFT_eSPI& display, const WifiSetupRect& bounds) {
@@ -74,6 +81,8 @@ WifiSetupUi::WifiSetupUi(TFT_eSPI& display) : display_(display) {}
 
 void WifiSetupUi::open() {
   clearPortalState();
+  clearCredentialState();
+  nearbyNotice_ = String();
   view_ = WifiSetupView::Saved;
   awaitEntryRelease_ = false;
   selectedProfileIndex_ = -1;
@@ -84,6 +93,7 @@ void WifiSetupUi::open() {
 
 void WifiSetupUi::close() {
   clearPortalState();
+  clearCredentialState();
   view_ = WifiSetupView::Closed;
   awaitEntryRelease_ = false;
   selectedProfileIndex_ = -1;
@@ -144,6 +154,14 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
     return simpleAction(WifiSetupActionType::Exit);
   }
 
+  if (view_ == WifiSetupView::Password && credentialEntry_.pollTimeout(nowMs)) {
+    credentialError_ = String();
+    nearbyNotice_ = "Entry timed out";
+    view_ = WifiSetupView::Nearby;
+    requestFullRender();
+    return noAction();
+  }
+
   if (clearHoldActive_ && !clearActionEmitted_ &&
       nowMs - clearHoldStartedMs_ >= kClearHoldMs) {
     clearActionEmitted_ = true;
@@ -151,7 +169,8 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
     return simpleAction(WifiSetupActionType::ClearAll);
   }
 
-  if (view_ != WifiSetupView::Portal && nowMs - lastActivityMs_ >= kInactivityMs) {
+  if (view_ != WifiSetupView::Portal && view_ != WifiSetupView::Password &&
+      view_ != WifiSetupView::Connecting && nowMs - lastActivityMs_ >= kInactivityMs) {
     close();
     return simpleAction(WifiSetupActionType::Exit);
   }
@@ -196,6 +215,101 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   wanHoldActive_ = false;
   if (clearHoldActive_ && !kClearBounds.contains(point)) {
     clearHoldActive_ = false;
+  }
+
+  if (view_ == WifiSetupView::Password || view_ == WifiSetupView::Connecting) {
+    const CredentialKeyHit hit = credentialKeyboardHitTest(credentialEntry_.page(), point);
+    if (view_ == WifiSetupView::Connecting) {
+      if (hit.type == CredentialKeyType::Back) {
+        return simpleAction(WifiSetupActionType::CancelCredentialAttempt);
+      }
+      return noAction();
+    }
+
+    switch (hit.type) {
+      case CredentialKeyType::Back:
+        returnToNearby();
+        return noAction();
+      case CredentialKeyType::Show:
+        if (credentialEntry_.toggleVisibility(nowMs)) {
+          credentialFieldNeedsRedraw_ = true;
+          credentialShowNeedsRedraw_ = true;
+        }
+        return noAction();
+      case CredentialKeyType::Shift:
+        if (credentialEntry_.page() == CredentialKeyboardPage::Alphabet) {
+          if (credentialEntry_.toggleShift(nowMs)) {
+            credentialKeyboardNeedsRedraw_ = true;
+            credentialShiftNeedsRedraw_ = true;
+          }
+        } else if (credentialEntry_.selectPage(CredentialKeyboardPage::Alphabet, nowMs)) {
+          requestFullRender();
+        }
+        return noAction();
+      case CredentialKeyType::Page: {
+        CredentialKeyboardPage nextPage = CredentialKeyboardPage::Numbers;
+        if (credentialEntry_.page() == CredentialKeyboardPage::Numbers) {
+          nextPage = CredentialKeyboardPage::Symbols;
+        }
+        if (credentialEntry_.selectPage(nextPage, nowMs)) {
+          requestFullRender();
+        }
+        return noAction();
+      }
+      case CredentialKeyType::Character: {
+        char value = hit.character;
+        if (credentialEntry_.page() == CredentialKeyboardPage::Alphabet &&
+            credentialEntry_.uppercase()) {
+          value = static_cast<char>(std::toupper(static_cast<unsigned char>(value)));
+        }
+        const bool couldConnect = credentialEntry_.canSubmit();
+        if (credentialEntry_.append(value, nowMs)) {
+          credentialFieldNeedsRedraw_ = true;
+          if (couldConnect != credentialEntry_.canSubmit()) {
+            credentialConnectNeedsRedraw_ = true;
+          }
+        }
+        return noAction();
+      }
+      case CredentialKeyType::Space: {
+        const bool couldConnect = credentialEntry_.canSubmit();
+        if (credentialEntry_.append(' ', nowMs)) {
+          credentialFieldNeedsRedraw_ = true;
+          if (couldConnect != credentialEntry_.canSubmit()) {
+            credentialConnectNeedsRedraw_ = true;
+          }
+        }
+        return noAction();
+      }
+      case CredentialKeyType::Backspace: {
+        const bool couldConnect = credentialEntry_.canSubmit();
+        if (credentialEntry_.backspace(nowMs)) {
+          credentialFieldNeedsRedraw_ = true;
+          if (couldConnect != credentialEntry_.canSubmit()) {
+            credentialConnectNeedsRedraw_ = true;
+          }
+        }
+        return noAction();
+      }
+      case CredentialKeyType::UsePhone: {
+        WifiSetupAction action{WifiSetupActionType::UsePhone, -1,
+                               String(credentialEntry_.ssid()),
+                               credentialEntry_.securityType()};
+        returnToNearby();
+        return action;
+      }
+      case CredentialKeyType::Connect:
+        if (credentialEntry_.submit(nowMs)) {
+          view_ = WifiSetupView::Connecting;
+          credentialError_ = String();
+          requestFullRender();
+          return simpleAction(WifiSetupActionType::SubmitCredentials);
+        }
+        return noAction();
+      case CredentialKeyType::None:
+      default:
+        return noAction();
+    }
   }
 
   if (kBackBounds.contains(point)) {
@@ -369,9 +483,55 @@ bool WifiSetupUi::showScanFailure(const String& message) {
   return true;
 }
 
+void WifiSetupUi::showCredentialEntry(const String& ssid, uint8_t securityType,
+                                      uint32_t nowMs) {
+  clearCredentialState();
+  nearbyNotice_ = String();
+  lastNowMs_ = nowMs;
+  if (!credentialEntry_.begin(ssid.c_str(), securityType, nowMs)) {
+    view_ = WifiSetupView::Nearby;
+    nearbyNotice_ = "Unable to enter password";
+    requestFullRender();
+    return;
+  }
+  view_ = WifiSetupView::Password;
+  credentialFieldNeedsRedraw_ = true;
+  credentialKeyboardNeedsRedraw_ = true;
+  credentialShowNeedsRedraw_ = true;
+  credentialShiftNeedsRedraw_ = true;
+  credentialConnectNeedsRedraw_ = true;
+  cancelHolds();
+  requestFullRender();
+}
+
+bool WifiSetupUi::takeCredentialSubmission(CredentialSubmission& out) {
+  return credentialEntry_.takeSubmission(out);
+}
+
+bool WifiSetupUi::showCredentialFailure(const String& message, uint32_t nowMs) {
+  if (view_ != WifiSetupView::Connecting || !credentialEntry_.active() ||
+      !credentialEntry_.connecting()) {
+    return false;
+  }
+  lastNowMs_ = nowMs;
+  credentialEntry_.connectionFailed(nowMs);
+  credentialError_ = message;
+  view_ = WifiSetupView::Password;
+  requestFullRender();
+  return true;
+}
+
+void WifiSetupUi::cancelCredentialAttempt() {
+  if (view_ == WifiSetupView::Password || view_ == WifiSetupView::Connecting ||
+      credentialEntry_.active()) {
+    returnToNearby();
+  }
+}
+
 void WifiSetupUi::showPortal(const String& ssid, const String& code,
                              uint32_t expiresAtMs) {
   clearPortalState();
+  clearCredentialState();
   portalSsid_ = ssid;
   portalCode_ = code;
   portalExpiresAtMs_ = expiresAtMs;
@@ -382,6 +542,7 @@ void WifiSetupUi::showPortal(const String& ssid, const String& code,
 
 void WifiSetupUi::showResult(const String& message, bool success) {
   clearPortalState();
+  clearCredentialState();
   resultMessage_ = message;
   resultSuccess_ = success;
   view_ = WifiSetupView::Result;
@@ -398,11 +559,29 @@ int WifiSetupUi::savedProfileForSsid(const String& ssid) const {
   return -1;
 }
 
-void WifiSetupUi::drawButton(const WifiSetupRect& bounds, const char* label, bool selected) {
+void WifiSetupUi::clearCredentialState() {
+  credentialEntry_.cancel();
+  credentialError_ = String();
+  credentialFieldNeedsRedraw_ = false;
+  credentialKeyboardNeedsRedraw_ = false;
+  credentialShowNeedsRedraw_ = false;
+  credentialShiftNeedsRedraw_ = false;
+  credentialConnectNeedsRedraw_ = false;
+}
+
+void WifiSetupUi::returnToNearby() {
+  clearCredentialState();
+  view_ = WifiSetupView::Nearby;
+  requestFullRender();
+}
+
+void WifiSetupUi::drawButton(const WifiSetupRect& bounds, const char* label, bool selected,
+                             bool enabled) {
   display_.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 4,
-                         selected ? kSelected : kPanel);
+                         selected && enabled ? kSelected : kPanel);
   display_.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 4, kBorder);
-  display_.setTextColor(TFT_WHITE, selected ? kSelected : kPanel);
+  display_.setTextColor(enabled ? TFT_WHITE : kMuted,
+                        selected && enabled ? kSelected : kPanel);
   display_.setTextDatum(MC_DATUM);
   display_.drawString(label, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, 2);
 }
@@ -416,6 +595,107 @@ void WifiSetupUi::drawHeader(WanPhase wanPhase) {
                view_ == WifiSetupView::Nearby || view_ == WifiSetupView::Scanning);
   }
   drawWanStatusLine(wanPhase);
+}
+
+void WifiSetupUi::drawCredentialHeader() {
+  const bool editing = view_ == WifiSetupView::Password;
+  drawButton(wifiRect(kCredentialBackBounds), "Back");
+  char ssid[25];
+  const char* selectedSsid = credentialEntry_.ssid();
+  if (std::strlen(selectedSsid) > 24) {
+    std::snprintf(ssid, sizeof(ssid), "%.21s...", selectedSsid);
+  } else {
+    std::snprintf(ssid, sizeof(ssid), "%s", selectedSsid);
+  }
+  display_.setTextDatum(MC_DATUM);
+  display_.setTextColor(TFT_WHITE, kBackground);
+  display_.drawString(ssid, 156, 18, 1);
+  drawButton(wifiRect(kCredentialShowBounds), credentialEntry_.visible() ? "Hide" : "Show",
+             false, editing);
+}
+
+void WifiSetupUi::drawCredentialField() {
+  display_.fillRect(kCredentialFieldBounds.x, kCredentialFieldBounds.y,
+                    kCredentialFieldBounds.width, kCredentialFieldBounds.height, kPanel);
+  display_.drawRect(kCredentialFieldBounds.x, kCredentialFieldBounds.y,
+                    kCredentialFieldBounds.width, kCredentialFieldBounds.height, kBorder);
+  char displayText[64];
+  const size_t length = credentialEntry_.copyDisplayText(displayText, sizeof(displayText));
+  const char* tail = displayText + (length > 32 ? length - 32 : 0);
+  display_.setTextDatum(ML_DATUM);
+  display_.setTextColor(TFT_WHITE, kPanel);
+  display_.drawString(tail, 8, 51, 1);
+  char count[16];
+  std::snprintf(count, sizeof(count), "%u/63", static_cast<unsigned>(length));
+  display_.setTextDatum(MC_DATUM);
+  display_.drawString(count, 288, 51, 1);
+}
+
+void WifiSetupUi::drawCredentialStatus() {
+  display_.fillRect(4, 65, 312, 10, kBackground);
+  display_.setTextDatum(MC_DATUM);
+  if (view_ == WifiSetupView::Connecting) {
+    display_.setTextColor(TFT_YELLOW, kBackground);
+    display_.drawString("Connecting...", 160, 69, 1);
+  } else if (credentialError_.length() > 0) {
+    display_.setTextColor(TFT_RED, kBackground);
+    display_.drawString(credentialError_, 160, 69, 1);
+  } else {
+    display_.setTextColor(kMuted, kBackground);
+    display_.drawString("8-63 characters", 160, 69, 1);
+  }
+}
+
+void WifiSetupUi::drawCredentialKeyboard() {
+  const CredentialKeyboardPage page = credentialEntry_.page();
+  const bool editing = view_ == WifiSetupView::Password;
+  for (size_t row = 0; row < 3; ++row) {
+    const CredentialKeyboardRow keyboardRow = credentialKeyboardRow(page, row);
+    for (size_t column = 0; keyboardRow.characters[column] != '\0'; ++column) {
+      char label[2]{keyboardRow.characters[column], '\0'};
+      if (page == CredentialKeyboardPage::Alphabet && credentialEntry_.uppercase()) {
+        label[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(label[0])));
+      }
+      const WifiSetupRect bounds{
+          static_cast<int16_t>(keyboardRow.x + static_cast<int16_t>(column) *
+                                                   (keyboardRow.keyWidth + keyboardRow.gap)),
+          keyboardRow.y, keyboardRow.keyWidth, keyboardRow.keyHeight};
+      drawButton(bounds, label, false, editing);
+    }
+  }
+}
+
+void WifiSetupUi::drawCredentialControls() {
+  const bool editing = view_ == WifiSetupView::Password;
+  drawCredentialShiftControl();
+  drawButton(wifiRect(kCredentialPageBounds), credentialPageLabel(credentialEntry_.page()),
+             false, editing);
+  drawButton(wifiRect(kCredentialSpaceBounds), "Space", false, editing);
+  drawButton(wifiRect(kCredentialBackspaceBounds), "Backspace", false, editing);
+  drawButton(wifiRect(kCredentialUsePhoneBounds), "Use phone", false, editing);
+  drawCredentialConnectControl();
+}
+
+void WifiSetupUi::drawCredentialShowControl() {
+  drawButton(wifiRect(kCredentialShowBounds), credentialEntry_.visible() ? "Hide" : "Show",
+             false, view_ == WifiSetupView::Password);
+}
+
+void WifiSetupUi::drawCredentialShiftControl() {
+  const bool editing = view_ == WifiSetupView::Password;
+  drawButton(wifiRect(kCredentialShiftOrAbcBounds),
+             credentialShiftOrAbcLabel(credentialEntry_.page()),
+             credentialEntry_.page() == CredentialKeyboardPage::Alphabet &&
+                 credentialEntry_.uppercase(),
+             editing);
+}
+
+void WifiSetupUi::drawCredentialConnectControl() {
+  const bool editing = view_ == WifiSetupView::Password;
+  const bool canConnect = editing && credentialEntry_.canSubmit();
+  drawButton(wifiRect(kCredentialConnectBounds),
+             view_ == WifiSetupView::Connecting ? "Connecting..." : "Connect", canConnect,
+             canConnect);
 }
 
 void WifiSetupUi::drawWanStatusLine(WanPhase wanPhase) {
@@ -455,7 +735,12 @@ void WifiSetupUi::render(const CamperNetworkStatus& networkStatus) {
   }
   display_.fillScreen(kBackground);
   fullRenderRequested_ = false;
-  drawHeader(networkStatus.wanPhase);
+  if (view_ == WifiSetupView::Password || view_ == WifiSetupView::Connecting) {
+    drawCredentialHeader();
+    drawWanStatusLine(networkStatus.wanPhase);
+  } else {
+    drawHeader(networkStatus.wanPhase);
+  }
   switch (view_) {
     case WifiSetupView::Saved:
       renderSaved();
@@ -468,6 +753,10 @@ void WifiSetupUi::render(const CamperNetworkStatus& networkStatus) {
       break;
     case WifiSetupView::ConfirmDelete:
       renderConfirmDelete();
+      break;
+    case WifiSetupView::Password:
+    case WifiSetupView::Connecting:
+      renderCredential();
       break;
     case WifiSetupView::Portal:
       renderPortal();
@@ -486,6 +775,11 @@ void WifiSetupUi::render(const CamperNetworkStatus& networkStatus) {
                               : -1;
   lastClearCountdown_ = clearHoldActive_ ? static_cast<int>((kClearHoldMs -
       (lastNowMs_ - clearHoldStartedMs_) + 999) / 1000) : -1;
+  credentialFieldNeedsRedraw_ = false;
+  credentialKeyboardNeedsRedraw_ = false;
+  credentialShowNeedsRedraw_ = false;
+  credentialShiftNeedsRedraw_ = false;
+  credentialConnectNeedsRedraw_ = false;
 }
 
 void WifiSetupUi::renderDynamic(const CamperNetworkStatus& networkStatus) {
@@ -517,6 +811,28 @@ void WifiSetupUi::renderDynamic(const CamperNetworkStatus& networkStatus) {
     if (countdown != lastClearCountdown_) {
       drawClearHoldCountdown();
       lastClearCountdown_ = countdown;
+    }
+  }
+  if (view_ == WifiSetupView::Password || view_ == WifiSetupView::Connecting) {
+    if (credentialFieldNeedsRedraw_) {
+      drawCredentialField();
+      credentialFieldNeedsRedraw_ = false;
+    }
+    if (credentialKeyboardNeedsRedraw_) {
+      drawCredentialKeyboard();
+      credentialKeyboardNeedsRedraw_ = false;
+    }
+    if (credentialShowNeedsRedraw_) {
+      drawCredentialShowControl();
+      credentialShowNeedsRedraw_ = false;
+    }
+    if (credentialShiftNeedsRedraw_) {
+      drawCredentialShiftControl();
+      credentialShiftNeedsRedraw_ = false;
+    }
+    if (credentialConnectNeedsRedraw_) {
+      drawCredentialConnectControl();
+      credentialConnectNeedsRedraw_ = false;
     }
   }
 }
@@ -609,9 +925,21 @@ void WifiSetupUi::renderNearby() {
     display_.setTextDatum(MC_DATUM);
     display_.drawString("No nearby networks", display_.width() / 2, 105, 2);
   }
+  if (nearbyNotice_.length() > 0) {
+    display_.setTextColor(TFT_YELLOW, kBackground);
+    display_.setTextDatum(MC_DATUM);
+    display_.drawString(nearbyNotice_, display_.width() / 2, 188, 1);
+  }
   drawButton(kPreviousBounds, "Previous", scanPage_ > 0);
   drawButton(kRefreshBounds, "Refresh");
   drawButton(kNextBounds, "Next", (scanPage_ + 1) * kRowsPerPage < scanResults_.size());
+}
+
+void WifiSetupUi::renderCredential() {
+  drawCredentialField();
+  drawCredentialStatus();
+  drawCredentialKeyboard();
+  drawCredentialControls();
 }
 
 void WifiSetupUi::renderConfirmDelete() {
