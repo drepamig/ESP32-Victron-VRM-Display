@@ -60,3 +60,7 @@ debounce.
 After the reviewed image is flashed without erasing NVS, a single deliberate
 tap near the center of `Back`, `Saved`, and `Nearby` must register. The three
 previously passed feedback checks must remain passing.
+
+Observed on 2026-09-02: passed. Calibration persisted across the verified
+upload, all three center taps registered, and the earlier feedback checks
+remained passing.

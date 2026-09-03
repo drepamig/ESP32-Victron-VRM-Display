@@ -4,7 +4,7 @@ This bundle is the portable continuation record for the camper gateway work on
 branch `codex/esp32-venus-starlink-touch-bridge`.
 
 The firmware currently installed on the bench ESP32 was built from commit
-`1d5f95cb10aeee5b76dd7c4b1c9081cf9260231e`. The handoff documentation was
+`a6827e6e92db1870f70ccacd73f8d2b0cf4d5a20`. The handoff documentation was
 committed afterward, so cloning the latest branch tip does not mean a newer
 firmware image has been flashed.
 
@@ -45,25 +45,27 @@ production-used coordinators. The final correction at firmware commit
 `1d5f95c` paints the `Scanning` setup state before starting Wi-Fi scan
 initialization while retaining immediate WAN slide-cancel restoration.
 
-## Current physical checkpoint
+Firmware commit `a6827e6` then corrected the calibration-to-display coordinate
+contract after a lower-edge probe isolated unreliable top-row taps. It maps the
+stored 20-pixel calibration targets to their actual display positions without
+changing the saved calibration format or touch debounce.
 
-Firmware `1d5f95c` is flashed and hash-verified on the ESP32. Its upload wrote
+## Latest physical checkpoint
+
+Firmware `a6827e6` is flashed and hash-verified on the ESP32. Its upload wrote
 the bootloader, partition table, boot app, and application without erasing NVS
 at `0x9000..0xDFFF`, so saved touch calibration and any profiles were preserved.
 
-The very next work is observation only:
+Physical checks passed on 2026-09-02:
 
-1. Keep the bench-emulated upstream available, but do not select it yet.
-2. Hold WAN to open Network Setup.
-3. Tap `Nearby` once and verify `Scanning...` appears immediately, before scan
-   results arrive.
-4. Tap `Refresh` once and verify `Scanning...` again appears immediately.
-5. Return with `Back`, begin a WAN hold, slide outside the WAN target before
-   three seconds, and verify the countdown/highlight cancels and the normal
-   header restores immediately.
-6. Record the observations exactly. Do not mark an unperformed check as passed.
+- `Nearby` and `Refresh` each paint `Scanning...` immediately;
+- sliding outside WAN during the hold cancels the countdown/highlight and
+  restores the normal header immediately;
+- calibration remains stored across the upload; and
+- single deliberate center taps on `Nearby`, `Saved`, and `Back` all register.
 
-Only after all three feedback checks pass should upstream provisioning resume.
+The next work is controlled upstream provisioning. Keep the bench-emulated
+upstream available and select it from `Nearby` to begin the portal flow.
 
 ## Remaining Task 9 work
 
@@ -95,17 +97,17 @@ the hardware is co-located for Tasks 10 and 11.
 
 ## Verified firmware state
 
-At `1d5f95c`:
+At `a6827e6`:
 
 - all nine C++17 host suites rebuilt with warnings treated as errors and passed;
 - Arduino-ESP32 3.3.11 compiled the sketch successfully;
-- flash use was 1,028,222 bytes and global RAM use was 49,324 bytes;
+- flash use was 1,028,330 bytes and global RAM use was 49,324 bytes;
 - the only compile warning was TFT_eSPI reporting no `TOUCH_CS`, which is
   expected because this project drives XPT2046 through its separate library;
-- the reviewed source delta was limited to the setup/dashboard coordinator,
-  sketch wiring, and its host regression; and
-- credential/log scans, ignored-secret checks, `git diff --check`, and clean
-  worktree checks passed.
+- the final touch correction changed only coordinate mapping, calibration-target
+  placement, and the focused host regression; and
+- credential/log scans, ignored-secret checks, and `git diff --check` passed;
+  the user-owned untracked shortcut remained untouched and excluded.
 
 ## Safety and data boundaries
 
@@ -131,7 +133,7 @@ At `1d5f95c`:
 
 2. Read this file, `RESUME_PROMPT.md`, `VERIFY_LINUX.md`, the root `README.md`,
    and `docs/README.md`.
-3. Confirm the branch contains firmware commit `1d5f95c` in its history.
+3. Confirm the branch contains firmware commit `a6827e6` in its history.
 4. Recreate or privately transfer `VictronCYD_Modbus/secrets.h`, then confirm it
    remains ignored without printing its contents.
 5. Install the pinned toolchain and run the Linux verification in

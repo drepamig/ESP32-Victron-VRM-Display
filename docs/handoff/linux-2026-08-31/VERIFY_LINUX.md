@@ -30,7 +30,7 @@ run the desktop app or the whole development workflow as root.
 git switch codex/esp32-venus-starlink-touch-bridge
 git status --short --branch
 git log --oneline --decorate -12
-git merge-base --is-ancestor 1d5f95cb10aeee5b76dd7c4b1c9081cf9260231e HEAD
+git merge-base --is-ancestor a6827e6e92db1870f70ccacd73f8d2b0cf4d5a20 HEAD
 git remote -v
 
 cp -n VictronCYD_Modbus/secrets.example.h VictronCYD_Modbus/secrets.h
@@ -118,7 +118,7 @@ git status --short --branch
 ## Optional hardware upload
 
 Do not upload merely to establish the Linux checkout: the bench board already
-contains reviewed firmware `1d5f95c`. Upload only when the board is connected to
+contains reviewed firmware `a6827e6`. Upload only when the board is connected to
 Linux and a reviewed firmware change or explicit reflash is required.
 
 ```bash
