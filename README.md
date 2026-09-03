@@ -43,8 +43,9 @@ if you want to watch a site you're not on the same network as.
 
 ## 1. Configure TFT_eSPI for the CYD
 
-Both versions need TFT_eSPI set up for the CYD. Put this in `User_Setup.h` (or a custom
-`User_Setups/Setup_CYD.h` selected in `User_Setup_Select.h`):
+The repository-owned build uses `config/TFT_eSPI_CYD.h`; it never edits an
+installed library. If you build manually in Arduino IDE, copy the equivalent
+settings below into `User_Setup.h` (or a selected custom setup):
 
 ```c
 #define ILI9341_2_DRIVER        // if the screen stays blank, try #define ILI9341_DRIVER
@@ -120,6 +121,99 @@ arduino-cli upload  --fqbn esp32:esp32:esp32 -p COM3 VictronCYD_Modbus   # your 
 ```
 
 The camper gateway variant requires Arduino-ESP32 3.3.11 and XPT2046_Touchscreen 1.4. The ESP32 core version is required for the supported `WiFi.AP.enableNAPT()` API.
+
+## CYD Virtual Bench
+
+The virtual bench runs the Modbus firmware without a physical CYD. Native C++
+tests cover state and policy quickly; Wokwi runs the complete ESP32 image,
+`TFT_eSPI` drawing code, FT6206-backed scripted touch input, and exact 320x240
+golden screenshot comparisons.
+
+### Prerequisites and setup
+
+Install Docker Desktop and Python on Windows, then run from the repository
+root:
+
+```powershell
+tools/dev.ps1 setup
+tools/dev.ps1 doctor
+```
+
+`setup` builds a pinned Docker image containing Arduino CLI 1.5.1,
+Arduino-ESP32 3.3.11, TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206
+1.1.1, Pillow 11.3.0, and Wokwi CLI 0.26.1. Downloaded Arduino and Wokwi CLI
+executables are SHA-256 verified. The optional `.devcontainer` uses this same
+image definition, but neither the Dev Containers CLI nor a VS Code extension is
+required.
+
+Host flashing dependencies are pinned inside ignored `.tools/venv`. Builds,
+caches, source staging, simulator results, and pixel diffs are also ignored.
+Docker's own image storage remains Docker-managed.
+
+### Commands
+
+```powershell
+tools/dev.ps1 test
+tools/dev.ps1 firmware-build
+tools/dev.ps1 sim-build
+tools/dev.ps1 sim-test
+tools/dev.ps1 sim-test -Scenario password-entry
+tools/dev.ps1 all
+```
+
+`firmware-build` is a production-mode compile using tracked dummy bench values
+when no hardware secrets are available. The normal sketch still defaults to
+the ignored `VictronCYD_Modbus/secrets.h` outside staged builds.
+
+Wokwi execution requires a token created in the Wokwi CI dashboard. Supply it
+only in the calling process environment:
+
+```powershell
+$env:WOKWI_CLI_TOKEN = 'wok_...'
+tools/dev.ps1 sim-test
+```
+
+The value is forwarded to the one simulator container at runtime and is not
+stored in the image, repository, attestation, or command arguments. Scenarios
+use deterministic fake networks and Modbus data; they do not require Wokwi
+custom access points or a private gateway.
+
+`sim-build` stages only the files in `simulation/source-allowlist.txt`, excludes
+both real `secrets.h` files, and emits `build/simulation/firmware.bin`,
+`firmware.elf`, and an attestation containing source and artifact SHA-256
+values. The runner refuses stale, tampered, escaped, or production artifacts
+before contacting Wokwi.
+
+### Golden screenshot review
+
+Ordinary `sim-test` never changes baselines. On a mismatch it preserves
+`expected.png`, `actual.png`, and a magenta-highlighted `diff.png` below
+`build/simulation/diffs/<scenario>/<checkpoint>/`.
+
+After reviewing the actual images, update only the intended scenario:
+
+```powershell
+tools/dev.ps1 sim-update-goldens -Scenario password-entry
+git diff --stat -- simulation/goldens
+```
+
+The command prints every changed baseline before copying it. All committed
+goldens must be RGB PNG files of exactly 320x240 pixels.
+
+### Physical release
+
+Virtual tests do not replace a final hardware pass. Build, flash, and monitor
+with the repo-local tools:
+
+```powershell
+tools/dev.ps1 firmware-build
+tools/dev.ps1 flash -Port COM3
+tools/dev.ps1 monitor -Port COM3
+```
+
+Before releasing, verify display inversion on the actual panel, resistive-touch
+noise and calibration feel, private AP/NAPT routing, real GX connectivity,
+watchdog recovery, and a verified flash that does not erase NVS.
 
 ---
 

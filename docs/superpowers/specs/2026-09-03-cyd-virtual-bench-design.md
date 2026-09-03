@@ -25,10 +25,12 @@ The active checkout used by the other Codex task, its untracked
 modified, staged, or committed.
 
 The simulator build is a deny-by-default staging operation. It copies an
-explicit source allow-list and writes a tracked dummy `secrets.h` only inside
-the ignored simulator staging directory. The stage is scanned before compile;
-neither production secret path may be present or referenced. Wokwi only
-receives attested artifacts produced inside `build/simulation`.
+explicit source allow-list and selects a tracked simulation-only dummy
+configuration header. The simulator stage is forbidden from containing any
+`secrets.h`; neither production secret path may be present or referenced. The
+separate production-mode smoke build generates a dummy `secrets.h` only inside
+its ignored staging directory. Wokwi only receives attested artifacts produced
+inside `build/simulation`.
 
 ## Reproducible toolchain
 
@@ -63,7 +65,7 @@ with compiler defines. No installed library is edited in place.
 `Xpt2046RawTouchDevice` owns the production HSPI controller on the existing CYD
 pins and preserves the pressure threshold and rotation behavior. Under
 `CYD_SIMULATION`, `Ft6206RawTouchDevice` reads the Wokwi FT6206 over GPIO 32/25
-and deterministically maps its 320x240 display coordinates into the same raw
+and deterministically maps its 240x320 controller coordinates into the same raw
 range expected by the existing calibration, mapping, debounce, and gesture
 pipeline. `TouchInput` depends only on the boundary.
 
@@ -103,10 +105,11 @@ fixtures.
 
 ## Wokwi virtual device
 
-`simulation/diagram.json` models an ESP32 DevKit v1, ILI9341, and FT6206 touch
-controller. TFT wiring matches the physical CYD display pins (MISO 12, MOSI
-13, SCLK 14, CS 15, DC 2, reset unconnected, backlight 21). Simulator-only I2C
-uses SDA 32 and SCL 25 so GPIO 21 remains dedicated to backlight.
+`simulation/diagram.json` models an ESP32 DevKit C v4 and Wokwi's combined
+ILI9341/FT6206 capacitive-touch board. TFT wiring matches the physical CYD
+display pins (MISO 12, MOSI 13, SCLK 14, CS 15, DC 2, reset unconnected,
+backlight 21). Simulator-only I2C uses SDA 32 and SCL 25 so GPIO 21 remains
+dedicated to backlight.
 
 The simulator build emits a merged binary, ELF, and JSON attestation with:
 
@@ -155,4 +158,3 @@ Passing the virtual bench does not replace these physical release checks:
 panel inversion, resistive-touch noise and calibration feel, AP/NAPT routing,
 real GX Modbus connectivity, watchdog recovery, and verified flashing without
 erasing NVS.
-

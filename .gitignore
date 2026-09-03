@@ -9,6 +9,18 @@ build/
 *.hex
 *.map
 
+# Repository-local tooling and caches
+.tools/
+.arduino-cache/
+__pycache__/
+*.py[cod]
+
+# Simulator outputs (goldens remain tracked)
+simulation/results/
+simulation/actual/
+simulation/diffs/
+simulation/.stage/
+
 # OS junk
 .DS_Store
 Thumbs.db

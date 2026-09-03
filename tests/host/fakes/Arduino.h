@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <deque>
 #include <string>
 
 class String {
@@ -49,6 +50,34 @@ class FakeSerial {
 
   template <typename T>
   void println(const T&) {}
+
+  void println(const char* value) {
+    output_ += value == nullptr ? "" : value;
+    output_ += '\n';
+  }
+
+  int available() const { return static_cast<int>(input_.size()); }
+  int read() {
+    if (input_.empty()) return -1;
+    const unsigned char value = static_cast<unsigned char>(input_.front());
+    input_.pop_front();
+    return value;
+  }
+
+  void feed(const std::string& value) {
+    for (char character : value) input_.push_back(character);
+  }
+
+  void clear() {
+    input_.clear();
+    output_.clear();
+  }
+
+  const std::string& output() const { return output_; }
+
+ private:
+  std::deque<char> input_;
+  std::string output_;
 };
 
 inline FakeSerial Serial;

@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "scenarios": [
+    {
+      "name": "boot-calibration",
+      "file": "scenarios/boot-calibration.yaml",
+      "screenshots": ["boot", "calibrated-dashboard"]
+    },
+    {
+      "name": "wan-hold",
+      "file": "scenarios/wan-hold.yaml",
+      "screenshots": ["cancelled-short-press", "successful-three-second-hold"]
+    },
+    {
+      "name": "setup-navigation",
+      "file": "scenarios/setup-navigation.yaml",
+      "screenshots": ["saved", "nearby"]
+    },
+    {
+      "name": "protected-network",
+      "file": "scenarios/protected-network.yaml",
+      "screenshots": ["protected-selection"]
+    },
+    {
+      "name": "password-entry",
+      "file": "scenarios/password-entry.yaml",
+      "screenshots": ["masked", "visible", "hidden-again", "numbers", "symbols", "backspace"]
+    },
+    {
+      "name": "connection-flow",
+      "file": "scenarios/connection-flow.yaml",
+      "screenshots": ["connecting", "failure", "retry", "success"]
+    },
+    {
+      "name": "saved-profiles",
+      "file": "scenarios/saved-profiles.yaml",
+      "screenshots": ["selected", "delete-confirmation", "clear-hold"]
+    },
+    {
+      "name": "phone-portal",
+      "file": "scenarios/phone-portal.yaml",
+      "screenshots": ["fixed-pairing-code"]
+    },
+    {
+      "name": "dashboard-states",
+      "file": "scenarios/dashboard-states.yaml",
+      "screenshots": ["nominal", "stale", "offline"]
+    }
+  ]
+}

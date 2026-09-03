@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "author": "CYD Virtual Bench",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": -120,
+      "left": -220,
+      "attrs": {}
+    },
+    {
+      "type": "board-ili9341-cap-touch",
+      "id": "lcd1",
+      "top": -170,
+      "left": 110,
+      "rotate": 90,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    ["esp:3V3", "lcd1:VCC", "red", []],
+    ["esp:GND.1", "lcd1:GND", "black", []],
+    ["esp:15", "lcd1:CS", "green", []],
+    ["esp:2", "lcd1:D/C", "green", []],
+    ["esp:13", "lcd1:MOSI", "green", []],
+    ["esp:14", "lcd1:SCK", "green", []],
+    ["esp:12", "lcd1:MISO", "green", []],
+    ["esp:3V3", "lcd1:LED", "red", []],
+    ["esp:25", "lcd1:SCL", "green", []],
+    ["esp:32", "lcd1:SDA", "green", []],
+    ["esp:TX", "$serialMonitor:RX", "", []],
+    ["esp:RX", "$serialMonitor:TX", "", []]
+  ],
+  "serialMonitor": {
+    "display": "terminal",
+    "newline": "lf"
+  },
+  "dependencies": {}
+}

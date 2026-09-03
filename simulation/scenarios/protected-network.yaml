@@ -1,0 +1,24 @@
+name: Protected network selection
+version: 1
+author: CYD Virtual Bench
+steps:
+  - wait-serial: 'SIM READY'
+  - touch: {part-id: lcd1, x: 20, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 299, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 20, y: 299, duration: 120ms, wait: true}
+  - delay: 300ms
+  - touch-press: {part-id: lcd1, x: 218, y: 20}
+  - delay: 3200ms
+  - touch-release: {part-id: lcd1}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 187, y: 20, duration: 120ms, wait: true}
+  - delay: 300ms
+  - touch: {part-id: lcd1, x: 77, y: 68, duration: 120ms, wait: true}
+  - delay: 200ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../build/simulation/results/protected-network/protected-selection.png'
