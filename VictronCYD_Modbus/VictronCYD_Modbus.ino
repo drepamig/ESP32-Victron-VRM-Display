@@ -24,6 +24,7 @@
 #include "esp_task_wdt.h"
 #include "RuntimeConfig.h"
 #ifdef CYD_SIMULATION
+#include <Network.h>
 #include "SimulationClock.h"
 #include "SimulationControl.h"
 #endif
@@ -546,7 +547,11 @@ void handlePendingProfileCommit(uint32_t nowMs) {
     return;
   }
 
+#ifdef CYD_SIMULATION
+  const time_t currentEpoch = simulationClock.epoch();
+#else
   const time_t currentEpoch = time(nullptr);
+#endif
   pendingProfile.lastSuccessEpoch = currentEpoch > 0 ? static_cast<uint32_t>(currentEpoch) : 0;
   size_t storedIndex = 0;
   if (!profileStoreReady || !profileStore.upsertAndActivate(pendingProfile, storedIndex)) {
@@ -814,7 +819,15 @@ void setup() {
   }
 
   touchInputReady = touchInput.begin();
+#ifdef CYD_SIMULATION
+  // Initialize local sockets for the real portal without Wi-Fi or NTP traffic.
+  if (!Network.begin()) {
+    Serial.println("SIM ERROR network initialization");
+    return;
+  }
+#else
   configTime(kTimezoneOffsetSeconds, 0, "pool.ntp.org", "time.google.com");
+#endif
   modbusWorkerReady = startModbusWorker();
   if (!modbusWorkerReady) {
     Serial.println("[MB] worker unavailable");

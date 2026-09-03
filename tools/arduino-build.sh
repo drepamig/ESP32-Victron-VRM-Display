@@ -11,10 +11,10 @@ stage_path="$(python3 tools/sim_artifacts.py stage --mode "$mode")"
 build_path="build/arduino/$mode"
 if [[ "$mode" == "production" ]]; then
   output_path="build/firmware"
-  extra_flags="-include /workspace/config/TFT_eSPI_CYD.h"
+  extra_flags="-include /workspace/build/staging/production/config/TFT_eSPI_CYD.h"
 else
   output_path="build/simulation"
-  extra_flags="-DCYD_SIMULATION -include /workspace/config/TFT_eSPI_CYD.h"
+  extra_flags="-DCYD_SIMULATION -include /workspace/build/staging/simulation/config/TFT_eSPI_CYD.h"
 fi
 mkdir -p "$build_path" "$output_path"
 
@@ -33,4 +33,6 @@ if [[ "$mode" == "simulation" ]]; then
   cp "$output_path/VictronCYD_Modbus.ino.elf" "$output_path/firmware.elf"
   python3 tools/sim_artifacts.py attest
   python3 tools/sim_artifacts.py verify
+else
+  cp /opt/arduino/data/packages/esp32/hardware/esp32/3.3.11/tools/partitions/boot_app0.bin "$output_path/boot_app0.bin"
 fi

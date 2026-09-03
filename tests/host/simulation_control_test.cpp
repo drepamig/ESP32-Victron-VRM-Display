@@ -30,6 +30,7 @@ int main() {
 
   execute(control, "SIM clock=morning", "SIM OK");
   check(std::strcmp(clock.text(), "08:15") == 0, "clock fixture applied");
+  check(clock.epoch() == 1788423300U, "morning fixture has a fixed UTC epoch");
   execute(control, "SIM scan=empty", "SIM OK");
   check(network.startScan() && network.scanComplete(), "empty scan completes");
   ScanResult scan[1];
@@ -50,6 +51,7 @@ int main() {
   execute(control, "SIM reset", "SIM OK");
   check(std::strcmp(clock.text(), "12:34") == 0,
         "reset restores fixed default clock");
+  check(clock.epoch() == 1788438840U, "reset restores the fixed UTC epoch");
   check(network.setConnectFixture("success"), "reset restores network controls");
   check(modbus.fetch(cycle) && cycle.dcReady && cycle.pvW == 1625,
         "reset restores nominal Modbus data");
@@ -76,5 +78,11 @@ int main() {
   control.poll();
   check(Serial.output() == std::string("SIM ERROR\n"),
         "overlong line produces one error and resets parser");
+  Serial.clear();
+  Serial.feed("SI\rM reset\n");
+  Serial.feed(std::string("SIM reset") + '\0' + "extra\n");
+  control.poll();
+  check(Serial.output() == std::string("SIM ERROR\nSIM ERROR\n"),
+        "embedded CR and NUL must not turn malformed commands into valid commands");
   return 0;
 }

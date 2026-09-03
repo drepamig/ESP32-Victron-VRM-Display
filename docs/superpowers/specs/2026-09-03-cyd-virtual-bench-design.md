@@ -42,15 +42,17 @@ inside `build/simulation`.
 - XPT2046_Touchscreen 1.4
 - Adafruit FT6206 Library 1.1.1 (simulator only)
 - Wokwi CLI 0.26.1
-- the distro C++ compiler and Python/Pillow packages used by host tests
+- Pillow 11.3.0; C++ and Python come from Debian Bookworm packages on the
+  digest-pinned base (Debian package revisions themselves are not locked)
 
 Downloaded standalone executables are verified against SHA-256 values kept in
 the Dockerfile before installation. Arduino dependency versions are resolved
 into the image during the image build and checked by the bench doctor.
 
 `tools/dev.ps1` is the stable Windows entry point. It invokes Docker directly,
-mounts the checkout at `/workspace`, and keeps Arduino data, downloads, build
-outputs, Wokwi results, and host flashing packages in ignored project paths.
+mounts the checkout at `/workspace`, keeps Arduino packages/downloads in the
+Docker image, and keeps build outputs, Wokwi results, and host flashing packages
+in ignored project paths.
 It exposes `doctor`, `setup`, `test`, `firmware-build`, `sim-build`, `sim-test`,
 `sim-update-goldens`, `flash`, `monitor`, and `all`.
 
@@ -119,7 +121,9 @@ The simulator build emits a merged binary, ELF, and JSON attestation with:
 - the build mode and output directory;
 - SHA-256 values for each artifact.
 
-The Wokwi runner recalculates and rejects every mismatch, stale source hash,
+The source fingerprint is captured at staging, and compilation uses the staged
+TFT configuration. Attestation rejects source or staged-file changes during
+the build. The Wokwi runner recalculates and rejects every mismatch, stale source hash,
 unexpected configuration identifier, missing artifact, path escape, or
 artifact outside `build/simulation`. `WOKWI_CLI_TOKEN` is forwarded only to the
 runtime container process and never written to an image, file, log, or command
@@ -132,7 +136,7 @@ navigation, protected network selection, password keyboard behavior,
 connection outcomes, saved profile deletion/clear, fixed-code phone portal,
 and nominal/stale/offline dashboards.
 
-Each checkpoint names a committed 320x240 RGB PNG in
+Each checkpoint names a committed 320x240 RGBA PNG in
 `simulation/goldens/<scenario>/`. Ordinary `sim-test` saves actual images under
 `build/simulation/results`, compares all pixels, and on failure keeps expected,
 actual, and a highlighted diff. It never writes goldens.
@@ -153,6 +157,8 @@ value resembles or derives from local production configuration.
 `tools/dev.ps1 all` performs host tests, production compilation, simulator
 compilation, source/secret isolation checks, artifact attestation checks, and
 all Wokwi pixel scenarios. The Wokwi portion requires a user-provided token.
+It also rejects firmware assertion/panic/reboot logs even when the scenario
+process reports success.
 
 Passing the virtual bench does not replace these physical release checks:
 panel inversion, resistive-touch noise and calibration feel, AP/NAPT routing,

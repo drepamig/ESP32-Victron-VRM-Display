@@ -41,6 +41,7 @@ class SimCamperNetwork {
   ConnectFixture connectFixture_ = ConnectFixture::Success;
   WanPhase wanPhase_ = WanPhase::Offline;
   bool connectionPending_ = false;
+  bool pendingProfile_ = false;
   bool pendingConnected_ = false;
   uint32_t connectionReadyAtMs_ = 0;
   IPAddress upstreamAddress_;

@@ -161,8 +161,8 @@ tools/dev.ps1 sim-test -Scenario password-entry
 tools/dev.ps1 all
 ```
 
-`firmware-build` is a production-mode compile using tracked dummy bench values
-when no hardware secrets are available. The normal sketch still defaults to
+`firmware-build` is a production-mode smoke compile that always uses dummy
+bench values; it does not consume either real secrets file. The normal sketch still defaults to
 the ignored `VictronCYD_Modbus/secrets.h` outside staged builds.
 
 Wokwi execution requires a token created in the Wokwi CI dashboard. Supply it
@@ -198,18 +198,26 @@ git diff --stat -- simulation/goldens
 ```
 
 The command prints every changed baseline before copying it. All committed
-goldens must be RGB PNG files of exactly 320x240 pixels.
+goldens preserve Wokwi's native RGBA mode and must be exactly 320x240 pixels.
 
 ### Physical release
 
-Virtual tests do not replace a final hardware pass. Build, flash, and monitor
-with the repo-local tools:
+Virtual tests do not replace a final hardware pass. For a **dummy-config
+hardware smoke test**, build, flash, and monitor with the repo-local tools:
 
 ```powershell
 tools/dev.ps1 firmware-build
 tools/dev.ps1 flash -Port COM3
 tools/dev.ps1 monitor -Port COM3
 ```
+
+`flash` rebuilds the dummy production image and writes separate bootloader,
+partition-table, OTA-initialization, and application segments; it never flashes
+the merged image over NVS. This assumes the pinned Arduino default partition
+layout. Existing saved Wi-Fi profiles and touch calibration remain in NVS.
+For a real deployment, use the normal sketch with the ignored production
+`secrets.h` and the repository-owned TFT configuration; the dummy smoke image
+is not a real-GX release image.
 
 Before releasing, verify display inversion on the actual panel, resistive-touch
 noise and calibration feel, private AP/NAPT routing, real GX connectivity,

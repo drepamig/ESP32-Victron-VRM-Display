@@ -20,15 +20,23 @@ steps:
   - touch: {part-id: lcd1, x: 77, y: 68, duration: 120ms, wait: true}
   - delay: 150ms
   - touch: {part-id: lcd1, x: 20, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
   - touch: {part-id: lcd1, x: 42, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
   - touch: {part-id: lcd1, x: 64, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
   - touch: {part-id: lcd1, x: 86, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
   - touch: {part-id: lcd1, x: 108, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
   - touch: {part-id: lcd1, x: 130, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
   - touch: {part-id: lcd1, x: 152, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
   - touch: {part-id: lcd1, x: 174, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
   - touch: {part-id: lcd1, x: 177, y: 291, duration: 100ms, wait: true}
-  - delay: 1500ms
+  - delay: 2000ms
   - touch: {part-id: lcd1, x: 29, y: 20, duration: 100ms, wait: true}
   - delay: 200ms
   - touch-press: {part-id: lcd1, x: 218, y: 20}
@@ -36,19 +44,25 @@ steps:
   - touch-release: {part-id: lcd1}
   - delay: 200ms
   - touch: {part-id: lcd1, x: 77, y: 68, duration: 100ms, wait: true}
-  - delay: 100ms
+  - delay: 1000ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/saved-profiles/selected.png'
+      save-to: '../../build/simulation/results/saved-profiles/selected.png'
   - touch: {part-id: lcd1, x: 118, y: 299, duration: 100ms, wait: true}
-  - delay: 100ms
+  - delay: 1000ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/saved-profiles/delete-confirmation.png'
+      save-to: '../../build/simulation/results/saved-profiles/delete-confirmation.png'
   - touch: {part-id: lcd1, x: 62, y: 299, duration: 100ms, wait: true}
+  - delay: 300ms
   - touch-press: {part-id: lcd1, x: 194, y: 299}
-  - delay: 5100ms
+  - delay: 5500ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/saved-profiles/clear-hold.png'
+      save-to: '../../build/simulation/results/saved-profiles/clear-hold.png'
+  - delay: 5500ms
   - touch-release: {part-id: lcd1}
+  - delay: 1000ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/saved-profiles/cleared.png'

@@ -3,11 +3,11 @@ import argparse
 import shutil
 from pathlib import Path
 
-from PIL import Image, ImageChops
+from PIL import Image
 
 
 EXPECTED_SIZE = (320, 240)
-EXPECTED_MODE = "RGB"
+EXPECTED_MODE = "RGBA"
 
 
 def _load(path: Path) -> Image.Image:
@@ -16,7 +16,7 @@ def _load(path: Path) -> Image.Image:
     if image.size != EXPECTED_SIZE:
         raise ValueError(f"{path} must be an exact 320x240 image; got {image.size}")
     if image.mode != EXPECTED_MODE:
-        raise ValueError(f"{path} must use RGB mode; got {image.mode}")
+        raise ValueError(f"{path} must use {EXPECTED_MODE} mode; got {image.mode}")
     return image
 
 
@@ -28,8 +28,7 @@ def validate(path: Path) -> None:
 def compare(expected_path: Path, actual_path: Path, failure_dir: Path) -> bool:
     expected = _load(expected_path)
     actual = _load(actual_path)
-    difference = ImageChops.difference(expected, actual)
-    if difference.getbbox() is None:
+    if expected.tobytes() == actual.tobytes():
         return True
 
     failure_dir.mkdir(parents=True, exist_ok=True)
@@ -42,7 +41,7 @@ def compare(expected_path: Path, actual_path: Path, failure_dir: Path) -> bool:
     for y in range(EXPECTED_SIZE[1]):
         for x in range(EXPECTED_SIZE[0]):
             if expected_pixels[x, y] != actual_pixels[x, y]:
-                highlighted_pixels[x, y] = (255, 0, 255)
+                highlighted_pixels[x, y] = (255, 0, 255, 255)
     highlighted.save(failure_dir / "diff.png")
     return False
 

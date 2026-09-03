@@ -2,9 +2,12 @@
 
 #ifdef CYD_SIMULATION
 
+#include <cstdint>
+
 class SimulationClock {
  public:
   const char* text() const;
+  uint32_t epoch() const;
   bool setFixture(const char* fixture);
   void resetFixture();
 

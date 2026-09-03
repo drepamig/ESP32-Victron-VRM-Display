@@ -46,6 +46,7 @@ bool SimCamperNetwork::connect(const NetworkProfile& profile, uint32_t nowMs) {
   }
   wanPhase_ = WanPhase::Connecting;
   connectionPending_ = true;
+  pendingProfile_ = true;
   connectionReadyAtMs_ = nowMs + 1000;
   pendingConnected_ = false;
   upstreamAddress_ = IPAddress();
@@ -110,24 +111,26 @@ CamperNetworkStatus SimCamperNetwork::status() const {
 }
 
 bool SimCamperNetwork::pendingProfileConnected() const {
-  return pendingConnected_;
+  return pendingProfile_ && pendingConnected_;
 }
 
 void SimCamperNetwork::acceptPendingProfile() {
-  pendingConnected_ = false;
+  pendingProfile_ = false;
 }
 
 void SimCamperNetwork::cancelPendingProfile(bool) {
+  if (!pendingProfile_) return;
+  disconnectUpstream();
+}
+
+void SimCamperNetwork::disconnectUpstream() {
+  pendingProfile_ = false;
   connectionPending_ = false;
   connectionReadyAtMs_ = 0;
   pendingConnected_ = false;
   wanPhase_ = WanPhase::Offline;
   upstreamAddress_ = IPAddress();
   upstreamRssi_ = 0;
-}
-
-void SimCamperNetwork::disconnectUpstream() {
-  cancelPendingProfile();
 }
 
 bool SimCamperNetwork::setScanFixture(const char* fixture) {
@@ -175,6 +178,7 @@ void SimCamperNetwork::resetFixtures() {
   connectFixture_ = ConnectFixture::Success;
   wanPhase_ = WanPhase::Offline;
   connectionPending_ = false;
+  pendingProfile_ = false;
   connectionReadyAtMs_ = 0;
   pendingConnected_ = false;
   upstreamAddress_ = IPAddress();

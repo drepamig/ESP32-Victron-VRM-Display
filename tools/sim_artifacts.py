@@ -100,6 +100,7 @@ def _included_in_mode(relative: PurePosixPath, mode: str) -> bool:
 
 def stage_sources(repo: Path, mode: str) -> Path:
     repo = repo.resolve()
+    source_hash = source_tree_hash(repo)
     stage_root = _safe_stage_root(repo, mode)
     if stage_root.exists():
         if not _inside(stage_root, repo / "build" / "staging"):
@@ -117,6 +118,16 @@ def stage_sources(repo: Path, mode: str) -> Path:
             _dummy_secrets_text(), encoding="utf-8", newline="\n"
         )
     check_secret_isolation(repo, stage_root, mode)
+    if source_tree_hash(repo) != source_hash:
+        raise ValueError("source changed since staging began; rebuild")
+    inputs = {
+        "sourceSha256": source_hash,
+        "files": {
+            path.relative_to(stage_root).as_posix(): sha256(path)
+            for path in stage_root.rglob("*") if path.is_file()
+        },
+    }
+    (stage_root / "inputs.json").write_text(json.dumps(inputs), encoding="utf-8")
     return stage_root / "VictronCYD_Modbus"
 
 
@@ -148,6 +159,18 @@ def _attestation_path(repo: Path) -> Path:
 
 def create_attestation(repo: Path) -> dict:
     repo = repo.resolve()
+    stage = _safe_stage_root(repo, "simulation")
+    inputs_path = stage / "inputs.json"
+    if not inputs_path.is_file():
+        raise ValueError("staged input manifest is missing; rebuild")
+    inputs = json.loads(inputs_path.read_text(encoding="utf-8"))
+    source_hash = inputs.get("sourceSha256")
+    if source_tree_hash(repo) != source_hash:
+        raise ValueError("source changed since staging; rebuild before attesting")
+    for relative, expected_hash in inputs["files"].items():
+        staged_file = stage / relative
+        if not _inside(staged_file, stage) or not staged_file.is_file() or sha256(staged_file) != expected_hash:
+            raise ValueError("compiled input changed since staging; rebuild")
     simulator_root = (repo / "build" / "simulation").resolve()
     artifacts = []
     for relative in ARTIFACT_PATHS:
@@ -159,7 +182,7 @@ def create_attestation(repo: Path) -> dict:
         "schema": 1,
         "buildMode": "CYD_SIMULATION",
         "dummyConfigId": DUMMY_CONFIG_ID,
-        "sourceSha256": source_tree_hash(repo),
+        "sourceSha256": source_hash,
         "artifacts": artifacts,
     }
     path = _attestation_path(repo)

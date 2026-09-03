@@ -13,16 +13,16 @@ steps:
   - delay: 2500ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/dashboard-states/nominal.png'
+      save-to: '../../build/simulation/results/dashboard-states/nominal.png'
   - write-serial: "SIM modbus=stale\n"
   - wait-serial: 'SIM OK'
-  - delay: 2500ms
+  - delay: 4500ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/dashboard-states/stale.png'
+      save-to: '../../build/simulation/results/dashboard-states/stale.png'
   - write-serial: "SIM modbus=offline\n"
   - wait-serial: 'SIM OK'
   - delay: 12000ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/dashboard-states/offline.png'
+      save-to: '../../build/simulation/results/dashboard-states/offline.png'

@@ -70,5 +70,16 @@ int main() {
             network.setScanFixture("nominal") && network.setConnectFixture("success"),
         "reset restores deterministic defaults");
   check(!network.setConnectFixture("sometimes"), "unknown connection fixture rejected");
+  check(network.connect(profile, 2000), "saved-profile connection starts");
+  network.acceptPendingProfile();
+  network.poll(3000);
+  check(network.status().wanPhase == WanPhase::Online && !network.pendingProfileConnected(),
+        "accepting before connection completes must not resurrect pending state");
+  network.cancelPendingProfile();
+  check(network.status().wanPhase == WanPhase::Online,
+        "cancel is a no-op after profile acceptance, as in production");
+  network.disconnectUpstream();
+  check(network.status().wanPhase == WanPhase::Offline,
+        "explicit disconnect still disconnects an accepted profile");
   return 0;
 }

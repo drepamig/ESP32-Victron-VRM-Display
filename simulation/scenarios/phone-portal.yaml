@@ -23,4 +23,4 @@ steps:
   - delay: 200ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/phone-portal/fixed-pairing-code.png'
+      save-to: '../../build/simulation/results/phone-portal/fixed-pairing-code.png'

@@ -17,9 +17,9 @@ steps:
   - delay: 200ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/setup-navigation/saved.png'
+      save-to: '../../build/simulation/results/setup-navigation/saved.png'
   - touch: {part-id: lcd1, x: 187, y: 20, duration: 120ms, wait: true}
   - delay: 300ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/setup-navigation/nearby.png'
+      save-to: '../../build/simulation/results/setup-navigation/nearby.png'

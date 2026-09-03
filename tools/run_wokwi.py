@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 import compare_images
@@ -35,7 +36,21 @@ def load_scenarios(repo: Path, selected: str | None) -> list[dict]:
     return scenarios
 
 
+def verify_launch_artifacts(repo: Path) -> None:
+    sim_artifacts.verify_attestation(repo)
+    config_file = repo / "simulation" / "wokwi.toml"
+    with config_file.open("rb") as source:
+        config = tomllib.load(source).get("wokwi", {})
+    for key, filename in (("firmware", "firmware.bin"), ("elf", "firmware.elf")):
+        configured = config.get(key)
+        expected = (repo / "build" / "simulation" / filename).resolve()
+        if not isinstance(configured, str) or (config_file.parent / configured).resolve() != expected:
+            raise ValueError(f"Wokwi config selects an unattested {key} artifact")
+
+
 def run_scenario(repo: Path, scenario: dict) -> None:
+    # Check the actual Wokwi inputs again immediately before each upload.
+    verify_launch_artifacts(repo)
     name = scenario["name"]
     results_root = (repo / "build" / "simulation" / "results").resolve()
     scenario_root = (results_root / name).resolve()
@@ -58,10 +73,20 @@ def run_scenario(repo: Path, scenario: dict) -> None:
         str(serial_log),
     ]
     subprocess.run(command, cwd=repo, env=os.environ.copy(), check=True)
+    validate_serial_log(serial_log)
     for checkpoint in scenario["screenshots"]:
         actual = scenario_root / f"{checkpoint}.png"
         if not actual.is_file():
             raise ValueError(f"scenario did not create screenshot: {actual}")
+
+
+def validate_serial_log(path: Path) -> None:
+    output = path.read_text(encoding="utf-8", errors="replace")
+    for marker in ("assert failed:", "Guru Meditation Error", "Backtrace:", "Rebooting..."):
+        if marker in output:
+            raise ValueError(f"firmware crash detected ({marker}); see {path}")
+    if "SIM READY" not in output:
+        raise ValueError(f"firmware did not become ready; see {path}")
 
 
 def compare_scenario(repo: Path, scenario: dict) -> list[tuple[Path, Path]]:
@@ -86,7 +111,7 @@ def main() -> int:
     token = os.environ.get("WOKWI_CLI_TOKEN", "")
     if not token:
         raise SystemExit("WOKWI_CLI_TOKEN is required")
-    sim_artifacts.verify_attestation(repo)
+    verify_launch_artifacts(repo)
     scenarios = load_scenarios(repo, args.scenario)
     changed: list[tuple[Path, Path]] = []
     for scenario in scenarios:

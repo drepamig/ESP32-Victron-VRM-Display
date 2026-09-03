@@ -53,8 +53,8 @@ void SimulationControl::poll() {
     const int next = Serial.read();
     if (next < 0) return;
     const char character = static_cast<char>(next);
-    if (character == '\r') continue;
     if (character != '\n') {
+      if (character == '\0') lineOverflow_ = true;
       if (lineLength_ < kMaximumLineLength) {
         line_[lineLength_++] = character;
       } else {
@@ -63,6 +63,7 @@ void SimulationControl::poll() {
       continue;
     }
 
+    if (lineLength_ > 0 && line_[lineLength_ - 1] == '\r') --lineLength_;
     line_[lineLength_] = '\0';
     char response[16];
     if (lineOverflow_) {

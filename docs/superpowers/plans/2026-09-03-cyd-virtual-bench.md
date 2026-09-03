@@ -19,7 +19,8 @@ TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206 1.1.1, Wokwi CLI
 - Begin each new runtime behavior with a focused failing test.
 - Never stage production secrets or copy them into simulator inputs.
 - Ordinary test commands never alter golden images.
-- Never upload firmware or push without separate explicit authorization.
+- Only attested dummy simulator firmware may be sent to Wokwi under the user's
+  existing authorization. Never flash physical firmware or push without a request.
 - Wokwi execution may be reported as token-blocked only after all local checks
   and builds that do not require the token have run.
 
@@ -87,18 +88,44 @@ TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206 1.1.1, Wokwi CLI
 ### 8. Add scenarios and exact image comparison
 
 - [x] Add the approved Wokwi YAML scenarios and checkpoint manifest.
-- [x] Add 320x240 RGB exact comparator with expected/actual/highlighted diff
+- [x] Add 320x240 RGBA exact comparator with expected/actual/highlighted diff
       retention.
 - [x] Verify a one-pixel mutation fails and produces a usable diff.
 - [x] Add guarded golden promotion that prints the changed-image list.
-- [ ] Run all scenarios and commit generated goldens when a token is available.
+- [x] Run all scenarios and commit generated goldens when a token is available.
 
 ### 9. Document and verify
 
 - [x] Update README setup, token, commands, golden review, and physical release
       instructions.
-- [ ] Run all host suites, production compile, simulator compile, scenario/pixel
+- [x] Run all host suites, production compile, simulator compile, scenario/pixel
       suite, secret isolation, negative attestation, and clean-tree review.
-- [ ] Self-review the complete diff for correctness and scope because this task
-      does not authorize subagent delegation.
-- [ ] Follow the branch-finishing workflow without uploading or pushing.
+- [x] Complete the code review required by the review skill, resolve findings,
+      and self-review the final diff for correctness and scope.
+- [x] Verify branch provenance and preserve the isolated worktree for the
+      user's integration choice; no physical flash, merge, or push performed.
+
+## Acceptance evidence — 2026-09-03
+
+`tools/dev.ps1 all` completed with exit code 0 on Windows/Docker using the
+runtime `WOKWI_CLI_TOKEN`:
+
+- All 11 original C++ suites plus 4 simulator suites passed.
+- All 14 Python tooling tests passed, including one-pixel mismatch/diff,
+  production-path rejection, stale/tampered artifacts, source edits during
+  compilation, crash detection, and NVS-safe flashing.
+  Serial grammar itself is covered by the C++ simulator suite.
+- Production-mode dummy smoke compile: 1,035,746 bytes flash; 49,492 bytes RAM.
+- Simulator compile: 557,216 bytes flash; 34,484 bytes RAM.
+- Production/simulator isolation and artifact attestation passed.
+- All 9 live Wokwi scenarios passed; all 25 RGBA screenshots matched exactly.
+  The ordinary test run left every baseline file unchanged (SHA-256 checked).
+- Final diagram lint reported no errors, only informational undocumented-part
+  notices for Wokwi's official ESP32 DevKit and capacitive-touch display parts.
+- Code review findings were fixed and re-reviewed. Physical panel inversion,
+  resistive touch, AP/NAPT, real GX connectivity, watchdog, and actual flashing
+  remain hardware release checks.
+
+The bench is based on `codex/esp32-venus-starlink-touch-bridge` at
+`1673bbca4827ab371b7ab5ed68c2125fde66e932`, with zero development commits
+missing. The original checkout and its ignored credentials were not modified.

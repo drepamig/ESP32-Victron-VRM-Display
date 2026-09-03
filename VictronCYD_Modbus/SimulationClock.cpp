@@ -18,6 +18,17 @@ const char* SimulationClock::text() const {
   }
 }
 
+uint32_t SimulationClock::epoch() const {
+  // Fixed UTC instants on 2026-09-03 keep persisted profile metadata repeatable.
+  switch (fixture_) {
+    case Fixture::Morning: return 1788423300U;
+    case Fixture::Evening: return 1788471900U;
+    case Fixture::Unavailable: return 0;
+    case Fixture::Fixed:
+    default: return 1788438840U;
+  }
+}
+
 bool SimulationClock::setFixture(const char* fixture) {
   if (fixture == nullptr) return false;
   if (std::strcmp(fixture, "fixed") == 0) {

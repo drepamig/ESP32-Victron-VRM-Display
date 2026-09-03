@@ -5,7 +5,7 @@ steps:
   - wait-serial: 'SIM READY'
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/boot-calibration/boot.png'
+      save-to: '../../build/simulation/results/boot-calibration/boot.png'
   - touch: {part-id: lcd1, x: 20, y: 20, duration: 120ms, wait: true}
   - delay: 100ms
   - touch: {part-id: lcd1, x: 219, y: 20, duration: 120ms, wait: true}
@@ -16,4 +16,4 @@ steps:
   - delay: 2500ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/boot-calibration/calibrated-dashboard.png'
+      save-to: '../../build/simulation/results/boot-calibration/calibrated-dashboard.png'

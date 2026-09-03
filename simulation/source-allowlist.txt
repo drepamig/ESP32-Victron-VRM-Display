@@ -1,3 +1,4 @@
+config/TFT_eSPI_CYD.h
 VictronCYD_Modbus/CamperNetwork.cpp
 VictronCYD_Modbus/CamperNetwork.h
 VictronCYD_Modbus/CamperNetworkRuntime.h

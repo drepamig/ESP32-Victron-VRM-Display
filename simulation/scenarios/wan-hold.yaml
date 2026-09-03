@@ -15,11 +15,11 @@ steps:
   - delay: 200ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/wan-hold/cancelled-short-press.png'
+      save-to: '../../build/simulation/results/wan-hold/cancelled-short-press.png'
   - touch-press: {part-id: lcd1, x: 218, y: 20}
   - delay: 3200ms
   - touch-release: {part-id: lcd1}
   - delay: 200ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/wan-hold/successful-three-second-hold.png'
+      save-to: '../../build/simulation/results/wan-hold/successful-three-second-hold.png'

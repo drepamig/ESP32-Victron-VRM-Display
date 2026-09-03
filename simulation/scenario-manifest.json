@@ -34,7 +34,7 @@
     {
       "name": "saved-profiles",
       "file": "scenarios/saved-profiles.yaml",
-      "screenshots": ["selected", "delete-confirmation", "clear-hold"]
+      "screenshots": ["selected", "delete-confirmation", "clear-hold", "cleared"]
     },
     {
       "name": "phone-portal",

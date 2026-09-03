@@ -73,11 +73,8 @@ switch ($Command) {
   'flash' {
     if ([string]::IsNullOrWhiteSpace($Port)) { throw 'flash requires -Port COMx.' }
     Initialize-HostVenv
-    $imagePath = Join-Path $repoRoot 'build\firmware\VictronCYD_Modbus.ino.merged.bin'
-    if (-not (Test-Path -LiteralPath $imagePath)) {
-      Invoke-Docker @('firmware-build')
-    }
-    & $venvPython -m esptool --chip esp32 --port $Port write-flash 0x0 $imagePath
+    Invoke-Docker @('firmware-build')
+    & $venvPython (Join-Path $repoRoot 'tools\flash_firmware.py') --port $Port
     if ($LASTEXITCODE -ne 0) { throw 'Firmware flash failed.' }
   }
   'monitor' {

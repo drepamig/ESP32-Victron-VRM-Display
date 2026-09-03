@@ -21,4 +21,4 @@ steps:
   - delay: 200ms
   - take-screenshot:
       part-id: lcd1
-      save-to: '../build/simulation/results/protected-network/protected-selection.png'
+      save-to: '../../build/simulation/results/protected-network/protected-selection.png'
