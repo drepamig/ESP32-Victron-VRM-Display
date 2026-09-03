@@ -86,17 +86,39 @@ g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
 ./build/host/touch_input_release_test
 
 g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
+  tests/host/credential_entry_controller_test.cpp VictronCYD_Modbus/CredentialEntryController.cpp \
+  -o build/host/credential_entry_controller_test
+./build/host/credential_entry_controller_test
+
+g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
+  tests/host/credential_keyboard_layout_test.cpp VictronCYD_Modbus/CredentialKeyboardLayout.cpp \
+  -o build/host/credential_keyboard_layout_test
+./build/host/credential_keyboard_layout_test
+
+g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
   tests/host/wifi_setup_ui_test.cpp VictronCYD_Modbus/WifiSetupUi.cpp \
+  VictronCYD_Modbus/CredentialEntryController.cpp \
+  VictronCYD_Modbus/CredentialKeyboardLayout.cpp \
   -o build/host/wifi_setup_ui_test
 ./build/host/wifi_setup_ui_test
 
 g++ "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
   tests/host/provisioning_portal_test.cpp VictronCYD_Modbus/ProvisioningPortal.cpp \
+  VictronCYD_Modbus/CredentialEntryController.cpp \
   -o build/host/provisioning_portal_test
 ./build/host/provisioning_portal_test
 
-echo "host suites: 9/9 passed"
+echo "host suites: 11/11 passed"
 ```
+
+### Touch Wi-Fi setup
+
+Selecting an unknown protected network opens the on-device keyboard. Passwords
+are masked by default; use `Show` only when visual confirmation is needed.
+`Connect` becomes available after a valid password is entered. If a connection
+attempt fails, the keyboard returns with the password still masked so it can be
+corrected. Select `Use phone` to clear the local entry and use the private
+phone portal fallback instead.
 
 ## Firmware build
 

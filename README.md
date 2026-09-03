@@ -31,6 +31,9 @@ if you want to watch a site you're not on the same network as.
 - **Battery**: SoC %, charge bar, state, voltage / current / power, temperature
 - Energy-flow connectors, Victron-style dark theme, NTP clock, WiFi indicator
 - Credentials kept out of git via `secrets.h`
+- Touch Wi-Fi setup supports direct masked QWERTY password entry for unknown
+  protected networks, with the private phone portal available through
+  **Use phone**.
 
 ## Hardware
 
