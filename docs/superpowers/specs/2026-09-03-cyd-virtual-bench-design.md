@@ -19,10 +19,10 @@ physical release work does not require globally installed Arduino tooling.
 
 ## Safety and isolation
 
-Development occurs in a linked worktree based on the approved branch tip.
-The active checkout used by the other Codex task, its untracked
-`docs/handoff.lnk`, and the ignored `secrets.h` files are not copied, read,
-modified, staged, or committed.
+Development occurs in the current repository checkout on `develop` unless the
+user explicitly instructs otherwise, following the root `AGENTS.md`. Preserve
+unrelated local work. The untracked `docs/handoff.lnk` and the ignored
+`secrets.h` files are not copied, read, modified, staged, or committed.
 
 The simulator build is a deny-by-default staging operation. It copies an
 explicit source allow-list and selects a tracked simulation-only dummy

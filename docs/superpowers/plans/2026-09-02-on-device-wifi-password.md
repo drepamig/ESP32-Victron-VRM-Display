@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Work in `C:\Source\Sandbox\VictronVenus\ESP32-Victron-VRM-Display` on `codex/esp32-venus-starlink-touch-bridge`; do not create or switch workspaces.
+- Work in the current repository checkout on `develop` unless the user explicitly instructs otherwise, following the root `AGENTS.md`; do not create or switch workspaces.
 - Follow strict red-green-refactor: every production behavior starts with a focused failing host test that fails for the missing behavior, not a compile typo.
 - Protected-network passwords are 8 through 63 printable ASCII bytes; open networks carry exactly zero password bytes.
 - The on-device entry inactivity limit is exactly 300000 ms and pauses while a connection attempt is active; the phone portal remains exactly 600000 ms.

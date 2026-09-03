@@ -26,8 +26,11 @@ run the desktop app or the whole development workflow as root.
 
 ## Repository and secret checks
 
+Work on `develop` unless the user explicitly instructs otherwise. Verify the
+current branch before continuing and follow the root `AGENTS.md` if it differs.
+
 ```bash
-git switch codex/esp32-venus-starlink-touch-bridge
+git branch --show-current
 git status --short --branch
 git log --oneline --decorate -12
 git merge-base --is-ancestor a6827e6e92db1870f70ccacd73f8d2b0cf4d5a20 HEAD

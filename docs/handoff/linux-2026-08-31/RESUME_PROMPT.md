@@ -5,8 +5,9 @@ repository as its local project.
 
 ---
 
-Continue the ESP32 Venus-Starlink touch-bridge project on branch
-`codex/esp32-venus-starlink-touch-bridge`.
+Continue the ESP32 Venus-Starlink touch-bridge project in the current repository
+checkout on `develop` unless the user explicitly instructs otherwise, following
+the root `AGENTS.md`.
 
 First read, in order:
 

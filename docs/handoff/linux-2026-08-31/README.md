@@ -1,7 +1,9 @@
 # Linux continuation handoff
 
-This bundle is the portable continuation record for the camper gateway work on
-branch `codex/esp32-venus-starlink-touch-bridge`.
+This bundle is the portable continuation record for the camper gateway work
+originally developed on branch `codex/esp32-venus-starlink-touch-bridge`.
+Continue on `develop` unless the user explicitly instructs otherwise, following
+the root `AGENTS.md`; the original branch name is historical context only.
 
 The firmware currently installed on the bench ESP32 was built from commit
 `a6827e6e92db1870f70ccacd73f8d2b0cf4d5a20`. The handoff documentation was
@@ -127,17 +129,18 @@ At `a6827e6`:
   explicitly authorized. Ordinary uploads must preserve `0x9000..0xDFFF`.
 - The board's NVS state lives on the board, not in this repository.
 - Build outputs under `build/` are ignored and should be rebuilt on Linux.
-- Push this branch only to `origin`, the user's fork. Do not push to `upstream`
+- Push only to `origin`, the user's fork. Do not push to `upstream`
   or open an upstream pull request without a separate explicit request.
 
 ## Start on Linux
 
-1. Clone the user's fork and switch to the handoff branch:
+1. Clone the user's fork on `develop` unless the user explicitly requests a
+   different branch:
 
    ```bash
-   git clone https://github.com/drepamig/ESP32-Victron-VRM-Display.git
+   git clone --branch develop https://github.com/drepamig/ESP32-Victron-VRM-Display.git
    cd ESP32-Victron-VRM-Display
-   git switch codex/esp32-venus-starlink-touch-bridge
+   git branch --show-current
    ```
 
 2. Read this file, `RESUME_PROMPT.md`, `VERIFY_LINUX.md`, the root `README.md`,

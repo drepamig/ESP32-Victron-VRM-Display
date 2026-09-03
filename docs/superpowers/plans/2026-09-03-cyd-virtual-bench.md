@@ -1,6 +1,7 @@
 # CYD Virtual Bench Implementation Plan
 
-> Execute in the isolated `codex/cyd-virtual-bench` worktree. The design in
+> Execute in the current repository checkout on `develop` unless the user
+> explicitly instructs otherwise, following the root `AGENTS.md`. The design in
 > `docs/superpowers/specs/2026-09-03-cyd-virtual-bench-design.md` is already
 > approved; no additional approval gate is required.
 
@@ -14,7 +15,7 @@ TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206 1.1.1, Wokwi CLI
 
 ## Constraints
 
-- Preserve the original checkout, `docs/handoff.lnk`, and both ignored
+- Preserve unrelated local work, `docs/handoff.lnk`, and both ignored
   `secrets.h` files.
 - Begin each new runtime behavior with a focused failing test.
 - Never stage production secrets or copy them into simulator inputs.
@@ -26,9 +27,8 @@ TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206 1.1.1, Wokwi CLI
 
 ## Tasks
 
-### 1. Record isolation and baseline
+### 1. Record baseline
 
-- [x] Create a sibling linked worktree from the active branch tip.
 - [x] Compile and run all 11 existing host suites from fresh binaries.
 - [x] Write and self-review the approved design and this executable plan.
 
@@ -102,8 +102,7 @@ TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206 1.1.1, Wokwi CLI
       suite, secret isolation, negative attestation, and clean-tree review.
 - [x] Complete the code review required by the review skill, resolve findings,
       and self-review the final diff for correctness and scope.
-- [x] Verify branch provenance and preserve the isolated worktree for the
-      user's integration choice; no physical flash, merge, or push performed.
+- [x] Verify source provenance; no physical flash, merge, or push performed.
 
 ## Acceptance evidence — 2026-09-03
 
@@ -126,6 +125,6 @@ runtime `WOKWI_CLI_TOKEN`:
   resistive touch, AP/NAPT, real GX connectivity, watchdog, and actual flashing
   remain hardware release checks.
 
-The bench is based on `codex/esp32-venus-starlink-touch-bridge` at
+Historical provenance: the bench was based on `codex/esp32-venus-starlink-touch-bridge` at
 `1673bbca4827ab371b7ab5ed68c2125fde66e932`, with zero development commits
 missing. The original checkout and its ignored credentials were not modified.
