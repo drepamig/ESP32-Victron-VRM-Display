@@ -700,6 +700,10 @@ void testCredentialDeadlinesAndConnectionTimeExemption() {
   ui.render(offlineStatus());
   check(display.drewContaining("Entry timed out") && display.drewContaining("SyntheticNet"),
         "credential timeout must leave a visible notice over current Nearby results");
+  check(ui.poll(300101).type == WifiSetupActionType::None && ui.isOpen(),
+        "first poll after credential timeout must keep Nearby open");
+  check(ui.poll(360099).type == WifiSetupActionType::None && ui.isOpen(),
+        "credential timeout must restart Nearby's full sixty-second inactivity window");
 
   ui.showCredentialEntry("SyntheticNet", 3, 400000);
   uint32_t nowMs = 400001;

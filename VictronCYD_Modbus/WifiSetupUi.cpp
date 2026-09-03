@@ -157,6 +157,7 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
   if (view_ == WifiSetupView::Password && credentialEntry_.pollTimeout(nowMs)) {
     credentialError_ = String();
     nearbyNotice_ = "Entry timed out";
+    lastActivityMs_ = nowMs;
     view_ = WifiSetupView::Nearby;
     requestFullRender();
     return noAction();
