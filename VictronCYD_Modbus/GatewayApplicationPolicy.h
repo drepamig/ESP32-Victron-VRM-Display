@@ -6,7 +6,14 @@
 
 enum class ProvisioningRoute : uint8_t {
   DirectPending,
-  PhysicalPortal,
+  OnDevicePassword,
+};
+
+enum class PendingProfileSource : uint8_t {
+  None,
+  DirectOpen,
+  Portal,
+  OnDevice,
 };
 
 enum class ScanUiOutcome : uint8_t {
@@ -93,7 +100,7 @@ inline ScanUiOutcome scanUiOutcome(bool complete, bool failed) {
 
 inline ProvisioningRoute provisioningRouteForSecurity(uint8_t securityType) {
   return securityType == 0 ? ProvisioningRoute::DirectPending
-                           : ProvisioningRoute::PhysicalPortal;
+                           : ProvisioningRoute::OnDevicePassword;
 }
 
 enum class PendingProfileOutcome : uint8_t {
@@ -175,7 +182,9 @@ class GatewayLifecyclePolicy {
  public:
   GatewayLifecycleReplacement replaceWith(GatewayLifecycleTarget target,
                                             uint32_t nowMs = 0,
-                                            int previousActiveIndex = -1) {
+                                            int previousActiveIndex = -1,
+                                            PendingProfileSource source =
+                                                PendingProfileSource::None) {
     if (target == GatewayLifecycleTarget::Exit &&
         target_ == GatewayLifecycleTarget::PendingProfile) {
       return {false, false};
@@ -187,8 +196,10 @@ class GatewayLifecyclePolicy {
     target_ = target;
     if (target_ == GatewayLifecycleTarget::PendingProfile) {
       pending_.begin(nowMs, previousActiveIndex);
+      pendingSource_ = source;
     } else {
       pending_.finish();
+      pendingSource_ = PendingProfileSource::None;
     }
     return replacement;
   }
@@ -211,10 +222,12 @@ class GatewayLifecyclePolicy {
       pending_.finish();
       target_ = GatewayLifecycleTarget::Idle;
     }
+    pendingSource_ = PendingProfileSource::None;
   }
 
   GatewayLifecycleTarget target() const { return target_; }
   bool pendingActive() const { return target_ == GatewayLifecycleTarget::PendingProfile; }
+  PendingProfileSource pendingSource() const { return pendingSource_; }
   bool physicalPortalActive() const {
     return target_ == GatewayLifecycleTarget::PhysicalPortal;
   }
@@ -222,6 +235,7 @@ class GatewayLifecyclePolicy {
  private:
   GatewayLifecycleTarget target_ = GatewayLifecycleTarget::Idle;
   PendingProfileLifecycle pending_;
+  PendingProfileSource pendingSource_ = PendingProfileSource::None;
 };
 
 inline bool isRecentValidGxSnapshot(bool valid, uint32_t nowMs, uint32_t receivedAtMs,

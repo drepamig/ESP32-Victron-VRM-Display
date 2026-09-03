@@ -548,9 +548,10 @@ void clearPendingApplicationBuffers() {
 }
 
 void replaceGatewayLifecycle(GatewayLifecycleTarget target, uint32_t nowMs = 0,
-                             int previousActiveIndex = -1) {
+                             int previousActiveIndex = -1,
+                             PendingProfileSource source = PendingProfileSource::None) {
   const GatewayLifecycleReplacement replacement =
-      gatewayLifecycle.replaceWith(target, nowMs, previousActiveIndex);
+      gatewayLifecycle.replaceWith(target, nowMs, previousActiveIndex, source);
   if (replacement.cancelPendingProfile) {
     camperNetwork.cancelPendingProfile();
   }
@@ -573,8 +574,9 @@ bool reconnectPreviousProfile(uint32_t nowMs, int previousIndex) {
   return connected;
 }
 
-void showPendingFailure(const char* message, const PendingProfileEvaluation& evaluation,
-                        uint32_t nowMs) {
+PendingProfileSource finishPendingFailure(const PendingProfileEvaluation& evaluation,
+                                          uint32_t nowMs) {
+  const PendingProfileSource source = gatewayLifecycle.pendingSource();
   camperNetwork.cancelPendingProfile();
   if (evaluation.outcome == PendingProfileOutcome::RestorePrevious) {
     reconnectPreviousProfile(nowMs, evaluation.previousActiveIndex);
@@ -582,12 +584,30 @@ void showPendingFailure(const char* message, const PendingProfileEvaluation& eva
   gatewayLifecycle.completePending();
   clearPendingApplicationBuffers();
   refreshSavedProfiles();
+  return source;
+}
+
+void showPendingConnectionFailure(const char* genericMessage,
+                                  const PendingProfileEvaluation& evaluation,
+                                  uint32_t nowMs) {
+  const PendingProfileSource source = finishPendingFailure(evaluation, nowMs);
+  if (source != PendingProfileSource::OnDevice ||
+      !wifiSetupUi.showCredentialFailure("Connection failed", nowMs)) {
+    wifiSetupUi.showResult(genericMessage, false);
+  }
+  wifiSetupUi.render(camperNetwork.status());
+}
+
+void showPendingInvariantFailure(const char* message,
+                                 const PendingProfileEvaluation& evaluation,
+                                 uint32_t nowMs) {
+  finishPendingFailure(evaluation, nowMs);
   wifiSetupUi.showResult(message, false);
   wifiSetupUi.render(camperNetwork.status());
 }
 
-void beginPendingProfile(const String& ssid, String& passphrase, uint8_t securityType,
-                         uint32_t nowMs) {
+void beginPendingProfile(CredentialSubmission& submission,
+                         PendingProfileSource source, uint32_t nowMs) {
   NetworkProfile retainedPreviousProfile;
   bool retainedPreviousAvailable = false;
   int previousActiveIndex = -1;
@@ -602,23 +622,50 @@ void beginPendingProfile(const String& ssid, String& passphrase, uint8_t securit
   }
 
   replaceGatewayLifecycle(GatewayLifecycleTarget::PendingProfile, nowMs,
-                          previousActiveIndex);
+                          previousActiveIndex, source);
   previousProfileAvailable = retainedPreviousAvailable;
   if (retainedPreviousAvailable) {
     previousProfile = retainedPreviousProfile;
   }
   clearProfile(retainedPreviousProfile);
 
-  pendingProfile.ssid = ssid;
-  pendingProfile.passphrase = passphrase;
-  pendingProfile.securityType = securityType;
+  pendingProfile.ssid = submission.ssid;
+  pendingProfile.passphrase = submission.passphrase;
+  pendingProfile.securityType = submission.securityType;
   pendingProfile.lastSuccessEpoch = 0;
-  secureClearString(passphrase);
-  wifiSetupUi.close();
-  redrawCurrentView(nowMs);
-  if (!camperNetwork.connect(pendingProfile, nowMs)) {
-    showPendingFailure("Connection rejected", gatewayLifecycle.pendingImmediateFailure(), nowMs);
+  submission.clear();
+  if (source != PendingProfileSource::OnDevice) {
+    wifiSetupUi.close();
+    redrawCurrentView(nowMs);
   }
+  if (!camperNetwork.connect(pendingProfile, nowMs)) {
+    showPendingConnectionFailure("Connection rejected",
+                                 gatewayLifecycle.pendingImmediateFailure(), nowMs);
+  }
+}
+
+void startPhysicalPortal(const String& ssid, uint8_t securityType, uint32_t nowMs) {
+  replaceGatewayLifecycle(GatewayLifecycleTarget::PhysicalPortal);
+  if (portal.begin(ssid, securityType, nowMs)) {
+    wifiSetupUi.showPortal(ssid, portal.pairingCode(), portal.expiresAtMs());
+  } else {
+    replaceGatewayLifecycle(GatewayLifecycleTarget::Idle);
+    wifiSetupUi.showResult("Setup portal failed", false);
+  }
+  wifiSetupUi.render(camperNetwork.status());
+}
+
+void cancelOnDevicePending(uint32_t nowMs) {
+  const PendingProfileEvaluation evaluation = gatewayLifecycle.pendingImmediateFailure();
+  camperNetwork.cancelPendingProfile();
+  if (evaluation.outcome == PendingProfileOutcome::RestorePrevious) {
+    reconnectPreviousProfile(nowMs, evaluation.previousActiveIndex);
+  }
+  gatewayLifecycle.completePending();
+  clearPendingApplicationBuffers();
+  refreshSavedProfiles();
+  wifiSetupUi.cancelCredentialAttempt();
+  wifiSetupUi.render(camperNetwork.status());
 }
 
 void handlePendingProfileCommit(uint32_t nowMs) {
@@ -631,7 +678,7 @@ void handlePendingProfileCommit(uint32_t nowMs) {
     return;
   }
   if (evaluation.outcome != PendingProfileOutcome::Commit) {
-    showPendingFailure("Connection timed out", evaluation, nowMs);
+    showPendingConnectionFailure("Connection timed out", evaluation, nowMs);
     return;
   }
 
@@ -639,8 +686,8 @@ void handlePendingProfileCommit(uint32_t nowMs) {
   pendingProfile.lastSuccessEpoch = currentEpoch > 0 ? static_cast<uint32_t>(currentEpoch) : 0;
   size_t storedIndex = 0;
   if (!profileStoreReady || !profileStore.upsertAndActivate(pendingProfile, storedIndex)) {
-    showPendingFailure("Credential persistence failed",
-                       gatewayLifecycle.pendingImmediateFailure(), nowMs);
+    showPendingInvariantFailure("Credential persistence failed",
+                                gatewayLifecycle.pendingImmediateFailure(), nowMs);
     return;
   }
 
@@ -653,12 +700,9 @@ void handlePendingProfileCommit(uint32_t nowMs) {
 }
 
 void handlePortalLifecycle(uint32_t nowMs) {
-  ProvisioningSubmission submission;
+  CredentialSubmission submission;
   if (portal.takeSubmission(submission)) {
-    beginPendingProfile(submission.ssid, submission.passphrase,
-                        submission.securityType, nowMs);
-    secureClearString(submission.passphrase);
-    submission.ssid = String();
+    beginPendingProfile(submission, PendingProfileSource::Portal, nowMs);
     return;
   }
   if (gatewayLifecycle.physicalPortalActive() && !portal.active()) {
@@ -689,18 +733,27 @@ void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
     case WifiSetupActionType::ProvisionNew:
       if (provisioningRouteForSecurity(action.securityType) ==
           ProvisioningRoute::DirectPending) {
-        String emptyPassphrase;
-        beginPendingProfile(action.ssid, emptyPassphrase, action.securityType, nowMs);
-      } else {
-        replaceGatewayLifecycle(GatewayLifecycleTarget::PhysicalPortal);
-        if (portal.begin(action.ssid, action.securityType, nowMs)) {
-          wifiSetupUi.showPortal(action.ssid, portal.pairingCode(), portal.expiresAtMs());
-        } else {
-          replaceGatewayLifecycle(GatewayLifecycleTarget::Idle);
-          wifiSetupUi.showResult("Setup portal failed", false);
+        CredentialSubmission submission;
+        if (submission.set(action.ssid.c_str(), "", action.securityType)) {
+          beginPendingProfile(submission, PendingProfileSource::DirectOpen, nowMs);
         }
+      } else {
+        wifiSetupUi.showCredentialEntry(action.ssid, action.securityType, nowMs);
         wifiSetupUi.render(camperNetwork.status());
       }
+      break;
+    case WifiSetupActionType::SubmitCredentials: {
+      CredentialSubmission submission;
+      if (wifiSetupUi.takeCredentialSubmission(submission)) {
+        beginPendingProfile(submission, PendingProfileSource::OnDevice, nowMs);
+      }
+      break;
+    }
+    case WifiSetupActionType::UsePhone:
+      startPhysicalPortal(action.ssid, action.securityType, nowMs);
+      break;
+    case WifiSetupActionType::CancelCredentialAttempt:
+      cancelOnDevicePending(nowMs);
       break;
     case WifiSetupActionType::DeleteSaved: {
       const bool erased = profileStoreReady && action.profileIndex >= 0 &&

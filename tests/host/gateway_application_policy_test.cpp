@@ -16,10 +16,47 @@ void check(bool condition, const char* name) {
 
 void testUnknownNetworkRouting() {
   check(provisioningRouteForSecurity(0) == ProvisioningRoute::DirectPending,
-        "unknown open network routes directly to RAM-only pending flow");
-  check(provisioningRouteForSecurity(1) == ProvisioningRoute::PhysicalPortal &&
-            provisioningRouteForSecurity(3) == ProvisioningRoute::PhysicalPortal,
-        "unknown secured network routes to the physical password portal");
+        "unknown open network bypasses password entry");
+  check(provisioningRouteForSecurity(3) == ProvisioningRoute::OnDevicePassword,
+        "unknown protected network opens on-device password entry");
+}
+
+void testPendingLifecycleTracksPresentationSource() {
+  GatewayLifecyclePolicy lifecycle;
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 100, 2,
+                        PendingProfileSource::OnDevice);
+  check(lifecycle.pendingSource() == PendingProfileSource::OnDevice,
+        "pending attempt records on-device presentation ownership");
+  lifecycle.completePending();
+  check(lifecycle.pendingSource() == PendingProfileSource::None,
+        "completion clears pending source ownership");
+
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 200, 2,
+                        PendingProfileSource::OnDevice);
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 300, 2,
+                        PendingProfileSource::Portal);
+  check(lifecycle.pendingSource() == PendingProfileSource::Portal,
+        "portal pending replacement cannot retain on-device ownership");
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 400, 2,
+                        PendingProfileSource::DirectOpen);
+  check(lifecycle.pendingSource() == PendingProfileSource::DirectOpen,
+        "open pending replacement cannot retain portal ownership");
+  lifecycle.replaceWith(GatewayLifecycleTarget::SavedConnection);
+  check(lifecycle.pendingSource() == PendingProfileSource::None,
+        "saved replacement clears pending source ownership");
+
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 500, 2,
+                        PendingProfileSource::OnDevice);
+  lifecycle.replaceWith(GatewayLifecycleTarget::PhysicalPortal);
+  check(lifecycle.pendingSource() == PendingProfileSource::None,
+        "portal replacement clears pending source ownership");
+
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 600, 2,
+                        PendingProfileSource::OnDevice);
+  lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 700, 2,
+                        PendingProfileSource::None);
+  check(lifecycle.pendingSource() == PendingProfileSource::None,
+        "pending replacement without a source cannot retain stale ownership");
 }
 
 void testPendingCommitAndTimeoutRetainPriorSelection() {
@@ -275,6 +312,7 @@ void testRecordedCenterHeaderPainter() {
 
 int main() {
   testUnknownNetworkRouting();
+  testPendingLifecycleTracksPresentationSource();
   testPendingCommitAndTimeoutRetainPriorSelection();
   testPendingDeadlineAndGxFreshnessWraparound();
   testReplacingPendingLifecycleInvalidatesOldDeadline();
