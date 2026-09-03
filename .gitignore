@@ -24,3 +24,4 @@ simulation/.stage/
 # OS junk
 .DS_Store
 Thumbs.db
+CONNECTION_README.md
