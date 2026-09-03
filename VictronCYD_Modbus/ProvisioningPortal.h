@@ -4,12 +4,7 @@
 #include <WebServer.h>
 #include <cstdint>
 
-struct ProvisioningSubmission {
-  String ssid;
-  String passphrase;
-  uint8_t securityType = 0;
-  bool ready = false;
-};
+#include "CredentialSubmission.h"
 
 class ProvisioningPortal {
  public:
@@ -21,7 +16,7 @@ class ProvisioningPortal {
   bool active() const;
   String pairingCode() const;
   uint32_t expiresAtMs() const;
-  bool takeSubmission(ProvisioningSubmission& out);
+  bool takeSubmission(CredentialSubmission& out);
 
  private:
   static constexpr uint32_t kLifetimeMs = 600000;

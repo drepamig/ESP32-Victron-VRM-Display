@@ -13,6 +13,13 @@ void secureClear(char* value, size_t length) {
   }
 }
 
+void secureClearString(String& value) {
+  if (!value.isEmpty()) {
+    secureClear(const_cast<char*>(value.c_str()), value.length());
+  }
+  value = String();
+}
+
 bool deadlineReached(uint32_t nowMs, uint32_t deadlineMs) {
   return static_cast<int32_t>(nowMs - deadlineMs) >= 0;
 }
@@ -76,7 +83,7 @@ bool ProvisioningPortal::begin(const String& selectedSsid, uint8_t securityType,
 void ProvisioningPortal::poll(uint32_t nowMs) {
   if (!active_) return;
   if (deadlineReached(nowMs, expiresAtMs_)) {
-    stopActiveSession();
+    cancel();
     return;
   }
   server_.handleClient();
@@ -95,14 +102,11 @@ String ProvisioningPortal::pairingCode() const {
 
 uint32_t ProvisioningPortal::expiresAtMs() const { return expiresAtMs_; }
 
-bool ProvisioningPortal::takeSubmission(ProvisioningSubmission& out) {
+bool ProvisioningPortal::takeSubmission(CredentialSubmission& out) {
   if (!pendingReady_) return false;
-  out.ssid = pendingSsid_;
-  out.passphrase = pendingPassphrase_;
-  out.securityType = pendingSecurityType_;
-  out.ready = true;
+  const bool transferred = out.set(pendingSsid_, pendingPassphrase_, pendingSecurityType_);
   clearPendingSubmission();
-  return true;
+  return transferred;
 }
 
 void ProvisioningPortal::handleGet() {
@@ -136,18 +140,23 @@ void ProvisioningPortal::handlePost() {
     return;
   }
 
-  const String passphrase = server_.hasArg("password") ? server_.arg("password") : String();
-  const size_t passphraseLength = passphrase.length();
-  if (passphraseLength > 63 || (selectedSecurityType_ != 0 && passphraseLength == 0)) {
+  String submittedPassphrase =
+      server_.hasArg("password") ? server_.arg("password") : String();
+  const size_t passphraseLength = submittedPassphrase.length();
+  const bool valid = credentialPassphraseValid(selectedSecurityType_,
+                                               submittedPassphrase.c_str(), passphraseLength);
+  if (!valid) {
+    secureClearString(submittedPassphrase);
     server_.send(400, "text/plain", "Request rejected.");
     return;
   }
 
   const size_t ssidLength = std::strlen(selectedSsid_);
   std::memcpy(pendingSsid_, selectedSsid_, ssidLength + 1);
-  std::memcpy(pendingPassphrase_, passphrase.c_str(), passphraseLength + 1);
+  std::memcpy(pendingPassphrase_, submittedPassphrase.c_str(), passphraseLength + 1);
   pendingSecurityType_ = selectedSecurityType_;
   pendingReady_ = true;
+  secureClearString(submittedPassphrase);
   server_.send(200, "text/plain", "Setup accepted.");
   stopActiveSession();
 }

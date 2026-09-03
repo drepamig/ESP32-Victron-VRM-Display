@@ -6,6 +6,7 @@
 
 #include "WebServer.h"
 #include "esp_random.h"
+#include "../../VictronCYD_Modbus/CredentialSubmission.h"
 #include "../../VictronCYD_Modbus/ProvisioningPortal.h"
 
 namespace {
@@ -105,7 +106,7 @@ void testRouteAndSubnetBoundaries() {
   portal.cancel();
 }
 
-void testCodeAndPassphraseValidation() {
+void testCodeValidation() {
   fakeEspRandomValue = 246810;
   ProvisioningPortal portal;
   check(portal.begin("Secured", 3, 0), "secured validation portal starts");
@@ -122,52 +123,123 @@ void testCodeAndPassphraseValidation() {
   check(server().responseCode() == 400 && server().responseBody() == missingCodeBody &&
             server().responseBody().find("000000") == std::string::npos && portal.active(),
         "wrong code must use the same generic non-secret failure as missing code");
+  portal.cancel();
+}
 
-  check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
-                                 form("246810", "")) &&
-            server().responseCode() == 400 && portal.active(),
-        "secured network must reject an empty passphrase");
-  const std::string emptyPasswordBody = server().responseBody();
+void testProtectedPassphraseBoundariesAndPrintableBytes() {
+  fakeEspRandomValue = 246810;
+  ProvisioningPortal portal;
+  const char* const tooShort[] = {"", "x", "xx", "xxx", "xxxx", "xxxxx", "xxxxxx",
+                                 "xxxxxxx"};
+  std::string genericFailureBody;
+  for (size_t index = 0; index < sizeof(tooShort) / sizeof(tooShort[0]); ++index) {
+    check(portal.begin("BoundaryNet", 3, static_cast<uint32_t>(index)),
+          "protected rejection session starts");
+    check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
+                                   form("246810", tooShort[index])) &&
+              server().responseCode() == 400 && portal.active(),
+          "protected lengths zero through seven must be rejected");
+    if (index == 0) genericFailureBody = server().responseBody();
+    check(server().responseBody() == genericFailureBody,
+          "protected short lengths must use one generic rejection");
+  }
+
+  check(portal.begin("BoundaryNet", 3, 10), "protected oversized session starts");
   const std::string oversizedPassword(64, 'x');
   check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
                                  form("246810", oversizedPassword.c_str())) &&
-            server().responseCode() == 400 && server().responseBody() == emptyPasswordBody &&
+            server().responseCode() == 400 && server().responseBody() == genericFailureBody &&
             server().responseBody().find(oversizedPassword) == std::string::npos && portal.active(),
-        "passphrases over 63 bytes must get a generic non-echoing rejection");
+        "protected length 64 must be rejected generically without echoing input");
 
+  check(portal.begin("BoundaryNet", 3, 11), "protected control-byte session starts");
+  const std::string newlinePassword = "A1!A1!A\n";
   check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
-                                 form("246810", "valid-passphrase")) &&
+                                 form("246810", newlinePassword.c_str())) &&
+            server().responseCode() == 400 && server().responseBody() == genericFailureBody &&
+            portal.active(),
+        "protected control bytes must be rejected generically");
+  check(portal.begin("BoundaryNet", 3, 12), "protected delete-byte session starts");
+  const std::string deletePassword = "A1!A1!A\x7f";
+  check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
+                                 form("246810", deletePassword.c_str())) &&
+            server().responseCode() == 400 && server().responseBody() == genericFailureBody &&
+            portal.active(),
+        "protected delete bytes must be rejected generically");
+
+  check(portal.begin("BoundaryNet", 3, 13), "protected minimum session starts");
+  check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
+                                 form("246810", "A1!A1!A1")) &&
             server().responseCode() == 200 && !portal.active() && !server().running(),
-        "valid secured credentials must close the session and server");
-  check(server().responseBody().find("valid-passphrase") == std::string::npos &&
-            server().responseBody().find("246810") == std::string::npos,
-        "success response must not echo the password or active code");
-  ProvisioningSubmission secured;
-  check(portal.takeSubmission(secured) && secured.ready && secured.ssid == String("Secured") &&
-            secured.passphrase == String("valid-passphrase") && secured.securityType == 3,
-        "accepted secured credentials and encryption type must transfer exactly");
+        "protected length eight must be accepted");
+  CredentialSubmission acceptedMinimum;
+  check(portal.takeSubmission(acceptedMinimum) && acceptedMinimum.ready &&
+            std::string(acceptedMinimum.passphrase) == "A1!A1!A1",
+        "accepted protected minimum must transfer through the shared structure");
+  acceptedMinimum.clear();
+
+  fakeEspRandomValue = 975310;
+  check(portal.begin("BoundaryNet", 3, 100), "protected maximum portal starts");
+  const std::string maximumPassword(63, 'x');
+  check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
+                                 form("975310", maximumPassword.c_str())) &&
+            server().responseCode() == 200 && !portal.active(),
+        "protected length 63 must be accepted");
+  CredentialSubmission acceptedMaximum;
+  check(portal.takeSubmission(acceptedMaximum) && acceptedMaximum.ready &&
+            std::string(acceptedMaximum.passphrase) == maximumPassword,
+        "accepted protected maximum must transfer without truncation");
+  acceptedMaximum.clear();
 }
 
-void testOpenSubmissionAndOneShotTransfer() {
+void testSharedSubmissionContractAndOneShotTransfer() {
   fakeEspRandomValue = 13579;
+  ProvisioningPortal portal;
+  check(portal.begin("SyntheticNet", 3, 500), "shared-submission portal starts");
+  check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
+                                 form("013579", "A1!A1!A1!")) &&
+            server().responseCode() == 200,
+        "valid protected submission must be accepted");
+  check(!portal.active() && portal.pairingCode().isEmpty() && !server().running(),
+        "accepted submission must invalidate its code and stop serving");
+  check(server().responseBody().find("A1!A1!A1!") == std::string::npos &&
+            server().responseBody().find("013579") == std::string::npos,
+        "success response must not echo submitted material");
+
+  CredentialSubmission accepted;
+  check(portal.takeSubmission(accepted) && accepted.ready &&
+            std::string(accepted.ssid) == "SyntheticNet" &&
+            std::string(accepted.passphrase) == "A1!A1!A1!" && accepted.securityType == 3,
+        "portal transfers one bounded shared submission");
+  accepted.clear();
+  CredentialSubmission untouched;
+  check(untouched.set("SentinelNet", "A1!A1!A1!", 3), "one-shot sentinel initializes");
+  check(!portal.takeSubmission(untouched) && std::string(untouched.ssid) == "SentinelNet",
+        "submission must be consumable exactly once");
+  untouched.clear();
+}
+
+void testOpenNetworksAcceptOnlyEmptyPasswords() {
+  fakeEspRandomValue = 112233;
   ProvisioningPortal portal;
   check(portal.begin("Cafe Open", 0, 500), "open-network portal starts");
   check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
-                                 form("013579", "")) &&
-            server().responseCode() == 200,
-        "security type zero must allow an empty passphrase");
-  check(!portal.active() && portal.pairingCode().isEmpty() && !server().running(),
-        "accepted submission must invalidate its code and stop serving");
-
-  ProvisioningSubmission accepted;
+                                 form("112233", "x")) &&
+            server().responseCode() == 400 && portal.active(),
+        "open networks must reject a non-empty password");
+  const std::string genericFailureBody = server().responseBody();
+  check(genericFailureBody.find("x") == std::string::npos,
+        "open-network rejection must not echo submitted material");
+  check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
+                                 form("112233", "")) &&
+            server().responseCode() == 200 && !portal.active(),
+        "open networks must accept an empty password");
+  CredentialSubmission accepted;
   check(portal.takeSubmission(accepted) && accepted.ready &&
-            accepted.ssid == String("Cafe Open") && accepted.passphrase.isEmpty() &&
+            std::string(accepted.ssid) == "Cafe Open" && accepted.passphrase[0] == '\0' &&
             accepted.securityType == 0,
-        "accepted open-network data must transfer exactly to the consumer");
-  ProvisioningSubmission untouched;
-  untouched.ssid = "sentinel";
-  check(!portal.takeSubmission(untouched) && untouched.ssid == String("sentinel"),
-        "submission must be consumable exactly once");
+        "accepted open-network data must transfer through the shared structure");
+  accepted.clear();
 }
 
 void testCancelTimeoutAndRepeatedBeginClearOldState() {
@@ -175,7 +247,7 @@ void testCancelTimeoutAndRepeatedBeginClearOldState() {
   ProvisioningPortal portal;
   check(portal.begin("Cancelled", 3, 0), "cancel test portal starts");
   portal.cancel();
-  ProvisioningSubmission output;
+  CredentialSubmission output;
   check(!portal.active() && portal.pairingCode().isEmpty() && !server().running() &&
             !portal.takeSubmission(output),
         "cancel must close the server and clear session material");
@@ -203,6 +275,16 @@ void testCancelTimeoutAndRepeatedBeginClearOldState() {
   check(!portal.active() && portal.pairingCode().isEmpty() && !server().running() &&
             !portal.takeSubmission(output),
         "timeout must close and clear without producing a submission");
+
+  fakeEspRandomValue = 555555;
+  check(portal.begin("PendingCancel", 3, 40), "pending-cancel portal starts");
+  check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
+                                 form("555555", "A1!A1!A1!")) &&
+            server().responseCode() == 200,
+        "pending-cancel fixture is accepted");
+  portal.cancel();
+  check(!portal.takeSubmission(output), "cancel must clear an older pending submission");
+  output.clear();
 }
 
 }  // namespace
@@ -211,8 +293,10 @@ int main() {
   testCodeLifetimeAndEscapedForm();
   testWraparoundSafeExpiry();
   testRouteAndSubnetBoundaries();
-  testCodeAndPassphraseValidation();
-  testOpenSubmissionAndOneShotTransfer();
+  testCodeValidation();
+  testProtectedPassphraseBoundariesAndPrintableBytes();
+  testSharedSubmissionContractAndOneShotTransfer();
+  testOpenNetworksAcceptOnlyEmptyPasswords();
   testCancelTimeoutAndRepeatedBeginClearOldState();
   return failures == 0 ? 0 : 1;
 }
