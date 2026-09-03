@@ -45,7 +45,7 @@ class CamperNetwork {
   CamperNetworkStatus status() const;
   bool pendingProfileConnected() const;
   void acceptPendingProfile();
-  void cancelPendingProfile();
+  void cancelPendingProfile(bool clearTransientStationConfig = true);
   void disconnectUpstream();
 
  private:

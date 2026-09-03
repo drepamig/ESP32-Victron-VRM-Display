@@ -547,13 +547,15 @@ void clearPendingApplicationBuffers() {
   previousProfileAvailable = false;
 }
 
-void replaceGatewayLifecycle(GatewayLifecycleTarget target, uint32_t nowMs = 0,
+bool replaceGatewayLifecycle(GatewayLifecycleTarget target, uint32_t nowMs = 0,
                              int previousActiveIndex = -1,
                              PendingProfileSource source = PendingProfileSource::None) {
   const GatewayLifecycleReplacement replacement =
       gatewayLifecycle.replaceWith(target, nowMs, previousActiveIndex, source);
+  const bool retainStationConfig =
+      retainPendingStationConfigForImmediateReplacement(replacement, target);
   if (replacement.cancelPendingProfile) {
-    camperNetwork.cancelPendingProfile();
+    camperNetwork.cancelPendingProfile(!retainStationConfig);
   }
   if (replacement.cancelPhysicalPortal) {
     portal.cancel();
@@ -561,6 +563,7 @@ void replaceGatewayLifecycle(GatewayLifecycleTarget target, uint32_t nowMs = 0,
   if (target != GatewayLifecycleTarget::Exit || !gatewayLifecycle.pendingActive()) {
     clearPendingApplicationBuffers();
   }
+  return retainStationConfig;
 }
 
 bool reconnectPreviousProfile(uint32_t nowMs, int previousIndex) {
@@ -577,9 +580,13 @@ bool reconnectPreviousProfile(uint32_t nowMs, int previousIndex) {
 PendingProfileSource finishPendingFailure(const PendingProfileEvaluation& evaluation,
                                           uint32_t nowMs) {
   const PendingProfileSource source = gatewayLifecycle.pendingSource();
-  camperNetwork.cancelPendingProfile();
+  const bool restorePrevious =
+      evaluation.outcome == PendingProfileOutcome::RestorePrevious;
+  camperNetwork.cancelPendingProfile(!restorePrevious);
   if (evaluation.outcome == PendingProfileOutcome::RestorePrevious) {
-    reconnectPreviousProfile(nowMs, evaluation.previousActiveIndex);
+    if (!reconnectPreviousProfile(nowMs, evaluation.previousActiveIndex)) {
+      camperNetwork.disconnectUpstream();
+    }
   }
   gatewayLifecycle.completePending();
   clearPendingApplicationBuffers();
@@ -657,9 +664,13 @@ void startPhysicalPortal(const String& ssid, uint8_t securityType, uint32_t nowM
 
 void cancelOnDevicePending(uint32_t nowMs) {
   const PendingProfileEvaluation evaluation = gatewayLifecycle.pendingImmediateFailure();
-  camperNetwork.cancelPendingProfile();
+  const bool restorePrevious =
+      evaluation.outcome == PendingProfileOutcome::RestorePrevious;
+  camperNetwork.cancelPendingProfile(!restorePrevious);
   if (evaluation.outcome == PendingProfileOutcome::RestorePrevious) {
-    reconnectPreviousProfile(nowMs, evaluation.previousActiveIndex);
+    if (!reconnectPreviousProfile(nowMs, evaluation.previousActiveIndex)) {
+      camperNetwork.disconnectUpstream();
+    }
   }
   gatewayLifecycle.completePending();
   clearPendingApplicationBuffers();
@@ -715,7 +726,8 @@ void handlePortalLifecycle(uint32_t nowMs) {
 void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
   switch (action.type) {
     case WifiSetupActionType::ConnectSaved: {
-      replaceGatewayLifecycle(GatewayLifecycleTarget::SavedConnection);
+      const bool retainedStationConfig =
+          replaceGatewayLifecycle(GatewayLifecycleTarget::SavedConnection);
       NetworkProfile profile;
       const bool loaded = profileStoreReady && action.profileIndex >= 0 &&
                           profileStore.load(static_cast<size_t>(action.profileIndex), profile);
@@ -723,6 +735,9 @@ void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
       if (connecting) {
         camperNetwork.acceptPendingProfile();
       } else {
+        finishStationConfigReplacement(
+            retainedStationConfig, false,
+            [] { camperNetwork.disconnectUpstream(); });
         wifiSetupUi.showResult("Saved connection failed", false);
       }
       clearProfile(profile);
@@ -795,7 +810,11 @@ void handleTouchAndUiActions(uint32_t nowMs) {
       case TouchEventType::Press:
       case TouchEventType::Scroll:
         coordinateSetupInteraction(
-            [&] { return wifiSetupUi.handleTouch(event.point, nowMs); },
+            [&] {
+              return event.type == TouchEventType::Press
+                         ? wifiSetupUi.handleTouch(event.point, nowMs)
+                         : wifiSetupUi.handleTouchMove(event.point, nowMs);
+            },
             [&] { return wifiSetupUi.takeFullRenderRequest(); },
             [&] { redrawCurrentView(nowMs); },
             [&](const WifiSetupAction& action) { handleUiAction(action, nowMs); },

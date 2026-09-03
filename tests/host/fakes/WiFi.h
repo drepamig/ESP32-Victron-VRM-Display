@@ -72,6 +72,8 @@ class FakeWiFiClass {
 
   void reset() {
     events.clear();
+    persistentCalls = 0;
+    persistentValue = true;
     modeCalls = 0;
     modeValue = 0;
     autoReconnectCalls = 0;
@@ -79,6 +81,8 @@ class FakeWiFiClass {
     beginSsids.clear();
     beginPassphraseLengths.clear();
     disconnectCalls = 0;
+    disconnectWifiOff.clear();
+    disconnectEraseAp.clear();
     connected = false;
     stationAddress = IPAddress();
     stationRssi = 0;
@@ -91,6 +95,12 @@ class FakeWiFiClass {
     scanRecords.clear();
     AP = FakeAccessPoint();
     AP.events = &events;
+  }
+
+  void persistent(bool enabled) {
+    events.push_back("persistent");
+    ++persistentCalls;
+    persistentValue = enabled;
   }
 
   bool mode(int value) {
@@ -114,9 +124,11 @@ class FakeWiFiClass {
     return 0;
   }
 
-  bool disconnect(bool = false, bool = false, unsigned long = 100) {
+  bool disconnect(bool wifiOff = false, bool eraseAp = false, unsigned long = 100) {
     events.push_back("disconnect");
     ++disconnectCalls;
+    disconnectWifiOff.push_back(wifiOff);
+    disconnectEraseAp.push_back(eraseAp);
     connected = false;
     stationAddress = IPAddress();
     return true;
@@ -146,6 +158,8 @@ class FakeWiFiClass {
   }
 
   std::vector<std::string> events;
+  int persistentCalls = 0;
+  bool persistentValue = true;
   int modeCalls = 0;
   int modeValue = 0;
   int autoReconnectCalls = 0;
@@ -153,6 +167,8 @@ class FakeWiFiClass {
   std::vector<std::string> beginSsids;
   std::vector<size_t> beginPassphraseLengths;
   int disconnectCalls = 0;
+  std::vector<bool> disconnectWifiOff;
+  std::vector<bool> disconnectEraseAp;
   bool connected = false;
   IPAddress stationAddress;
   int8_t stationRssi = 0;

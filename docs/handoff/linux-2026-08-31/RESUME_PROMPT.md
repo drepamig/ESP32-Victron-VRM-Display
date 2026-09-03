@@ -26,15 +26,18 @@ history, remotes, ignored `VictronCYD_Modbus/secrets.h`, pinned Arduino-ESP32
 3.3.11 core, and XPT2046_Touchscreen 1.4 library. Never read a secret value into
 chat or commit it. Do not erase NVS or modify Venus.
 
-The physical feedback and top-row touch checkpoints are complete. Resume with
-controlled upstream provisioning: keep the bench upstream available, select it
-from `Nearby`, and verify the time-limited portal flow. Ask the user for the
-current upstream SSID only when provisioning begins; do not add it to tracked
-files or logs.
+The earlier physical feedback and top-row touch checkpoints are complete.
+Physical validation of the newer on-device password keyboard is still pending.
+Resume with controlled upstream provisioning: keep the bench upstream
+available, select it from `Nearby`, validate the masked keyboard and Connect
+flow first, then validate **Use phone** as the time-limited private portal
+fallback. Ask the user for the current upstream SSID only when provisioning
+begins; do not add it to tracked files or logs.
 
-Continue the remaining Task 9 provisioning, NAPT, bad-credential retention,
-second-profile selection/deletion, portal-boundary, five-minute loss, and
-reconnect scenarios exactly as listed in the handoff.
+Continue the remaining Task 9 physical keyboard, provisioning, NAPT,
+bad-credential correction and rollback, second-profile selection/deletion,
+phone-fallback portal-boundary, five-minute loss, and reconnect scenarios
+exactly as listed in the handoff.
 Record only observed hardware behavior and pause when user interaction is
 required. Real Starlink and live Venus/GX validation remain deferred until the
 field hardware is co-located.

@@ -156,6 +156,31 @@ void testReplacingPendingLifecycleInvalidatesOldDeadline() {
         "clear-all cancels pending without allowing its deadline to restore anything");
 }
 
+void testRetainedStationConfigurationErasesWhenReplacementFails() {
+  const GatewayLifecycleReplacement cancelledPending{true, false};
+  const GatewayLifecycleReplacement noPending{false, false};
+  check(retainPendingStationConfigForImmediateReplacement(
+            cancelledPending, GatewayLifecycleTarget::SavedConnection),
+        "saved replacement retains an old pending STA config for immediate overwrite");
+  check(retainPendingStationConfigForImmediateReplacement(
+            cancelledPending, GatewayLifecycleTarget::PendingProfile),
+        "new pending replacement retains the old STA config for immediate overwrite");
+  check(!retainPendingStationConfigForImmediateReplacement(
+             cancelledPending, GatewayLifecycleTarget::PhysicalPortal) &&
+            !retainPendingStationConfigForImmediateReplacement(
+                noPending, GatewayLifecycleTarget::SavedConnection),
+        "terminal targets and non-pending lifecycles do not retain STA config");
+
+  int eraseCalls = 0;
+  finishStationConfigReplacement(true, false, [&] { ++eraseCalls; });
+  check(eraseCalls == 1,
+        "failed immediate replacement erases the retained transient STA config");
+  finishStationConfigReplacement(true, true, [&] { ++eraseCalls; });
+  finishStationConfigReplacement(false, false, [&] { ++eraseCalls; });
+  check(eraseCalls == 1,
+        "successful replacement or an already-erased cancel performs no terminal erase");
+}
+
 void testExitPreservesPendingButCancelsPhysicalPortal() {
   GatewayLifecyclePolicy lifecycle;
   lifecycle.replaceWith(GatewayLifecycleTarget::PendingProfile, 400000, 1);
@@ -316,6 +341,7 @@ int main() {
   testPendingCommitAndTimeoutRetainPriorSelection();
   testPendingDeadlineAndGxFreshnessWraparound();
   testReplacingPendingLifecycleInvalidatesOldDeadline();
+  testRetainedStationConfigurationErasesWhenReplacementFails();
   testExitPreservesPendingButCancelsPhysicalPortal();
   testScanTerminalRouting();
   testCalibrationExclusivelyOwnsDisplayUntilComplete();

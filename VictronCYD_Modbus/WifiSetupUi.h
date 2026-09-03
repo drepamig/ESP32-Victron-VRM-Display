@@ -66,6 +66,7 @@ class WifiSetupUi {
   bool takeFullRenderRequest();
   uint8_t wanHoldCountdown(uint32_t nowMs) const;
   WifiSetupAction handleTouch(const TouchPoint& point, uint32_t nowMs);
+  WifiSetupAction handleTouchMove(const TouchPoint& point, uint32_t nowMs);
   WifiSetupAction handleRelease(uint32_t nowMs);
   WifiSetupAction poll(uint32_t nowMs);
   void setSavedProfiles(const NetworkProfile* profiles, size_t count, int activeIndex);
@@ -129,6 +130,7 @@ class WifiSetupUi {
   int selectedProfileIndex_ = -1;
   bool wanHoldActive_ = false;
   bool awaitEntryRelease_ = false;
+  bool credentialContactActive_ = false;
   bool clearHoldActive_ = false;
   bool clearActionEmitted_ = false;
   bool clearHoldNeedsRedraw_ = false;

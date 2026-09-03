@@ -40,6 +40,7 @@ bool CamperNetwork::begin(const char* apSsid, const char* apPassword, uint32_t) 
       return false;
     }
   }
+  WiFi.persistent(false);
   WiFi.mode(WIFI_AP_STA);
   const bool configReady =
       WiFi.AP.config(IPAddress(192, 168, 50, 1), IPAddress(192, 168, 50, 1),
@@ -257,11 +258,11 @@ void CamperNetwork::acceptPendingProfile() {
   pendingProfile_ = false;
 }
 
-void CamperNetwork::cancelPendingProfile() {
+void CamperNetwork::cancelPendingProfile(bool clearTransientStationConfig) {
   if (!pendingProfile_) {
     return;
   }
-  WiFi.disconnect(false, false);
+  WiFi.disconnect(false, clearTransientStationConfig);
   pendingProfile_ = false;
   selectedProfile_ = false;
   stationLifecycleActive_ = false;
@@ -273,7 +274,7 @@ void CamperNetwork::cancelPendingProfile() {
 }
 
 void CamperNetwork::disconnectUpstream() {
-  WiFi.disconnect(false, false);
+  WiFi.disconnect(false, true);
   pendingProfile_ = false;
   selectedProfile_ = false;
   stationLifecycleActive_ = false;

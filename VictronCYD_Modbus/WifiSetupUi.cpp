@@ -130,6 +130,7 @@ void WifiSetupUi::clearPortalState() {
 WifiSetupAction WifiSetupUi::handleRelease(uint32_t nowMs) {
   lastNowMs_ = nowMs;
   awaitEntryRelease_ = false;
+  credentialContactActive_ = false;
   if (isOpen()) {
     lastActivityMs_ = nowMs;
   }
@@ -219,6 +220,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   }
 
   if (view_ == WifiSetupView::Password || view_ == WifiSetupView::Connecting) {
+    credentialContactActive_ = true;
     const CredentialKeyHit hit = credentialKeyboardHitTest(credentialEntry_.page(), point);
     if (view_ == WifiSetupView::Connecting) {
       if (hit.type == CredentialKeyType::Back) {
@@ -437,6 +439,15 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
     }
   }
   return noAction();
+}
+
+WifiSetupAction WifiSetupUi::handleTouchMove(const TouchPoint& point, uint32_t nowMs) {
+  if (credentialContactActive_ || view_ == WifiSetupView::Password ||
+      view_ == WifiSetupView::Connecting) {
+    credentialContactActive_ = true;
+    return noAction();
+  }
+  return handleTouch(point, nowMs);
 }
 
 void WifiSetupUi::setSavedProfiles(const NetworkProfile* profiles, size_t count,

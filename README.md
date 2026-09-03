@@ -20,7 +20,7 @@ on a board that costs ~€10.
 | Refresh | ~20 s (VRM logs every ~60 s) | **~2 s, true realtime** |
 | Needs internet | Yes | **No** (local network only) |
 | Needs a token | Yes (VRM Personal Access Token) | **No** |
-| Library deps | TFT_eSPI, ArduinoJson, StreamUtils | **TFT_eSPI only** |
+| Library deps | TFT_eSPI, ArduinoJson, StreamUtils | **TFT_eSPI, XPT2046_Touchscreen 1.4** |
 
 **Use Modbus** if your GX is on the same network (instant, offline-capable). **Use VRM cloud**
 if you want to watch a site you're not on the same network as.
@@ -146,8 +146,9 @@ The Modbus client keeps one TCP connection open. To avoid the buffer desync that
 display, `mbRead()` drains stale bytes before each request, validates the response transaction id,
 and **closes the socket on any error** so the next read reconnects and re-syncs automatically.
 
-For an always-on display there's also a **two-level safety net**: a hardware task watchdog
-(reboots if the loop ever hangs >30 s) and a soft reboot if no valid data arrives for 2 minutes.
+For an always-on display, a hardware task watchdog reboots the board if the main loop hangs for
+more than 30 seconds. Loss of GX data is reported as stale/offline and does not intentionally
+reboot the board, so Network Setup and the private AP remain available during an outage.
 
 ## Credits
 

@@ -10,14 +10,14 @@ firmware image has been flashed.
 
 ## Project outcome
 
-The ESP32-2432S028R runs:
+The current branch implements:
 
 - a persistent private `Camper-Victron` AP at `192.168.50.1/24`;
 - outbound NAPT through one explicitly selected upstream Wi-Fi profile;
 - a realtime Victron Modbus dashboard whose GX and WAN health are independent;
 - XPT2046 resistive-touch calibration stored separately in NVS;
-- a physically activated, time-limited credential portal for secured upstream
-  networks; and
+- a physically activated on-device keyboard for secured upstream networks, with
+  the time-limited phone portal available through **Use phone**; and
 - touch management for up to five saved upstream profiles.
 
 Do not modify Venus OS files, add inbound forwarding, log credentials, or let
@@ -64,8 +64,15 @@ Physical checks passed on 2026-09-02:
 - calibration remains stored across the upload; and
 - single deliberate center taps on `Nearby`, `Saved`, and `Back` all register.
 
+The branch now opens a masked on-device keyboard when an unknown protected
+network is selected. **Use phone** starts the existing private, time-limited
+portal fallback. Firmware containing this newer credential-entry flow has not
+yet been flashed; it has host and compile coverage, but its physical keyboard
+layout, touch accuracy, masking, retry, and fallback behavior have not yet been
+validated on the display.
+
 The next work is controlled upstream provisioning. Keep the bench-emulated
-upstream available and select it from `Nearby` to begin the portal flow.
+upstream available and select it from `Nearby` to begin the keyboard-first flow.
 
 ## Remaining Task 9 work
 
@@ -73,19 +80,21 @@ Use the user-controlled bench upstream in place of real Starlink during this
 phase. Ask the user for its current SSID when needed; do not add that SSID or
 its password to tracked files or logs.
 
-1. Select the unknown secured upstream and verify the display shows the
-   time-limited setup URL and single-use code.
-2. From a phone joined to `Camper-Victron`, submit the code and password and
-   verify WAN progresses through connecting/validating to online.
+1. Select the unknown secured upstream and physically validate the masked
+   QWERTY keyboard, Shift, `123`, `#+=`, `ABC`, Space, Backspace, Show/Hide,
+   character count, and Connect gating.
+2. Enter the password on-device and verify WAN progresses through
+   connecting/validating to online.
 3. Join a laptop to `Camper-Victron`; verify `192.168.50.1`, DNS resolution,
    and outbound HTTPS through NAPT.
 4. Try deliberately bad credentials and prove the previously active profile is
-   retained and the bad password is absent from output.
+   restored, the password returns masked and editable, and the bad password is
+   absent from output.
 5. Add a second controlled hotspot, select between saved profiles, delete the
    second profile with confirmation, and verify the first remains active.
-6. Verify portal boundaries: unavailable before physical activation, wrong-code
-   rejection, timeout rejection, single-use behavior, and closure after an
-   accepted submission.
+6. Select **Use phone**, then verify the fallback portal boundaries: unavailable
+   before physical activation, wrong-code rejection, timeout rejection,
+   single-use behavior, and closure after an accepted submission.
 7. Disable the selected upstream for at least five minutes. Verify WAN goes
    offline while the private AP and setup UI remain available and no two-minute
    reboot occurs. Re-enable it and measure automatic reconnect.

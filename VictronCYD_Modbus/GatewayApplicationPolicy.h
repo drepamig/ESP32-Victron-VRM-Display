@@ -178,6 +178,22 @@ struct GatewayLifecycleReplacement {
   bool cancelPhysicalPortal;
 };
 
+inline bool retainPendingStationConfigForImmediateReplacement(
+    const GatewayLifecycleReplacement& replacement, GatewayLifecycleTarget target) {
+  return replacement.cancelPendingProfile &&
+         (target == GatewayLifecycleTarget::SavedConnection ||
+          target == GatewayLifecycleTarget::PendingProfile);
+}
+
+template <typename EraseStationConfig>
+inline void finishStationConfigReplacement(bool retainedForReplacement,
+                                           bool replacementStarted,
+                                           EraseStationConfig eraseStationConfig) {
+  if (retainedForReplacement && !replacementStarted) {
+    eraseStationConfig();
+  }
+}
+
 class GatewayLifecyclePolicy {
  public:
   GatewayLifecycleReplacement replaceWith(GatewayLifecycleTarget target,

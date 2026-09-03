@@ -595,6 +595,47 @@ void testProtectedCredentialRenderingMaskingAndFixedKeyboardRouting() {
         "Show must reveal the retained text through a partial repaint");
 }
 
+// Mutation caught: routing Scroll through the credential keyboard would dispatch a second key
+// when one physical contact drifts by the touch input's six-pixel motion threshold.
+void testCredentialContactDispatchesOnceWhileListMotionStillRoutes() {
+  TFT_eSPI display;
+  WifiSetupUi ui(display);
+  ui.showCredentialEntry("SyntheticNet", 3, 100);
+  ui.render(offlineStatus());
+  const size_t credentialCheckpoint = display.drawnStrings.size();
+  ui.handleTouch({35, 115}, 101);      // Press on A
+  ui.handleTouchMove({65, 115}, 102);  // Same contact drifts onto S
+  ui.renderDynamic(offlineStatus());
+  check(display.drewSince("1/63", credentialCheckpoint) &&
+            !display.drewSince("2/63", credentialCheckpoint),
+        "one credential contact must dispatch only its initial key action");
+  ui.handleRelease(103);
+  ui.handleTouch({65, 115}, 104);  // New contact on S
+  ui.renderDynamic(offlineStatus());
+  check(display.drewSince("2/63", credentialCheckpoint),
+        "release must re-arm the next credential contact");
+
+  WifiSetupUi listUi(display);
+  const ScanResult result[1]{{"SyntheticNet", -55, 3, 1}};
+  listUi.open();
+  listUi.handleTouch({210, 18}, 200);
+  listUi.setScanResults(result, 1);
+  const WifiSetupAction action = listUi.handleTouchMove({100, 56}, 201);
+  check(action.type == WifiSetupActionType::ProvisionNew &&
+            action.ssid == String("SyntheticNet"),
+        "touch motion must keep routing on Nearby list surfaces");
+
+  WifiSetupUi savedUi(display);
+  NetworkProfile savedProfile;
+  savedProfile.ssid = "SavedNet";
+  savedUi.setSavedProfiles(&savedProfile, 1, -1);
+  savedUi.open();
+  savedUi.handleTouchMove({100, 56}, 300);
+  check(savedUi.handleTouchMove({50, 220}, 301).type ==
+            WifiSetupActionType::ConnectSaved,
+        "touch motion must keep routing on Saved list surfaces");
+}
+
 // Mutations caught: enabling Connect at seven bytes, emitting twice, leaking edits while
 // connecting, clearing the failed password, or making connecting Back cancel locally.
 void testConnectGatingConnectingLockFailureAndCancelRouting() {
@@ -615,9 +656,18 @@ void testConnectGatingConnectingLockFailureAndCancelRouting() {
   ui.renderDynamic(offlineStatus());
   check(display.drew("8/63"), "eight-byte password must update the independent count");
 
+  ui.handleTouch({284, 18}, nowMs++);  // Show
+  ui.renderDynamic(offlineStatus());
+  check(display.drewContaining("aaaaaaaa") && display.drew("Hide"),
+        "Show must expose the fixture before Connect for the masking regression");
+
   WifiSetupAction action = ui.handleTouch({240, 213}, nowMs++);
   check(action.type == WifiSetupActionType::SubmitCredentials,
         "Connect must emit SubmitCredentials at eight bytes");
+  ui.render(offlineStatus());
+  check(display.drew("********") && display.drew("Show") && !display.drew("Hide") &&
+            !display.drewContaining("aaaaaaaa"),
+        "Connecting must mask the field and show the disabled Show label");
   check(ui.handleTouch({240, 213}, nowMs++).type == WifiSetupActionType::None,
         "connecting Connect must emit only once");
   CredentialSubmission submission;
@@ -784,6 +834,7 @@ int main() {
   testClearAllHoldCountdownAndReleaseCancellation();
   testBackInactivityPortalAndResultViews();
   testProtectedCredentialRenderingMaskingAndFixedKeyboardRouting();
+  testCredentialContactDispatchesOnceWhileListMotionStillRoutes();
   testConnectGatingConnectingLockFailureAndCancelRouting();
   testUsePhoneAndExplicitCancellationClearCredentialState();
   testCredentialDeadlinesAndConnectionTimeExemption();
