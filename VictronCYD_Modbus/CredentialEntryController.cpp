@@ -108,6 +108,7 @@ bool CredentialEntryController::toggleVisibility(uint32_t nowMs) {
 
 bool CredentialEntryController::submit(uint32_t nowMs) {
   if (!canSubmit()) return false;
+  visible_ = false;
   connecting_ = true;
   submissionReady_ = true;
   error_ = false;

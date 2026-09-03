@@ -1,0 +1,9 @@
+.git
+.tools
+.arduino-cache
+build
+simulation/actual
+simulation/diffs
+simulation/results
+simulation/.stage
+**/secrets.h

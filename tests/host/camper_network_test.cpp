@@ -58,9 +58,12 @@ void testApValidationOrderAndSingleStartup() {
   check(WiFi.events.empty(), "oversized AP password has no WiFi side effects");
 
   check(gateway.begin("Camper", "123456789012", 0), "AP accepts twelve-byte password");
-  check(WiFi.events.size() >= 4 && WiFi.events[0] == "mode" && WiFi.events[1] == "config" &&
-            WiFi.events[2] == "create" && WiFi.events[3] == "napt",
-        "AP mode/config/create/NAPT order");
+  check(WiFi.events.size() >= 5 && WiFi.events[0] == "persistent" &&
+            WiFi.events[1] == "mode" && WiFi.events[2] == "config" &&
+            WiFi.events[3] == "create" && WiFi.events[4] == "napt",
+        "RAM-only policy precedes AP mode/config/create/NAPT order");
+  check(WiFi.persistentCalls == 1 && !WiFi.persistentValue,
+        "WiFi persistence is disabled before initialization");
   check(WiFi.modeCalls == 1 && WiFi.modeValue == WIFI_AP_STA, "AP+STA mode once");
   check(WiFi.AP.configCalls.size() == 1, "AP configured once");
   if (!WiFi.AP.configCalls.empty()) {
@@ -279,8 +282,18 @@ void testAcceptCancelAndDisconnectKeepAp() {
   cancelled.cancelPendingProfile();
   cancelled.poll(60000);
   check(WiFi.disconnectCalls == 1 && WiFi.beginSsids.size() == 1 &&
+            WiFi.disconnectEraseAp == std::vector<bool>{true} &&
             cancelled.status().wanPhase == WanPhase::Offline && cancelled.status().apReady,
-        "cancel stops only station attempt and clears retry credentials");
+        "terminal cancel stops the station attempt and erases transient STA configuration");
+
+  resetFakes();
+  CamperNetwork rollback;
+  startGateway(rollback);
+  rollback.connect(profile(), 0);
+  rollback.cancelPendingProfile(false);
+  check(WiFi.disconnectCalls == 1 && WiFi.disconnectEraseAp == std::vector<bool>{false} &&
+            rollback.status().wanPhase == WanPhase::Offline && rollback.status().apReady,
+        "rollback-ready cancel leaves transient STA erase to the immediate replacement");
 
   resetFakes();
   CamperNetwork disconnected;
@@ -289,9 +302,10 @@ void testAcceptCancelAndDisconnectKeepAp() {
   disconnected.disconnectUpstream();
   disconnected.poll(60000);
   check(WiFi.disconnectCalls == 1 && WiFi.beginSsids.size() == 1 &&
+            WiFi.disconnectEraseAp == std::vector<bool>{true} &&
             disconnected.status().wanPhase == WanPhase::Offline && disconnected.status().apReady &&
             WiFi.AP.naptCalls == 1,
-        "Clear All stops upstream only while AP and NAPT remain");
+        "Clear All erases transient STA configuration while AP and NAPT remain");
 }
 
 void testAsyncScanGatingFailureAndResults() {

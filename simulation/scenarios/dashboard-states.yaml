@@ -1,0 +1,28 @@
+name: Nominal stale and offline GX dashboard
+version: 1
+author: CYD Virtual Bench
+steps:
+  - wait-serial: 'SIM READY'
+  - touch: {part-id: lcd1, x: 20, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 299, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 20, y: 299, duration: 120ms, wait: true}
+  - delay: 2500ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/dashboard-states/nominal.png'
+  - write-serial: "SIM modbus=stale\n"
+  - wait-serial: 'SIM OK'
+  - delay: 4500ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/dashboard-states/stale.png'
+  - write-serial: "SIM modbus=offline\n"
+  - wait-serial: 'SIM OK'
+  - delay: 12000ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/dashboard-states/offline.png'

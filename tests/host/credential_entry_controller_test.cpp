@@ -120,8 +120,8 @@ void testSubmissionIsOneShotAndConnectionFailureRetainsMaskedEntry() {
   check(entry.toggleVisibility(199) && entry.visible(),
         "test setup exposes the entry before the connection attempt");
   CredentialSubmission submission;
-  check(entry.submit(200) && entry.takeSubmission(submission),
-        "valid entry produces one bounded submission");
+  check(entry.submit(200) && !entry.visible() && entry.takeSubmission(submission),
+        "submission immediately masks the retained entry before Connecting renders");
   check(submission.ready && std::string(submission.ssid) == "SyntheticNet" &&
             std::string(submission.passphrase) == "A1!A1!A1!" && submission.securityType == 3,
         "submission preserves exact selected values");

@@ -32,15 +32,12 @@ int32_t averageOfTwo(int32_t first, int32_t second) {
 }
 }  // namespace
 
-TouchInput::TouchInput(TFT_eSPI& display)
-    : display_(display), touchSpi_(HSPI), touch_(33, 36) {}
+TouchInput::TouchInput(TFT_eSPI& display) : display_(display) {}
 
 bool TouchInput::begin() {
-  touchSpi_.begin(25, 39, 32, 33);
-  if (!touch_.begin(touchSpi_)) {
+  if (!rawTouch_.begin()) {
     return false;
   }
-  touch_.setRotation(1);
   if (!loadCalibration()) {
     startCalibration();
   }
@@ -54,16 +51,9 @@ bool TouchInput::calibrated() const {
 bool TouchInput::poll(TouchEvent& event) {
   event = {TouchEventType::None, {0, 0}, 0, 0};
   const uint32_t now = millis();
-  const bool touched = touch_.touched();
-  TouchRawPoint rawPoint{};
-  bool contactPresent = false;
-  if (touched) {
-    const TS_Point rawTouch = touch_.getPoint();
-    if (rawTouch.z >= kMinimumPressure) {
-      rawPoint = {rawTouch.x, rawTouch.y};
-      contactPresent = true;
-    }
-  }
+  const RawTouchSample sample = rawTouch_.sample();
+  const bool contactPresent = sample.contact && sample.pressure >= kMinimumPressure;
+  const TouchRawPoint rawPoint = sample.point;
   if (calibrationActive_) {
     return pollCalibration(contactPresent, rawPoint, now, event);
   }

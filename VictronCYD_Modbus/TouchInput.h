@@ -1,9 +1,8 @@
 #pragma once
 
 #include <Preferences.h>
-#include <SPI.h>
-#include <XPT2046_Touchscreen.h>
 
+#include "RawTouchDevice.h"
 #include "TouchMapping.h"
 
 class TFT_eSPI;
@@ -37,8 +36,7 @@ class TouchInput {
   void drawCalibrationTarget();
 
   TFT_eSPI& display_;
-  SPIClass touchSpi_;
-  XPT2046_Touchscreen touch_;
+  RawTouchDeviceRuntime rawTouch_;
   TouchCalibration calibration_{};
   TouchGestureState gesture_{};
   TouchRawPoint calibrationSamples_[kCalibrationSampleCount]{};

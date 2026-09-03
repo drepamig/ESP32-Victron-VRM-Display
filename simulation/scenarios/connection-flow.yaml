@@ -1,0 +1,59 @@
+name: Connection failure retry and success
+version: 1
+author: CYD Virtual Bench
+steps:
+  - wait-serial: 'SIM READY'
+  - touch: {part-id: lcd1, x: 20, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 299, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 20, y: 299, duration: 120ms, wait: true}
+  - delay: 300ms
+  - touch-press: {part-id: lcd1, x: 218, y: 20}
+  - delay: 3200ms
+  - touch-release: {part-id: lcd1}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 187, y: 20, duration: 120ms, wait: true}
+  - delay: 300ms
+  - touch: {part-id: lcd1, x: 77, y: 68, duration: 120ms, wait: true}
+  - delay: 150ms
+  - touch: {part-id: lcd1, x: 20, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
+  - touch: {part-id: lcd1, x: 42, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
+  - touch: {part-id: lcd1, x: 64, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
+  - touch: {part-id: lcd1, x: 86, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
+  - touch: {part-id: lcd1, x: 108, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
+  - touch: {part-id: lcd1, x: 130, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
+  - touch: {part-id: lcd1, x: 152, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
+  - touch: {part-id: lcd1, x: 174, y: 115, duration: 80ms, wait: true}
+  - delay: 300ms
+  - write-serial: "SIM connect=failure\n"
+  - wait-serial: 'SIM OK'
+  - touch: {part-id: lcd1, x: 177, y: 291, duration: 100ms, wait: true}
+  - delay: 500ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/connection-flow/connecting.png'
+  - delay: 61000ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/connection-flow/failure.png'
+  - write-serial: "SIM connect=success\n"
+  - wait-serial: 'SIM OK'
+  - touch: {part-id: lcd1, x: 177, y: 291, duration: 100ms, wait: true}
+  - delay: 500ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/connection-flow/retry.png'
+  - delay: 2000ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/connection-flow/success.png'

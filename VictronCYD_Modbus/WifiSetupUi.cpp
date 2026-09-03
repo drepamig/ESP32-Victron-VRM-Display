@@ -130,6 +130,7 @@ void WifiSetupUi::clearPortalState() {
 WifiSetupAction WifiSetupUi::handleRelease(uint32_t nowMs) {
   lastNowMs_ = nowMs;
   awaitEntryRelease_ = false;
+  credentialContactActive_ = false;
   if (isOpen()) {
     lastActivityMs_ = nowMs;
   }
@@ -219,6 +220,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   }
 
   if (view_ == WifiSetupView::Password || view_ == WifiSetupView::Connecting) {
+    credentialContactActive_ = true;
     const CredentialKeyHit hit = credentialKeyboardHitTest(credentialEntry_.page(), point);
     if (view_ == WifiSetupView::Connecting) {
       if (hit.type == CredentialKeyType::Back) {
@@ -439,6 +441,15 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
   return noAction();
 }
 
+WifiSetupAction WifiSetupUi::handleTouchMove(const TouchPoint& point, uint32_t nowMs) {
+  if (credentialContactActive_ || view_ == WifiSetupView::Password ||
+      view_ == WifiSetupView::Connecting) {
+    credentialContactActive_ = true;
+    return noAction();
+  }
+  return handleTouch(point, nowMs);
+}
+
 void WifiSetupUi::setSavedProfiles(const NetworkProfile* profiles, size_t count,
                                    int activeIndex) {
   savedProfileCount_ = count < NetworkProfileStore::kMaxProfiles
@@ -577,14 +588,14 @@ void WifiSetupUi::returnToNearby() {
 }
 
 void WifiSetupUi::drawButton(const WifiSetupRect& bounds, const char* label, bool selected,
-                             bool enabled) {
+                             bool enabled, uint8_t font) {
   display_.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 4,
                          selected && enabled ? kSelected : kPanel);
   display_.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 4, kBorder);
   display_.setTextColor(enabled ? TFT_WHITE : kMuted,
                         selected && enabled ? kSelected : kPanel);
   display_.setTextDatum(MC_DATUM);
-  display_.drawString(label, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, 2);
+  display_.drawString(label, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, font);
 }
 
 void WifiSetupUi::drawHeader(WanPhase wanPhase) {
@@ -672,7 +683,7 @@ void WifiSetupUi::drawCredentialControls() {
   drawButton(wifiRect(kCredentialPageBounds), credentialPageLabel(credentialEntry_.page()),
              false, editing);
   drawButton(wifiRect(kCredentialSpaceBounds), "Space", false, editing);
-  drawButton(wifiRect(kCredentialBackspaceBounds), "Backspace", false, editing);
+  drawButton(wifiRect(kCredentialBackspaceBounds), "Backspace", false, editing, 1);
   drawButton(wifiRect(kCredentialUsePhoneBounds), "Use phone", false, editing);
   drawCredentialConnectControl();
 }

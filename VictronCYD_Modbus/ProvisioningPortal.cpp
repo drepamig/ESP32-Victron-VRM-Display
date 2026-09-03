@@ -2,7 +2,9 @@
 
 #include <cstdio>
 #include <cstring>
+#ifndef CYD_SIMULATION
 #include <esp_random.h>
+#endif
 
 namespace {
 
@@ -72,7 +74,11 @@ bool ProvisioningPortal::begin(const String& selectedSsid, uint8_t securityType,
 
   std::memcpy(selectedSsid_, selectedSsid.c_str(), ssidLength + 1);
   selectedSecurityType_ = securityType;
+#ifdef CYD_SIMULATION
+  const unsigned long code = 424242UL;
+#else
   const unsigned long code = static_cast<unsigned long>(esp_random() % 1000000U);
+#endif
   std::snprintf(pairingCode_, sizeof(pairingCode_), "%06lu", code);
   expiresAtMs_ = nowMs + kLifetimeMs;
   active_ = true;

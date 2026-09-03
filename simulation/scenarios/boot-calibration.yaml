@@ -1,0 +1,19 @@
+name: Boot and four-point calibration
+version: 1
+author: CYD Virtual Bench
+steps:
+  - wait-serial: 'SIM READY'
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/boot-calibration/boot.png'
+  - touch: {part-id: lcd1, x: 20, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 299, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 20, y: 299, duration: 120ms, wait: true}
+  - delay: 2500ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/boot-calibration/calibrated-dashboard.png'
