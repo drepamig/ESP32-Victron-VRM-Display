@@ -1,7 +1,13 @@
 # On-device Wi-Fi password entry design
 
 Date: 2026-09-02
-Status: Approved in design discussion
+Design status: Approved in design discussion.
+
+Implementation status, reconciled 2026-09-03: implemented with host, build,
+and recorded virtual-bench coverage; physical keyboard validation remains
+pending. The requirements below remain the acceptance target. Refer to
+[current status and open gateway findings](../../README.md) and the
+[implementation record](../plans/2026-09-02-on-device-wifi-password.md).
 
 ## Purpose
 

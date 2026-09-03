@@ -1,14 +1,18 @@
 # Linux continuation handoff
 
+Reconciled 2026-09-03 against `develop` at `6ef6c93`. The tracked
+[status and acceptance record](../../README.md) is the current task tracker;
+this handoff preserves the earlier bench evidence and continuation context.
+
 This bundle is the portable continuation record for the camper gateway work
 originally developed on branch `codex/esp32-venus-starlink-touch-bridge`.
 Continue on `develop` unless the user explicitly instructs otherwise, following
 the root `AGENTS.md`; the original branch name is historical context only.
 
-The firmware currently installed on the bench ESP32 was built from commit
-`a6827e6e92db1870f70ccacd73f8d2b0cf4d5a20`. The handoff documentation was
-committed afterward, so cloning the latest branch tip does not mean a newer
-firmware image has been flashed.
+The latest recorded verified upload was built from commit
+`a6827e6e92db1870f70ccacd73f8d2b0cf4d5a20`. Later commits include keyboard
+firmware and the virtual bench, not just documentation. There was no fresh
+board inspection or upload during the 2026-09-03 review.
 
 ## Project outcome
 
@@ -27,8 +31,11 @@ the firmware silently roam to a stronger saved profile.
 
 ## Completed development
 
-Implementation Tasks 1 through 8 are complete and reviewed. Task 9 bench work
-has validated all of the following on physical hardware:
+Original implementation Tasks 1 through 8 were completed and reviewed. The
+2026-09-03 review reopened follow-up work in Tasks 4 and 8: R1 (saved active
+selection is not persisted) and R2 (an unavailable uplink remains Connecting).
+Both are detailed in the [open findings](../../README.md#open-review-findings).
+Historical Task 9 bench work recorded the following on physical hardware:
 
 - the private AP starts without an upstream network and the dashboard remains
   stable while GX is unavailable;
@@ -54,7 +61,7 @@ changing the saved calibration format or touch debounce.
 
 ## Latest physical checkpoint
 
-Firmware `a6827e6` is flashed and hash-verified on the ESP32. Its upload wrote
+The recorded `a6827e6` upload was hash-verified on the ESP32. It wrote
 the bootloader, partition table, boot app, and application without erasing NVS
 at `0x9000..0xDFFF`, so saved touch calibration and any profiles were preserved.
 
@@ -68,15 +75,19 @@ Physical checks passed on 2026-09-02:
 
 The branch now opens a masked on-device keyboard when an unknown protected
 network is selected. **Use phone** starts the existing private, time-limited
-portal fallback. Firmware containing this newer credential-entry flow has not
-yet been flashed; it has host and compile coverage, but its physical keyboard
-layout, touch accuracy, masking, retry, and fallback behavior have not yet been
-validated on the display.
+portal fallback. The newer credential-entry flow has host, compile, and
+recorded virtual-bench coverage. No later physical upload or validation is
+recorded for its keyboard layout, touch accuracy, masking, retry, or fallback.
 
-The next work is controlled upstream provisioning. Keep the bench-emulated
-upstream available and select it from `Nearby` to begin the keyboard-first flow.
+The next development work is correcting R1 and R2 with regressions and review.
+After verification and an NVS-preserving upload of the privately configured
+image, continue controlled upstream provisioning through the keyboard-first flow.
 
 ## Remaining Task 9 work
+
+The [current acceptance checklist](../../README.md#remaining-task-9-acceptance)
+includes saved-selection reboot/rollback coverage, reset protection, and timing
+records. Resolve R1 and R2 before completing the affected hardware scenarios.
 
 Use the user-controlled bench upstream in place of real Starlink during this
 phase. Ask the user for its current SSID when needed; do not add that SSID or
@@ -106,7 +117,19 @@ its password to tracked files or logs.
 Live Venus/GX Modbus and real Starlink field validation remain deferred until
 the hardware is co-located for Tasks 10 and 11.
 
-## Verified firmware state
+## Current repository verification
+
+At `6ef6c93`, the 2026-09-03 review reran `tools/dev.ps1 test` (15 C++ suites
+and 14 Python tests passed) and `tools/dev.ps1 firmware-build` (dummy production
+build passed at 1,035,746 bytes flash and 49,492 bytes globals). A separate
+production-module outage probe failed the planned Offline condition after
+five minutes. Wokwi and hardware checks were not repeated in this review.
+
+The virtual bench's earlier acceptance records 9 Wokwi scenarios and 25 exact
+screenshot matches; see its
+[implementation record](../../superpowers/plans/2026-09-03-cyd-virtual-bench.md).
+
+## Historical firmware verification
 
 At `a6827e6`:
 
@@ -143,12 +166,13 @@ At `a6827e6`:
    git branch --show-current
    ```
 
-2. Read this file, `RESUME_PROMPT.md`, `VERIFY_LINUX.md`, the root `README.md`,
-   and `docs/README.md`.
+2. Read `docs/README.md`, this file, `RESUME_PROMPT.md`, `VERIFY_LINUX.md`,
+   and the root `README.md`.
 3. Confirm the branch contains firmware commit `a6827e6` in its history.
-4. Recreate or privately transfer `VictronCYD_Modbus/secrets.h`, then confirm it
-   remains ignored without printing its contents.
-5. Install the pinned toolchain and run the Linux verification in
-   `VERIFY_LINUX.md` before changing firmware.
+4. Run the repository-owned Docker verification in `VERIFY_LINUX.md`; it needs
+   no private configuration. Preserve any existing ignored secrets file.
+5. Recreate or privately transfer `VictronCYD_Modbus/secrets.h` only when a
+   privately configured deployment build is needed. Confirm it stays ignored
+   without printing its contents.
 6. Open the repository folder as the local Codex project and start with the
    prompt in `RESUME_PROMPT.md`.

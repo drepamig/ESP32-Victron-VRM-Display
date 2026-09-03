@@ -1,9 +1,15 @@
 # CYD Virtual Bench Implementation Plan
 
-> Execute in the current repository checkout on `develop` unless the user
-> explicitly instructs otherwise, following the root `AGENTS.md`. The design in
-> `docs/superpowers/specs/2026-09-03-cyd-virtual-bench-design.md` is already
-> approved; no additional approval gate is required.
+**Status, reconciled 2026-09-03:** Implemented and merged into `develop` at
+`4e5384f`. The checked steps and acceptance evidence below describe the
+original implementation run. Continue in the current checkout on `develop`
+following the root `AGENTS.md`; do not recreate the historical feature checkout.
+
+The later review at `6ef6c93` reran all 15 C++ suites, 14 Python tooling tests,
+and the dummy production build successfully. It did not rerun Wokwi or flash
+hardware. Gateway findings R1/R2 remain open despite the passing virtual bench:
+saved selection is not persisted and an unavailable upstream stays Connecting.
+See [current status and acceptance](../../README.md) before physical release.
 
 **Goal:** Build a reproducible, pixel-exact Wokwi bench for
 `VictronCYD_Modbus`, with fast native tests and production-safe simulator
@@ -102,7 +108,8 @@ TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206 1.1.1, Wokwi CLI
       suite, secret isolation, negative attestation, and clean-tree review.
 - [x] Complete the code review required by the review skill, resolve findings,
       and self-review the final diff for correctness and scope.
-- [x] Verify source provenance; no physical flash, merge, or push performed.
+- [x] Verify source provenance; no physical flash, merge, or push performed
+      during the original acceptance run. The later merge is recorded above.
 
 ## Acceptance evidence — 2026-09-03
 

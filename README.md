@@ -35,6 +35,16 @@ if you want to watch a site you're not on the same network as.
   protected networks, with the private phone portal available through
   **Use phone**.
 
+## Development status
+
+The gateway, on-device keyboard, and virtual bench are implemented. Physical
+acceptance remains incomplete. The 2026-09-03 review at `6ef6c93` found two
+open issues: choosing a saved network does not persist the active selection,
+and a lost upstream remains amber/Connecting instead of the planned
+red/Offline state. See the [status and acceptance record](docs/README.md) for
+evidence, remaining bench/field checks, and the latest recorded firmware upload.
+Continue development on `develop` following [AGENTS.md](AGENTS.md).
+
 ## Hardware
 
 - **ESP32-2432S028R** (CYD) — ILI9341 240×320 TFT
@@ -79,9 +89,19 @@ settings below into `User_Setup.h` (or a selected custom setup):
 
 1. On the GX: **Settings → Services → Modbus TCP = ON**. Note the GX IP address
    (Settings → Ethernet/WiFi).
-2. `cd VictronCYD_Modbus && cp secrets.example.h secrets.h`, then set WiFi, `SECRET_GX_IP`,
-   `SECRET_SITE_NAME`.
-3. Flash. Done — updates every ~2 s, no token, works offline.
+2. Copy `VictronCYD_Modbus/secrets.example.h` to the ignored
+   `VictronCYD_Modbus/secrets.h`. Set the private AP SSID and a 12–63-byte AP
+   password, `SECRET_GX_IP`, and `SECRET_SITE_NAME`. The GX must be reachable
+   from the private AP network; its migration remains a field acceptance task.
+3. Build the reviewed source with this private configuration and the CYD TFT
+   settings. For bench validation, use a verified upload that preserves NVS.
+4. Hold WAN for three seconds to open Network Setup. Select an upstream from
+   Nearby; unknown protected networks open masked password entry. **Use phone**
+   starts the private portal fallback. Upstream credentials are saved after
+   successful association/DHCP; they are not compile-time settings.
+
+Follow the [remaining acceptance checks](docs/README.md#remaining-task-9-acceptance)
+before deployment. The saved-selection and WAN-status issues above are still open.
 
 **GX Modbus register map used** (function 3, read holding registers):
 

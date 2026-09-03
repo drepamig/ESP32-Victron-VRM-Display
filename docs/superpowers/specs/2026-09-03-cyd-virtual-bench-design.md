@@ -2,6 +2,13 @@
 
 **Date:** 2026-09-03
 
+**Implementation status:** Implemented and merged at `4e5384f`. See the
+[implementation evidence](../plans/2026-09-03-cyd-virtual-bench.md) and
+[current gateway status](../../README.md). The later `6ef6c93` review confirmed
+the host/tooling tests and dummy production build, but left two gateway
+findings and physical acceptance open. This design's simulator results do not
+certify real AP/NAPT, GX transport, or resistive-touch behavior.
+
 ## Purpose
 
 The virtual bench makes `VictronCYD_Modbus` testable without an attached

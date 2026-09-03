@@ -1,5 +1,11 @@
 # Task 9: Correct calibrated top-row touch mapping
 
+Status: completed at `a6827e6`, with physical validation recorded at `4aa11f1`
+on 2026-09-02. The procedure below is historical. The scan-feedback,
+slide-cancellation, and center-tap checks are complete; do not resume from the
+older ledger's pending scan-feedback checkpoint. See the
+[current task and acceptance record](../README.md) for remaining work.
+
 ## Context
 
 The three post-flash feedback checks passed on physical hardware. A new
@@ -8,7 +14,7 @@ on its lower edge worked reliably.
 
 The calibration UI measures raw coordinates at targets inset 20 pixels from
 each display edge. `TouchCalibration` stores those measurements as its extrema,
-but `mapTouchPoint()` currently maps them to `(0, 0)` and
+but before this correction `mapTouchPoint()` mapped them to `(0, 0)` and
 `(width - 1, height - 1)`. A physical touch near the center of the top-row
 buttons can therefore map above their `y = 4` hitboxes. The lower-edge probe
 confirms this coordinate mismatch; it does not implicate the 40 ms contact

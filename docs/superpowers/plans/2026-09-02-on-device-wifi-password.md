@@ -1,6 +1,27 @@
 # On-device Wi-Fi Password Entry Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+**Status, reconciled 2026-09-03:** Implemented through `1673bbc`; physical
+keyboard acceptance remains pending. The task procedures and unchecked steps
+below preserve the original implementation recipe, not an outstanding-work
+list. Do not recreate the modules or replay old RED steps. Current findings,
+remaining acceptance, and verification evidence live in
+[docs/README.md](../../README.md).
+
+| Task | Implementation evidence |
+| --- | --- |
+| 1: Credential contract/controller | `f44da44`; production module and host suite present. |
+| 2: Keyboard layout | `de00320`; geometry and character coverage suite present. |
+| 3: Password UI | `9a692fc`, followed by interaction/layout fixes through `1673bbc`. |
+| 4: Shared portal submission | `77910e3`; bounded submission shared with on-device entry. |
+| 5: Application integration | `22cebc3`, followed by flow fixes at `67e4555`. |
+| 6: Documentation/verification | `7189268`, with later tooling and docs updates; current verification includes 15 C++ suites and 14 Python tests. |
+
+The review at `6ef6c93` found open saved-selection persistence and WAN-outage
+status defects in the retained gateway paths (R1/R2). Passing keyboard tests
+does not close those findings or establish physical acceptance. Use the
+[current verification commands](../../handoff/linux-2026-08-31/VERIFY_LINUX.md)
+instead of the historical per-file commands below; the virtual bench added
+dependencies and expanded the matrix.
 
 **Goal:** Let a user enter an unknown protected Wi-Fi network's password on the ESP32 touchscreen while preserving the phone portal as a secure fallback.
 

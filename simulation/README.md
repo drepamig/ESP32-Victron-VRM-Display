@@ -4,6 +4,14 @@ Run from the repository root with `tools/dev.ps1 sim-test`. To select one
 scenario, add `-Scenario password-entry` (or another manifest name).
 Only `sim-update-goldens` promotes screenshots; ordinary tests never do.
 
+The bench is implemented and its original acceptance records 9 scenarios and
+25 exact screenshots. See the [implementation evidence](../docs/superpowers/plans/2026-09-03-cyd-virtual-bench.md).
+The later review at `6ef6c93` reran host/tooling tests and the dummy production
+build, not live Wokwi. Two real gateway findings remain open: saved selection
+does not update the persisted active profile, and uplink loss stays Connecting.
+The existing scenarios do not establish those acceptance conditions. Track
+corrections and physical release checks in [gateway status](../docs/README.md).
+
 The firmware is built from the same development sources as production, with
 `CYD_SIMULATION` replacing only hardware/data boundaries. It does not use the
 ignored production secrets. Each scenario starts a fresh simulator image and
