@@ -1,6 +1,6 @@
 # Linux continuation handoff
 
-Updated 2026-09-03 for R2 on `develop` after implementation baseline `b9e92f7`. The tracked
+Updated 2026-09-04 after the verified physical upload of R2 firmware `d69e0cf`. The tracked
 [status and acceptance record](../../README.md) is the current task tracker;
 this handoff preserves the earlier bench evidence and continuation context.
 
@@ -10,9 +10,9 @@ Continue on `develop` unless the user explicitly instructs otherwise, following
 the root `AGENTS.md`; the original branch name is historical context only.
 
 The latest recorded verified upload was built from commit
-`a6827e6e92db1870f70ccacd73f8d2b0cf4d5a20`. Later commits include keyboard
-firmware and the virtual bench, not just documentation. There was no fresh
-board inspection or upload during the 2026-09-03 review.
+`d69e0cf03ffd8a99cdbb825efdd9303a69f1962e`, using the restored private
+configuration on `COM3` on 2026-09-04. All four segments were hash-verified;
+NVS matched byte for byte. See the [upload record](../../research/2026-09-04-physical-upload.md).
 
 ## Project outcome
 
@@ -64,6 +64,14 @@ changing the saved calibration format or touch debounce.
 
 ## Latest physical checkpoint
 
+Firmware `d69e0cf` booted normally after the 2026-09-04 upload. A 25-second
+serial check observed private AP ready, one boot, and no panic/watchdog event.
+There was one invalid Modbus result and no valid GX result. Display/touch,
+real routing, saved switching, and five-minute outage/recovery were not tested.
+The NVS comparison proves upload preservation, not interactive acceptance.
+
+### Earlier touch checkpoint
+
 The recorded `a6827e6` upload was hash-verified on the ESP32. It wrote
 the bootloader, partition table, boot app, and application without erasing NVS
 at `0x9000..0xDFFF`, so saved touch calibration and any profiles were preserved.
@@ -79,8 +87,9 @@ Physical checks passed on 2026-09-02:
 The branch now opens a masked on-device keyboard when an unknown protected
 network is selected. **Use phone** starts the existing private, time-limited
 portal fallback. The newer credential-entry flow has host, compile, and
-recorded virtual-bench coverage. No later physical upload or validation is
-recorded for its keyboard layout, touch accuracy, masking, retry, or fallback.
+recorded virtual-bench coverage. It is included in the latest physical upload,
+but keyboard layout, touch accuracy, masking, retry, and fallback have not yet
+received physical acceptance.
 
 R1 is implemented and reviewed with 16 host suites and 14 tooling tests passing.
 The later simulator-only FT6206 release fix adds a host regression: all 17
@@ -94,8 +103,9 @@ acceptance. `sim-test` and `all` are local; Wokwi requires explicit backend and
 scenario/full-suite selection. Review recorded captures before promotion;
 golden updates reuse the run without another simulation. R1 and R2 physical
 acceptance remain pending.
-After verification and an NVS-preserving upload of the privately configured
-image, continue controlled upstream provisioning through the keyboard-first flow.
+Use the latest verified privately configured image to continue controlled
+upstream provisioning through the keyboard-first flow. Rebuild and verify an
+NVS-preserving upload if source or configuration changes.
 
 ## Remaining Task 9 work
 

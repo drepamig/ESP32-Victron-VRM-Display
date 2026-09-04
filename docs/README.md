@@ -1,7 +1,7 @@
 # Gateway status and acceptance record
 
-Updated 2026-09-03 for R2's WAN-outage correction on `develop`, following
-implementation baseline `b9e92f7`. This is the tracked status
+Updated 2026-09-04 for the verified physical upload of R2 firmware `d69e0cf`
+on `develop`. This is the tracked status
 record for the ESP32 Venus-Starlink touch bridge. Work in the current checkout
 on `develop` according to [AGENTS.md](../AGENTS.md).
 
@@ -97,7 +97,8 @@ follow-up review reported no remaining findings.
 
 Physical acceptance must still prove A→B switching, reboot persistence,
 cancellation, failed-switch rollback, and continued private AP availability
-using an NVS-preserving upload. No board was flashed for this change.
+using an NVS-preserving upload. The later upload below preserves NVS, but does
+not complete those interactive acceptance checks.
 
 ### R2: Upstream loss stays amber instead of red/offline
 
@@ -174,12 +175,16 @@ No firmware flashing, Venus changes, or pushing occurred.
 ## Recorded physical observations
 
 The latest recorded verified upload is firmware
-`a6827e6e92db1870f70ccacd73f8d2b0cf4d5a20`, with physical confirmation on
-2026-09-02. Its upload preserved NVS at `0x9000..0xDFFF`. This is a historical
-record, not a fresh reading of the connected board. Later keyboard and virtual
-bench firmware has no recorded physical validation.
+`d69e0cf03ffd8a99cdbb825efdd9303a69f1962e` on 2026-09-04, using the private
+configuration on `COM3`. All four firmware segments passed hash verification;
+NVS at `0x9000..0xDFFF` matched byte for byte before and after flashing. A normal
+boot reported the private AP ready, with one boot and no panic/watchdog event
+during 25 seconds. No valid GX result was observed. See the
+[upload record](research/2026-09-04-physical-upload.md) for artifact hashes,
+measurements, and limits. Physical UI, R1/R2, and routing acceptance remain pending.
 
-The following results are carried forward from the original bench ledger and
+The following earlier touch results at firmware `a6827e6` on 2026-09-02 are
+carried forward from the original bench ledger and
 [Linux handoff](handoff/linux-2026-08-31/README.md). They were not repeated in
 the 2026-09-03 review.
 
@@ -200,8 +205,9 @@ not establish timing bounds or uninterrupted routing.
 ## Remaining Task 9 acceptance
 
 R1 and R2 implementation, automated verification, and review are complete.
-Build the exact reviewed source with private deployment
-configuration and preserve NVS during verified upload.
+The privately configured `d69e0cf` image is now uploaded and verified. Use that
+image for acceptance; if source or configuration changes, rebuild the reviewed
+source and preserve NVS during the next verified upload.
 Use a controlled bench upstream in place of real Starlink; keep its SSID and
 password out of tracked results.
 

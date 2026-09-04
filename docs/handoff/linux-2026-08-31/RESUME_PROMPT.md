@@ -20,8 +20,10 @@ Use `docs/README.md` as the current task and acceptance record. The review
 baseline is `6ef6c93` on 2026-09-03. Do not restart Tasks 1-8 or repeat completed
 Task 9 calibration/countdown/navigation work as if it had never been done.
 The latest recorded verified physical upload is
-`a6827e6e92db1870f70ccacd73f8d2b0cf4d5a20`; later commits include the keyboard
-and virtual bench. Confirm actual device state before any future upload.
+`d69e0cf03ffd8a99cdbb825efdd9303a69f1962e` on 2026-09-04. All four segments
+were hash-verified, NVS was unchanged byte for byte, and a 25-second startup
+check reported private AP ready without panic/watchdog events. UI/routing and
+R1/R2 acceptance remain pending. Confirm actual device state before any future upload.
 The old nested checkout, feature branch, and missing original plan/spec paths
 in the ignored SDD records are historical references.
 
