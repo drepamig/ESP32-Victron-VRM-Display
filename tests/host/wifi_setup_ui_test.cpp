@@ -832,6 +832,38 @@ void testCredentialStateClearsOnTerminalTransitions() {
 }  // namespace
 
 int main() {
+  {
+    TFT_eSPI display;
+    WifiSetupUi ui(display);
+    ui.openFromSettings(100);
+    check(ui.handleTouch({210, 18}, 110).type == WifiSetupActionType::None,
+          "Settings entry contact cannot trigger a scan on the new Wi-Fi view");
+    ui.handleRelease(120);
+    check(ui.handleTouch({30, 18}, 130).exitReason == WifiSetupExitReason::Back,
+          "explicit Back has a distinct navigation reason");
+    ui.openFromSettings(200);
+    ui.handleRelease(200);
+    const auto inactivity = ui.poll(60200);
+    check(inactivity.type == WifiSetupActionType::Exit &&
+          inactivity.exitReason == WifiSetupExitReason::Inactivity,
+          "automatic inactivity exit must not navigate back into Settings");
+    ui.showPortal("fixture", "123456", 70000);
+    const auto expired = ui.poll(70000);
+    check(expired.type == WifiSetupActionType::Exit &&
+          expired.exitReason == WifiSetupExitReason::PortalExpired,
+          "portal expiry is an automatic exit");
+    ui.handleTouch({300, 10}, 80000);
+    ui.poll(83100, false);
+    check(!ui.isOpen(), "pending dashboard attempt cancels any armed WAN entry");
+    ui.poll(140000, false);
+    ui.showResult("Connection timed out", false);
+    check(ui.poll(140001).type == WifiSetupActionType::None && ui.isOpen(),
+          "terminal result after sixty-second pending attempt cannot instantly expire");
+    check(ui.poll(199999).type == WifiSetupActionType::None && ui.isOpen(),
+          "new result keeps its complete inactivity window");
+    check(ui.poll(200000).type == WifiSetupActionType::Exit,
+          "new result expires at its own deadline");
+  }
   // Regression: saved Connect must paint progress before the network side effect.
   {
     TFT_eSPI display;

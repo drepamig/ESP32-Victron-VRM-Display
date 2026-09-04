@@ -28,6 +28,16 @@ int main() {
   SimulationClock clock;
   SimulationControl control(network, modbus, clock);
 
+  execute(control, "SIM clock=springbefore", "SIM OK");
+  check(clock.epoch() == 1805011199U, "spring fixture is the UTC second before the Chicago jump");
+  execute(control, "SIM clock=springafter", "SIM OK");
+  check(clock.epoch() == 1805011200U, "spring fixture crosses the boundary by one second");
+  execute(control, "SIM clock=fallbefore", "SIM OK");
+  check(clock.epoch() == 1793516399U, "fall fixture is the UTC second before the Chicago repeat");
+  execute(control, "SIM clock=fallafter", "SIM OK");
+  check(clock.epoch() == 1793516400U, "fall fixture crosses the boundary by one second");
+  execute(control, "SIM reset", "SIM OK");
+
   execute(control, "SIM wan=online", "SIM ERROR");
   NetworkProfile wanProfile;
   wanProfile.ssid = "Bench-Open";
@@ -58,7 +68,6 @@ int main() {
   execute(control, "SIM wan=online", "SIM ERROR");
 
   execute(control, "SIM clock=morning", "SIM OK");
-  check(std::strcmp(clock.text(), "08:15") == 0, "clock fixture applied");
   check(clock.epoch() == 1788423300U, "morning fixture has a fixed UTC epoch");
   execute(control, "SIM scan=empty", "SIM OK");
   check(network.startScan() && network.scanComplete(), "empty scan completes");
@@ -78,8 +87,6 @@ int main() {
         "Modbus fixture applied");
 
   execute(control, "SIM reset", "SIM OK");
-  check(std::strcmp(clock.text(), "12:34") == 0,
-        "reset restores fixed default clock");
   check(clock.epoch() == 1788438840U, "reset restores the fixed UTC epoch");
   check(network.setConnectFixture("success"), "reset restores network controls");
   check(modbus.fetch(cycle) && cycle.dcReady && cycle.pvW == 1625,
@@ -97,8 +104,7 @@ int main() {
   control.poll();
   check(Serial.output() == std::string("SIM OK\nSIM OK\n"),
         "poll accepts CRLF and LF framed serial commands");
-  check(std::strcmp(clock.text(), "21:45") == 0,
-        "poll routes clock command");
+  check(clock.epoch() == 1788471900U, "poll routes clock command as a UTC instant");
   check(modbus.fetch(cycle) && !cycle.requiredValid,
         "poll routes Modbus command");
 

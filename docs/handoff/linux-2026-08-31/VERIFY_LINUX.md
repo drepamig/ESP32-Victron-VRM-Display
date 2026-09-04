@@ -43,6 +43,15 @@ setup/Back; the host network suite checks real retry/DNS logic over five minutes
 of fake time. Review all seven new outage captures before recorded promotion,
 then repeat that scenario against the references.
 
+For issue #1, run `sim-test --scenario time-settings` to check the Settings
+screens, both DST boundaries, saved UTC/24h after reboot, and draft inactivity.
+The shared header/navigation change also requires the six other supported local
+scenarios. Review captured images before promotion; clock/gear changes are
+expected in dashboard references. The unsupported `dashboard-states` references
+remain historical until that scenario is accepted locally or an explicitly
+selected cloud comparison is authorized. Do not edit images to manufacture a
+passing comparison. Physical time/NTP/touch acceptance remains pending.
+
 ## Optional native toolchain
 
 Install Arduino CLI 1.5.1, a C++17 compiler, Git, and the pinned ESP32 dependencies:

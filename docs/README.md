@@ -1,7 +1,7 @@
 # Gateway status and acceptance record
 
-Updated 2026-09-04 for the verified physical upload of R2 firmware `d69e0cf`
-on `develop`. This is the tracked status
+Updated 2026-09-04 for issue #1 time-settings implementation and verification.
+The latest verified physical upload remains R2 firmware `d69e0cf`. This is the tracked status
 record for the ESP32 Venus-Starlink touch bridge. Work in the current checkout
 on `develop` according to [AGENTS.md](../AGENTS.md).
 
@@ -42,6 +42,25 @@ share the pending-profile path. The
 implemented and was merged at `4e5384f`; simulated network/GX evidence does not
 complete physical gateway acceptance.
 
+## Issue #1: Time configuration
+
+The Modbus dashboard now provides a gear menu with **Time** and **Wi-Fi**.
+Time supports persistent 12/24-hour display and 65 named US, Canadian, Mexican,
+and UTC choices from pinned IANA 2026c. The default is America/Chicago with
+12-hour AM/PM. Save applies a draft; Back or 60-second inactivity discards it.
+Current/future timezone rules affect display only, preserving UTC profile
+timestamps and the existing profile/calibration NVS schema.
+
+The [approved plan](superpowers/plans/2026-09-04-time-settings.md) and
+[timezone provenance](../tools/timezones/README.md) describe implementation
+boundaries. [Verification evidence](research/2026-09-04-time-settings.md) records
+19 C++ suites, 60 Python tests, all three builds/isolation, independent review,
+and seven completed local scenarios with 46 exact comparisons to reviewed
+goldens. Physical acceptance is pending: verify gear/Time/Wi-Fi navigation,
+NTP-derived local time, timezone/format persistence after reboot, and existing
+profiles/calibration after an NVS-preserving upload. The latest physical board
+upload remains R2 firmware `d69e0cf`; issue #1 has not been flashed.
+
 ## Local testing workflow and next development task
 
 Velxio is the chosen local simulator backend alongside the existing host
@@ -56,7 +75,8 @@ dummy inputs. `sim-build`, `sim-test`, and `all` default to local execution.
 Cloud runs require an explicit Wokwi backend and scenario/full-suite selection;
 there is no fallback. Golden promotion reuses reviewed recorded local captures.
 See the [implementation evidence](research/2026-09-03-velxio-local-runner.md).
-R2 adds a local `wan-outage` scenario. Six earlier scenarios still lack local
+R2 adds `wan-outage` and issue #1 adds `time-settings`. Seven local scenarios
+are supported; six earlier scenarios still lack local
 acceptance, and all outstanding physical acceptance remains open. The next task
 is controlled Task 9 hardware acceptance.
 
@@ -134,6 +154,7 @@ responsive setup, AP availability, and recovery after an NVS-preserving upload.
 
 | Evidence | Result and scope |
 | --- | --- |
+| Issue #1: time settings | 19 C++ suites, 60 Python tests, three builds, both attestations/isolation, independent review, seven completed local scenarios and 46 exact RGBA matches after reviewed recorded promotion. Physical acceptance pending. [Evidence](research/2026-09-04-time-settings.md). |
 | R2: host/tooling matrix | Passed: 17 C++ suites and 55 Python tooling tests. Production outage, fixture, parser, and protocol regressions failed before implementation. |
 | R2: builds and isolation | Production 1,038,790 bytes flash / 49,532 globals; local DIO 559,944 / 34,516; standard simulator 559,928 / 34,516. All builds, both attestations, and production isolation passed. |
 | R2: targeted local scenarios | `wan-outage`, `saved-switch`, and `reboot-persistence` passed with 19 exact RGBA comparisons. Seven new outage images were visually reviewed before recorded promotion and reproduced byte for byte on repeat. Existing goldens unchanged; zero Wokwi executions. [Run IDs and evidence](research/2026-09-03-r2-wan-outage.md). |

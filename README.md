@@ -34,6 +34,8 @@ if you want to watch a site you're not on the same network as.
 - Touch Wi-Fi setup supports direct masked QWERTY password entry for unknown
   protected networks, with the private phone portal available through
   **Use phone**.
+- Modbus time settings: persistent 12/24-hour display and named US, Canadian,
+  Mexican, and UTC timezones with automatic seasonal changes where applicable.
 
 ## Development status
 
@@ -48,6 +50,24 @@ DHCP report amber/Validating until fresh DNS succeeds. New connection attempts
 retain amber/Connecting. See the [status and acceptance record](docs/README.md) for
 evidence, remaining bench/field checks, and the latest recorded firmware upload.
 Continue development on `develop` following [AGENTS.md](AGENTS.md).
+
+## Modbus time and Wi-Fi settings
+
+Tap the dashboard's upper-left gear to open **Settings**, then **Time** or
+**Wi-Fi**. Holding WAN for three seconds still opens Wi-Fi directly. Settings
+and WAN entry wait until any active connection attempt finishes.
+
+In **Time**, choose **12h** or **24h** and use **Change timezone** to select a
+country and city/region. **Save** applies both choices immediately and retains
+them across reboot. **Back** discards unsaved time edits; picker Back goes up
+one level. Sixty seconds without interaction exits without saving. Wi-Fi Back
+returns to Settings when entered through the gear, or to the dashboard when
+entered through WAN; automatic exits return to the dashboard.
+
+The default is **America/Chicago, 12-hour AM/PM**. The clock shows `--:--` until
+NTP supplies a valid time; settings can still be changed offline. Timezones use
+pinned IANA 2026c current/future rules, with updates delivered through firmware.
+The VRM cloud sketch retains its existing time behavior.
 
 ## Hardware
 

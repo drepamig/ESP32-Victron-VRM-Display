@@ -15,6 +15,8 @@ build_and_run() {
 
 build_and_run gateway_policy_test tests/host/gateway_policy_test.cpp
 build_and_run gateway_application_policy_test tests/host/gateway_application_policy_test.cpp
+build_and_run time_settings_test -Wl,--wrap=setenv tests/host/time_settings_test.cpp VictronCYD_Modbus/TimeSettings.cpp VictronCYD_Modbus/TimeZoneCatalog.cpp
+build_and_run settings_ui_test tests/host/settings_ui_test.cpp VictronCYD_Modbus/SettingsUi.cpp VictronCYD_Modbus/TimeSettings.cpp VictronCYD_Modbus/TimeZoneCatalog.cpp
 build_and_run modbus_snapshot_policy_test tests/host/modbus_snapshot_policy_test.cpp
 build_and_run touch_mapping_test tests/host/touch_mapping_test.cpp
 build_and_run network_profiles_test tests/host/network_profiles_test.cpp VictronCYD_Modbus/NetworkProfiles.cpp

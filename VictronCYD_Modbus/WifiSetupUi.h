@@ -49,11 +49,14 @@ enum class WifiSetupActionType : uint8_t {
   Exit,
 };
 
+enum class WifiSetupExitReason : uint8_t { Back, Inactivity, PortalExpired };
+
 struct WifiSetupAction {
   WifiSetupActionType type;
   int profileIndex;
   String ssid;
   uint8_t securityType;
+  WifiSetupExitReason exitReason = WifiSetupExitReason::Back;
 };
 
 class WifiSetupUi {
@@ -61,6 +64,7 @@ class WifiSetupUi {
   explicit WifiSetupUi(TFT_eSPI& display);
 
   void open();
+  void openFromSettings(uint32_t nowMs);
   void close();
   bool isOpen() const;
   void render(const CamperNetworkStatus& networkStatus);
@@ -70,7 +74,7 @@ class WifiSetupUi {
   WifiSetupAction handleTouch(const TouchPoint& point, uint32_t nowMs);
   WifiSetupAction handleTouchMove(const TouchPoint& point, uint32_t nowMs);
   WifiSetupAction handleRelease(uint32_t nowMs);
-  WifiSetupAction poll(uint32_t nowMs);
+  WifiSetupAction poll(uint32_t nowMs, bool allowDashboardEntry = true);
   void setSavedProfiles(const NetworkProfile* profiles, size_t count, int activeIndex);
   void setScanResults(const ScanResult* results, size_t count);
   bool showScanFailure(const String& message);

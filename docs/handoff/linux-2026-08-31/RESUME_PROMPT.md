@@ -19,6 +19,10 @@ First read, in order:
 Use `docs/README.md` as the current task and acceptance record. The review
 baseline is `6ef6c93` on 2026-09-03. Do not restart Tasks 1-8 or repeat completed
 Task 9 calibration/countdown/navigation work as if it had never been done.
+Issue #1 time settings are implemented in the current working source: gear
+menu, persistent 12/24h and North American/UTC timezone selection. Defaults
+are America/Chicago and 12h. See the current status/evidence before continuing;
+the physical board has not received this issue's changes.
 The latest recorded verified physical upload is
 `d69e0cf03ffd8a99cdbb825efdd9303a69f1962e` on 2026-09-04. All four segments
 were hash-verified, NVS was unchanged byte for byte, and a 25-second startup
@@ -29,7 +33,7 @@ in the ignored SDD records are historical references.
 
 Before making changes, verify the branch, working tree, baseline commits in
 history, remotes, and the repository-owned toolchain. Run the complete current
-test script; it now includes 17 C++ suites and 55 Python tooling tests,
+test script; it now includes 19 C++ suites and 60 Python tooling tests,
 including production controller integration for R1 and the FT6206 release-race
 and WAN-outage regressions. Dummy builds and tests do not need production secrets. Preserve any
 ignored `VictronCYD_Modbus/secrets.h`; never read a secret value into chat or

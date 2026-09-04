@@ -8,6 +8,7 @@
 #include "esp_random.h"
 #include "../../VictronCYD_Modbus/CredentialSubmission.h"
 #include "../../VictronCYD_Modbus/ProvisioningPortal.h"
+#include "../../VictronCYD_Modbus/GatewayApplicationPolicy.h"
 
 namespace {
 
@@ -290,6 +291,33 @@ void testCancelTimeoutAndRepeatedBeginClearOldState() {
 }  // namespace
 
 int main() {
+  {
+    ProvisioningPortal portal;
+    CredentialSubmission submission;
+    bool physicalPortalActive = true;
+    int submitted = 0, expired = 0;
+    auto dispatch = [&] {
+      coordinatePortalLifecycle(false, physicalPortalActive, portal, submission,
+          [&](CredentialSubmission&) { ++submitted; physicalPortalActive = false; },
+          [&] { ++expired; physicalPortalActive = false; });
+    };
+    check(portal.begin("Expiry fixture", 3, 100), "navigation expiry portal starts");
+    portal.poll(600100);  // Production loop order: poll before lifecycle/UI handling.
+    dispatch();
+    dispatch();
+    check(expired == 1 && submitted == 0 && !physicalPortalActive,
+          "real portal expiry routes once to automatic exit before UI polling");
+    physicalPortalActive = true;
+    check(portal.begin("Submitted fixture", 3, 700000), "submission navigation portal starts");
+    check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
+                                   form(portal.pairingCode().c_str(), "dummy-password")),
+          "valid phone POST is accepted");
+    portal.poll(700001);
+    dispatch();
+    check(submitted == 1 && expired == 1 && submission.ready,
+          "accepted POST stops the portal but must be consumed before expiry routing");
+    submission.clear();
+  }
   testCodeLifetimeAndEscapedForm();
   testWraparoundSafeExpiry();
   testRouteAndSubnetBoundaries();

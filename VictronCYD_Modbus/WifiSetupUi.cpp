@@ -91,6 +91,13 @@ void WifiSetupUi::open() {
   cancelHolds();
 }
 
+void WifiSetupUi::openFromSettings(uint32_t nowMs) {
+  lastNowMs_ = nowMs;
+  open();
+  awaitEntryRelease_ = true;
+  requestFullRender();
+}
+
 void WifiSetupUi::close() {
   clearPortalState();
   clearCredentialState();
@@ -138,9 +145,13 @@ WifiSetupAction WifiSetupUi::handleRelease(uint32_t nowMs) {
   return noAction();
 }
 
-WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
+WifiSetupAction WifiSetupUi::poll(uint32_t nowMs, bool allowDashboardEntry) {
   lastNowMs_ = nowMs;
   if (!isOpen()) {
+    if (!allowDashboardEntry) {
+      cancelHolds();
+      return noAction();
+    }
     if (wanHoldActive_ && nowMs - wanHoldStartedMs_ >= kWanHoldMs) {
       open();
       awaitEntryRelease_ = true;
@@ -152,7 +163,7 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
 
   if (view_ == WifiSetupView::Portal && isDeadlineReached(nowMs, portalExpiresAtMs_)) {
     close();
-    return simpleAction(WifiSetupActionType::Exit);
+    return {WifiSetupActionType::Exit, -1, String(), 0, WifiSetupExitReason::PortalExpired};
   }
 
   if (view_ == WifiSetupView::Password && credentialEntry_.pollTimeout(nowMs)) {
@@ -175,7 +186,7 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
       view_ != WifiSetupView::Connecting && view_ != WifiSetupView::SavedConnecting &&
       nowMs - lastActivityMs_ >= kInactivityMs) {
     close();
-    return simpleAction(WifiSetupActionType::Exit);
+    return {WifiSetupActionType::Exit, -1, String(), 0, WifiSetupExitReason::Inactivity};
   }
   return noAction();
 }

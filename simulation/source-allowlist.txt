@@ -29,6 +29,13 @@ VictronCYD_Modbus/SimulationClock.h
 VictronCYD_Modbus/SimulationControl.cpp
 VictronCYD_Modbus/SimulationControl.h
 VictronCYD_Modbus/SimulationDummyConfig.h
+VictronCYD_Modbus/SettingsUi.h
+VictronCYD_Modbus/SettingsUi.cpp
+VictronCYD_Modbus/TimeSettings.h
+VictronCYD_Modbus/TimeSettings.cpp
+VictronCYD_Modbus/TimeZoneCatalog.h
+VictronCYD_Modbus/TimeZoneCatalog.cpp
+VictronCYD_Modbus/TimeZoneCatalog.inc
 VictronCYD_Modbus/TcpModbusCycleSource.cpp
 VictronCYD_Modbus/TcpModbusCycleSource.h
 VictronCYD_Modbus/TouchInput.cpp

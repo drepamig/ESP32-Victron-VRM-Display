@@ -1,0 +1,436 @@
+{
+  "issue": 1,
+  "baseline": "bdbd0d2",
+  "branch": "develop",
+  "date": "2026-09-04",
+  "hostSuites": 19,
+  "toolingTests": 60,
+  "timezoneOracleSamples": 4972,
+  "builds": [
+    {
+      "mode": "production",
+      "flashBytes": 1047094,
+      "globalBytes": 49588,
+      "artifactSha256": "98e8155e3df4d89c93335070cd7be6710c466d2db4c85db79598ee6fd7ccecb0"
+    },
+    {
+      "mode": "velxio",
+      "flashBytes": 582002,
+      "globalBytes": 34888,
+      "artifactSha256": "1a59f863d70ab36ad0d24937e23fa4b0fafc14a8bc66e5ea74d3ffb45a395af5"
+    },
+    {
+      "mode": "standard-simulator",
+      "flashBytes": 581986,
+      "globalBytes": 34888,
+      "artifactSha256": "fc9d8cbd2f0664b2279ca11647c6d9212fda681176933d824c258ebf459d3b26"
+    }
+  ],
+  "runs": [
+    {
+      "runId": "2c9b7b612a5d436587f4dac50aeaf331",
+      "scenario": "time-settings",
+      "wallSeconds": 204.647,
+      "warnings": [
+        "E (541) task_wdt: esp_task_wdt_init(517): TWDT already initialized",
+        "E (643) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ],
+      "captures": [
+        {
+          "name": "central-default",
+          "sha256": "a4a93bf266f62b90b48b93781d4bea558870276d935b9715fe734422ee71ce14",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "springbefore",
+          "sha256": "d3e0d817f30da10ebd8da9688cc48a289a0f3a634e94eb467c776d927c04a9f9",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "springafter",
+          "sha256": "dbbd09a9e6483101297d4e45c130c937b06616363cf91f8b23ac8bff8a4ed161",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "fallbefore",
+          "sha256": "d3e0d817f30da10ebd8da9688cc48a289a0f3a634e94eb467c776d927c04a9f9",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "fallafter",
+          "sha256": "cdcad6cb5590d7df3be043bb8e4f226d3fe2b8a396da73a5f6a82069a59c7aa0",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "settings-menu",
+          "sha256": "cb1ce2b82f2fcac7a65f880855c8fd624dab8e874daaca7da163ac1534470520",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "time-default",
+          "sha256": "57d3df2a35aecb90d8e482897dcd4fcec37c8f5be82bf92439668d5f3f11e84f",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "draft-24h",
+          "sha256": "2ab0b2eaf90874fdef7745d07a39e8195ea02cc9be255499633af9f080825e37",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "discarded-draft",
+          "sha256": "57d3df2a35aecb90d8e482897dcd4fcec37c8f5be82bf92439668d5f3f11e84f",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "countries",
+          "sha256": "0bf61c764531d4124f24b4715c2a13cd3316fd5939c813ccc89b74a8925d8311",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "canada",
+          "sha256": "5e308dbcc2791575c57e8f7976fd2159ef1e6133151213698459e26ae4b817cc",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "canada-page-two",
+          "sha256": "20125a19d266334a0924116886aab96bf6b35f170acf2785c5e917b0af2c08a8",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "mexico",
+          "sha256": "6d60f849fa65cb6cdba1f5af110d67c3315d30ec56cbca0a32917763cead99eb",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "utc-draft",
+          "sha256": "7625e0ad16b93793f5c5bfddc63bf902d4c4bca374a0365fb92bccd1d9e31974",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "utc-24h",
+          "sha256": "05bb95207bf60440bf1bb4d7892235fdcbc0d517a13222d0d05b8ab086ee51ca",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "wifi-from-settings",
+          "sha256": "c1a3f63e8507d8c48a29b7e48af9a1cba5c7a9feaffcd4fd11f3f3e8b1d9b214",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "wifi-back-settings",
+          "sha256": "cb1ce2b82f2fcac7a65f880855c8fd624dab8e874daaca7da163ac1534470520",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "persisted-dashboard",
+          "sha256": "11e921a8605dab1da54d60bb124509dc45fb67cff10a43111d37d50a40f05223",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "persisted-settings",
+          "sha256": "7625e0ad16b93793f5c5bfddc63bf902d4c4bca374a0365fb92bccd1d9e31974",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "timeout-discard",
+          "sha256": "11e921a8605dab1da54d60bb124509dc45fb67cff10a43111d37d50a40f05223",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "unavailable",
+          "sha256": "65c75affda91fc00cf89687fd7060214069dabf20d4741ca683e82d26c73d635",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        }
+      ],
+      "sourceSha256": "acb8c57632d56b7d0a4b8a72973902fc429e4d9aa42346576ff7bcc877b1529c"
+    },
+    {
+      "runId": "b91fb63ca1df4a7898c89a64bd678580",
+      "scenario": "boot-calibration",
+      "wallSeconds": 18.553,
+      "warnings": [
+        "E (533) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ],
+      "captures": [
+        {
+          "name": "boot",
+          "sha256": "97fda52f9161858f6332e496466cbe948785044451b407f6ca6b9f0b100a1939",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "calibrated-dashboard",
+          "sha256": "a4a93bf266f62b90b48b93781d4bea558870276d935b9715fe734422ee71ce14",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": [
+            3,
+            0,
+            194,
+            21
+          ]
+        }
+      ],
+      "sourceSha256": "acb8c57632d56b7d0a4b8a72973902fc429e4d9aa42346576ff7bcc877b1529c"
+    },
+    {
+      "runId": "b91fb63ca1df4a7898c89a64bd678580",
+      "scenario": "setup-navigation",
+      "wallSeconds": 29.196,
+      "warnings": [
+        "E (536) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ],
+      "captures": [
+        {
+          "name": "saved",
+          "sha256": "c1a3f63e8507d8c48a29b7e48af9a1cba5c7a9feaffcd4fd11f3f3e8b1d9b214",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "nearby",
+          "sha256": "31dbae32af5f4b91bad7e4718f96fbf493438c537f73fcb771a35110342f65ea",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        }
+      ],
+      "sourceSha256": "acb8c57632d56b7d0a4b8a72973902fc429e4d9aa42346576ff7bcc877b1529c"
+    },
+    {
+      "runId": "b91fb63ca1df4a7898c89a64bd678580",
+      "scenario": "wan-hold",
+      "wallSeconds": 31.411,
+      "warnings": [
+        "E (536) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ],
+      "captures": [
+        {
+          "name": "cancelled-short-press",
+          "sha256": "a4a93bf266f62b90b48b93781d4bea558870276d935b9715fe734422ee71ce14",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": [
+            3,
+            0,
+            194,
+            21
+          ]
+        },
+        {
+          "name": "successful-three-second-hold",
+          "sha256": "c1a3f63e8507d8c48a29b7e48af9a1cba5c7a9feaffcd4fd11f3f3e8b1d9b214",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        }
+      ],
+      "sourceSha256": "acb8c57632d56b7d0a4b8a72973902fc429e4d9aa42346576ff7bcc877b1529c"
+    },
+    {
+      "runId": "b91fb63ca1df4a7898c89a64bd678580",
+      "scenario": "wan-outage",
+      "wallSeconds": 160.687,
+      "warnings": [
+        "E (537) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ],
+      "captures": [
+        {
+          "name": "online",
+          "sha256": "94c33f1d6631d1cd5ef4590d235ac905f149c3d9176cce8c859e54958a0f927c",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": [
+            3,
+            0,
+            194,
+            21
+          ]
+        },
+        {
+          "name": "offline",
+          "sha256": "f6a9e10a62c274eafd95ff3af657eefc32c56326f9625571e7344d9ddae052bd",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": [
+            3,
+            0,
+            194,
+            21
+          ]
+        },
+        {
+          "name": "offline-after-30s",
+          "sha256": "f6a9e10a62c274eafd95ff3af657eefc32c56326f9625571e7344d9ddae052bd",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": [
+            3,
+            0,
+            194,
+            21
+          ]
+        },
+        {
+          "name": "setup-offline",
+          "sha256": "97f0c9b095ac09cae37cf8edd0b7dc4d704962b22301265f3baa8054b1bcb416",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "back-offline",
+          "sha256": "f6a9e10a62c274eafd95ff3af657eefc32c56326f9625571e7344d9ddae052bd",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": [
+            3,
+            0,
+            194,
+            21
+          ]
+        },
+        {
+          "name": "validating",
+          "sha256": "e5d21944d5da3012d638ecd728656e377c6825fd45e0b2a31f09ca9d83109661",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": [
+            3,
+            0,
+            194,
+            21
+          ]
+        },
+        {
+          "name": "recovered-online",
+          "sha256": "3ce987b9ef520d6618c3fa04a1b18bdd1ce71f3a4b6ebf9a4b7cb1e4e6b70658",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": [
+            3,
+            0,
+            194,
+            21
+          ]
+        }
+      ],
+      "sourceSha256": "acb8c57632d56b7d0a4b8a72973902fc429e4d9aa42346576ff7bcc877b1529c"
+    },
+    {
+      "runId": "db35f1c8e6e24abda1d8b56f509a1d6e",
+      "scenario": "saved-switch",
+      "wallSeconds": 282.765,
+      "warnings": [
+        "E (507) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ],
+      "captures": [
+        {
+          "name": "a-active",
+          "sha256": "8dd30ce73edabe73be749e3fa4b17b9bd6f1d72ceb172c5ed872e36cf51b7a65",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "progress",
+          "sha256": "52a75ea38e428a2fd3694db113986d990900e3b25fa414a00c132e250dad0f1f",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "cancelled",
+          "sha256": "8dd2d393648bf4a9250be1058f5701f73d316696ed61ef3039b628082a743560",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "timeout",
+          "sha256": "8f8a4c512551e8630cbdea1070f7656489772bfc7baaa7b092977992b5392df1",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "rollback-a",
+          "sha256": "8dd30ce73edabe73be749e3fa4b17b9bd6f1d72ceb172c5ed872e36cf51b7a65",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "success",
+          "sha256": "dc972f17b3ccd7f39ae396fbae0bcc76faadbc264531020b24e10e4b7c450a2b",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "b-active",
+          "sha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        }
+      ],
+      "sourceSha256": "acb8c57632d56b7d0a4b8a72973902fc429e4d9aa42346576ff7bcc877b1529c"
+    },
+    {
+      "runId": "4b0206dc1a7d4e2db52e11dc7d6f1219",
+      "scenario": "reboot-persistence",
+      "wallSeconds": 311.862,
+      "warnings": [
+        "E (509) task_wdt: esp_task_wdt_init(517): TWDT already initialized",
+        "E (1168) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ],
+      "captures": [
+        {
+          "name": "b-active-before",
+          "sha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "dashboard-after-reboot",
+          "sha256": "3ce987b9ef520d6618c3fa04a1b18bdd1ce71f3a4b6ebf9a4b7cb1e4e6b70658",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": [
+            3,
+            0,
+            194,
+            21
+          ]
+        },
+        {
+          "name": "b-active-after",
+          "sha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "failed-submission",
+          "sha256": "c9fff1d6ed74b79f065392109822b717c131d2616ef0c4bc33d3acfb6ccf9918",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        },
+        {
+          "name": "rollback-b",
+          "sha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+          "matchesCurrentGoldenRgba": true,
+          "priorGoldenDifferenceBounds": null
+        }
+      ],
+      "sourceSha256": "acb8c57632d56b7d0a4b8a72973902fc429e4d9aa42346576ff7bcc877b1529c"
+    }
+  ],
+  "currentGoldenRgbaMatches": 46,
+  "physicalAcceptance": "pending",
+  "wokwiExecutions": 0,
+  "flashed": false,
+  "pushed": false
+}

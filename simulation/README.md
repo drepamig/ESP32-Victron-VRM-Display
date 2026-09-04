@@ -12,6 +12,7 @@ Docker host. Local runs disable networking and require no Wokwi token.
 | boot-calibration | Fresh boot, four-point calibration and dashboard |
 | wan-hold | Short press cancellation and three-second setup hold |
 | setup-navigation | Saved and Nearby navigation |
+| time-settings | Time formatting/DST, drafts, timezone picker, Wi-Fi menu, reboot persistence |
 | saved-switch | Progress, Back cancellation, blocked controls, 60-second timeout, rollback and B activation |
 | reboot-persistence | New worker retains flash, calibration and B; failed submission rolls back to B |
 | wan-outage | Established Online, Offline for 30 guest seconds, setup/Back during outage, Validating and recovered Online |
@@ -27,6 +28,15 @@ required; these simulations use the existing network and GX fixtures.
 injecting WAN states. Its screenshots check presentation and navigation.
 The production `camper_network_test.cpp` suite separately checks a five-minute
 outage, retry deadlines/backoff, DHCP loss, and fresh DNS recovery with fake time.
+
+The local `time-settings` scenario exercises the production clock formatter
+with UTC fixtures at both DST boundaries, Settings navigation and draft discard,
+country/city pagination, UTC/24h Save, menu-origin Wi-Fi Back, flash-preserving
+reboot, inactivity discard, and unavailable time. The original `fixed`,
+`morning`, and `evening` fixture epochs are unchanged; their presentation now
+uses the selected timezone and format. Additional clock fixture names are
+`springbefore`, `springafter`, `fallbefore`, and `fallafter`. No fixture contacts
+NTP. Real NTP and physical touch acceptance remain hardware checks.
 
 ## Pinned runtime and artifacts
 
@@ -84,6 +94,15 @@ Wokwi's token is forwarded by environment name only. There is no cloud fallback.
 running it. Old cloud captures remain historical evidence for their own build.
 
 ## Verification history
+
+Issue #1's [verification record](../docs/research/2026-09-04-time-settings.md)
+adds time settings: 19 C++ suites, 60 Python tests, three builds and both
+attestations/isolation passed. All seven supported local scenarios completed;
+46 retained captures match the reviewed current goldens exactly. Twenty-one
+new images and nine dashboard header changes were inspected before promotion.
+The six unsupported scenarios remain gaps; `dashboard-states` references still
+have the old header pending an actual accepted capture. No Wokwi run or board
+upload was performed for issue #1.
 
 R2's [verification record](../docs/research/2026-09-03-r2-wan-outage.md) covers
 the current outage correction: 17 C++ suites, 55 Python tests, all three builds,

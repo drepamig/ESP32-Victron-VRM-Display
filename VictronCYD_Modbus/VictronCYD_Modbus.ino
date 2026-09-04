@@ -22,6 +22,8 @@
 #include "NetworkProfiles.h"
 #include "TouchInput.h"
 #include "WifiSetupUi.h"
+#include "SettingsUi.h"
+#include "TimeSettings.h"
 #include "esp_task_wdt.h"
 #include "RuntimeConfig.h"
 #ifdef CYD_SIMULATION
@@ -34,7 +36,6 @@
 
 namespace {
 
-constexpr long kTimezoneOffsetSeconds = 7200;
 constexpr uint32_t kModbusPollMs = 2000;
 constexpr uint32_t kGxSnapshotMaximumAgeMs = 10000;
 constexpr uint32_t kModbusTaskStack = 4096;
@@ -65,6 +66,11 @@ struct Box {
 TFT_eSPI tft;
 TouchInput touchInput(tft);
 WifiSetupUi wifiSetupUi(tft);
+SettingsUi settingsUi(tft);
+TimeSettingsStore timeSettingsStore;
+TimeSettings activeTimeSettings;
+WifiSetupOrigin wifiSetupOrigin = WifiSetupOrigin::Dashboard;
+TouchSurfaceGate touchSurfaceGate;
 CamperNetworkRuntime camperNetwork;
 NetworkProfileStore profileStore;
 ProvisioningPortal portal;
@@ -114,18 +120,11 @@ void clearProfile(NetworkProfile& profile) {
   profile.lastSuccessEpoch = 0;
 }
 
-String clockText() {
+ClockText clockText() {
 #ifdef CYD_SIMULATION
-  return String(simulationClock.text());
+  return formatClock(simulationClock.epoch(), activeTimeSettings.format);
 #else
-  struct tm currentTime;
-  if (!getLocalTime(&currentTime, 0)) {
-    return "--:--";
-  }
-  char output[6];
-  std::snprintf(output, sizeof(output), "%02d:%02d", currentTime.tm_hour,
-                currentTime.tm_min);
-  return String(output);
+  return formatClock(time(nullptr), activeTimeSettings.format);
 #endif
 }
 
@@ -186,7 +185,14 @@ void drawDashboardFrame() {
   tft.fillScreen(kBackground);
   tft.setTextColor(kTitle, kBackground);
   tft.setTextDatum(ML_DATUM);
-  tft.drawString(SECRET_SITE_NAME, 4, 11, 2);
+  String siteName(SECRET_SITE_NAME);
+  if (tft.textWidth(siteName, 2) > 76) {
+    while (siteName.length() && tft.textWidth(siteName + "...", 2) > 76) {
+      siteName.remove(siteName.length() - 1);
+    }
+    siteName += "...";
+  }
+  tft.drawString(siteName, 28, 11, 2);
   drawBoxFrame(bGrid, "Grid");
   drawBoxFrame(bInv, "Inverter");
   drawBoxFrame(bAC, "AC Loads");
@@ -322,15 +328,27 @@ void drawDashboardHeader(uint32_t nowMs, bool fullFrameCleared = false) {
     return;
   }
   lastDashboardHeaderHoldCountdown = holdCountdown;
+  const bool settingsAvailable = canOpenSettings(DisplaySurface::Dashboard,
+      connectionController.pendingActive(), connectionController.physicalPortalActive());
+  const uint16_t gearColor = settingsAvailable ? kTitle : kLine;
+  tft.fillRect(0, 0, 24, 22, kBackground);
+  tft.drawCircle(12, 11, 6, gearColor);
+  tft.drawCircle(12, 11, 2, gearColor);
+  for (int offset : {-1, 1}) {
+    tft.drawLine(12 + offset * 6, 11, 12 + offset * 9, 11, gearColor);
+    tft.drawLine(12, 11 + offset * 6, 12, 11 + offset * 9, gearColor);
+    tft.drawLine(12 + offset * 4, 7, 12 + offset * 6, 5, gearColor);
+    tft.drawLine(12 + offset * 4, 15, 12 + offset * 6, 17, gearColor);
+  }
   coordinateDashboardWanHold(
       holdCountdown,
       [&](const char* holdLabel) {
-        const String normalClock = clockText();
-        const char* text = holdLabel == nullptr ? normalClock.c_str() : holdLabel;
+        const ClockText normalClock = clockText();
+        const char* text = holdLabel == nullptr ? normalClock.time : holdLabel;
         tft.setTextColor(gxOnline ? kValue : kUnit, kBackground);
         tft.setTextDatum(MC_DATUM);
         paintCenterHeaderText(tft, lastDashboardCenterTextWidth, text, holdLabel != nullptr,
-                              fullFrameCleared, kBackground);
+                              fullFrameCleared, kBackground, normalClock.meridiem);
       },
       [&](bool highlighted) { drawDashboardWanIndicator(nowMs, fullFrameCleared, highlighted); });
 
@@ -345,7 +363,7 @@ void drawDashboardHeader(uint32_t nowMs, bool fullFrameCleared = false) {
 
 DisplaySurface currentDisplaySurface() {
   return displaySurfaceFor(touchInputReady, touchInputReady && touchInput.calibrated(),
-                           wifiSetupUi.isOpen());
+                           wifiSetupUi.isOpen(), settingsUi.isOpen());
 }
 
 void redrawCurrentView(uint32_t nowMs) {
@@ -354,6 +372,9 @@ void redrawCurrentView(uint32_t nowMs) {
       return;
     case DisplaySurface::Setup:
       wifiSetupUi.render(camperNetwork.status());
+      return;
+    case DisplaySurface::Settings:
+      settingsUi.render();
       return;
     case DisplaySurface::Dashboard:
       lastDashboardWanHoldCountdown = -1;
@@ -461,18 +482,23 @@ void handlePendingProfileCommit(uint32_t nowMs) {
       nowMs, currentEpoch > 0 ? static_cast<uint32_t>(currentEpoch) : 0), nowMs);
 }
 
+void exitWifiSetup(WifiSetupExitReason reason, uint32_t nowMs) {
+  replaceGatewayLifecycle(GatewayLifecycleTarget::Exit, nowMs);
+  wifiSetupUi.close();
+  if (returnToSettings(wifiSetupOrigin, reason == WifiSetupExitReason::Back) &&
+      !connectionController.pendingActive() && !connectionController.physicalPortalActive()) {
+    settingsUi.open(nowMs, activeTimeSettings);
+  }
+  wifiSetupOrigin = WifiSetupOrigin::Dashboard;
+  redrawCurrentView(nowMs);
+}
+
 void handlePortalLifecycle(uint32_t nowMs) {
-  if (connectionController.pendingSource() == PendingProfileSource::Saved) return;
   CredentialSubmission submission;
-  if (portal.takeSubmission(submission)) {
-    beginPendingProfile(submission, PendingProfileSource::Portal, nowMs);
-    return;
-  }
-  if (connectionController.physicalPortalActive() && !portal.active()) {
-    replaceGatewayLifecycle(GatewayLifecycleTarget::Idle, nowMs);
-    wifiSetupUi.showResult("Setup portal expired", false);
-    wifiSetupUi.render(camperNetwork.status());
-  }
+  coordinatePortalLifecycle(connectionController.pendingSource() == PendingProfileSource::Saved,
+      connectionController.physicalPortalActive(), portal, submission,
+      [&](CredentialSubmission& accepted) { beginPendingProfile(accepted, PendingProfileSource::Portal, nowMs); },
+      [&] { exitWifiSetup(WifiSetupExitReason::PortalExpired, nowMs); });
 }
 
 void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
@@ -532,12 +558,30 @@ void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
       break;
     }
     case WifiSetupActionType::Exit:
-      replaceGatewayLifecycle(GatewayLifecycleTarget::Exit, nowMs);
-      wifiSetupUi.close();
-      redrawCurrentView(nowMs);
+      exitWifiSetup(action.exitReason, nowMs);
       break;
     case WifiSetupActionType::None:
     default:
+      break;
+  }
+}
+
+void handleSettingsAction(SettingsAction action, uint32_t nowMs) {
+  switch (action) {
+    case SettingsAction::OpenWifi:
+      wifiSetupOrigin = WifiSetupOrigin::Settings;
+      refreshSavedProfiles();
+      wifiSetupUi.openFromSettings(nowMs);
+      redrawCurrentView(nowMs);
+      break;
+    case SettingsAction::Save:
+      settingsUi.saveResult(saveAndApplyTimeSettings(timeSettingsStore, activeTimeSettings,
+                                                     settingsUi.draft()));
+      break;
+    case SettingsAction::Exit:
+      redrawCurrentView(nowMs);
+      break;
+    case SettingsAction::None:
       break;
   }
 }
@@ -548,6 +592,33 @@ void handleTouchAndUiActions(uint32_t nowMs) {
     switch (event.type) {
       case TouchEventType::Press:
       case TouchEventType::Scroll:
+        if (event.type == TouchEventType::Press) {
+          const bool permitted = currentDisplaySurface() != DisplaySurface::Dashboard ||
+              canOpenSettings(currentDisplaySurface(), connectionController.pendingActive(),
+                              connectionController.physicalPortalActive());
+          touchSurfaceGate.press(currentDisplaySurface(), permitted);
+        }
+        if (!touchSurfaceGate.allowMove(currentDisplaySurface())) break;
+        if (currentDisplaySurface() == DisplaySurface::Settings) {
+          if (event.type == TouchEventType::Press) {
+            handleSettingsAction(settingsUi.handleTouch(event.point, nowMs), nowMs);
+          }
+          break;
+        }
+        if (currentDisplaySurface() == DisplaySurface::Dashboard &&
+            event.type == TouchEventType::Press) {
+          if (event.point.x >= 0 && event.point.x < 24 && event.point.y >= 0 && event.point.y < 22 &&
+              canOpenSettings(currentDisplaySurface(), connectionController.pendingActive(),
+                              connectionController.physicalPortalActive())) {
+            // Cancel an interrupted WAN hold before the new surface owns contact.
+            wifiSetupUi.handleRelease(nowMs);
+            settingsUi.open(nowMs, activeTimeSettings);
+            break;
+          }
+          if (kWifiWanIndicatorBounds.contains(event.point)) {
+            wifiSetupOrigin = WifiSetupOrigin::Dashboard;
+          }
+        }
         coordinateSetupInteraction(
             [&] {
               return event.type == TouchEventType::Press
@@ -560,6 +631,11 @@ void handleTouchAndUiActions(uint32_t nowMs) {
             [&] { if (currentDisplaySurface() == DisplaySurface::Dashboard) drawDashboardHeader(nowMs); });
         break;
       case TouchEventType::Release:
+        touchSurfaceGate.release();
+        if (currentDisplaySurface() == DisplaySurface::Settings) {
+          settingsUi.handleRelease(nowMs);
+          break;
+        }
         coordinateDashboardInteraction(
             [&] { handleUiAction(wifiSetupUi.handleRelease(nowMs), nowMs); },
             [&] { if (currentDisplaySurface() == DisplaySurface::Dashboard) drawDashboardHeader(nowMs); },
@@ -574,12 +650,20 @@ void handleTouchAndUiActions(uint32_t nowMs) {
         break;
     }
   }
-  handleUiAction(wifiSetupUi.poll(nowMs), nowMs);
+  if (currentDisplaySurface() == DisplaySurface::Settings) {
+    handleSettingsAction(settingsUi.poll(nowMs), nowMs);
+  } else {
+    handleUiAction(wifiSetupUi.poll(nowMs, !connectionController.pendingActive() &&
+                                         !connectionController.physicalPortalActive()), nowMs);
+  }
+  if (settingsUi.takeFullRenderRequest()) redrawCurrentView(nowMs);
   if (wifiSetupUi.takeFullRenderRequest()) {
     redrawCurrentView(nowMs);
   }
   switch (currentDisplaySurface()) {
     case DisplaySurface::Calibration:
+      return;
+    case DisplaySurface::Settings:
       return;
     case DisplaySurface::Setup:
       wifiSetupUi.renderDynamic(camperNetwork.status());
@@ -653,6 +737,8 @@ void updateClockAndStatusWhenDue(uint32_t nowMs) {
   switch (currentDisplaySurface()) {
     case DisplaySurface::Calibration:
       return;
+    case DisplaySurface::Settings:
+      return;
     case DisplaySurface::Setup:
       wifiSetupUi.renderDynamic(camperNetwork.status());
       return;
@@ -700,6 +786,8 @@ void setup() {
   }
 
   touchInputReady = touchInput.begin();
+  timeSettingsStore.load(activeTimeSettings);
+  applyTimeSettings(activeTimeSettings);
 #ifdef CYD_SIMULATION
   // Initialize local sockets for the real portal without Wi-Fi or NTP traffic.
   if (!Network.begin()) {
@@ -707,7 +795,7 @@ void setup() {
     return;
   }
 #else
-  configTime(kTimezoneOffsetSeconds, 0, "pool.ntp.org", "time.google.com");
+  configTzTime(findTimeZone(activeTimeSettings.zoneId)->posix, "pool.ntp.org", "time.google.com");
 #endif
   modbusWorkerReady = startModbusWorker();
   if (!modbusWorkerReady) {

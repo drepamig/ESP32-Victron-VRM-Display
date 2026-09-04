@@ -215,6 +215,32 @@ void testScanTerminalRouting() {
 // Mutation caught: removing calibration priority would let the setup or dashboard
 // renderer overwrite the touch calibration targets while calibration is incomplete.
 void testCalibrationExclusivelyOwnsDisplayUntilComplete() {
+  TouchSurfaceGate contact;
+  contact.press(DisplaySurface::Settings, true);
+  check(!contact.allowMove(DisplaySurface::Dashboard),
+        "holding Settings Back cannot start a WAN gesture on the dashboard");
+  contact.release();
+  check(!contact.allowMove(DisplaySurface::Dashboard), "move requires a fresh press");
+  contact.press(DisplaySurface::Dashboard, false);
+  check(!contact.allowMove(DisplaySurface::Dashboard), "pending attempt rejects the whole contact");
+  contact.press(DisplaySurface::Dashboard, true);
+  check(contact.allowMove(DisplaySurface::Dashboard) && !contact.allowMove(DisplaySurface::Setup),
+        "fresh contact permits WAN sliding but cannot activate a newly shown result");
+  check(displaySurfaceFor(true, false, false, true) == DisplaySurface::Calibration,
+        "calibration also takes priority over general Settings");
+  check(displaySurfaceFor(true, true, false, true) == DisplaySurface::Settings,
+        "Settings owns rendering when open");
+  check(displaySurfaceFor(true, true, true, true) == DisplaySurface::Setup,
+        "Wi-Fi attempt view retains priority over Settings");
+  check(canOpenSettings(DisplaySurface::Dashboard, false, false), "idle dashboard permits Settings");
+  check(!canOpenSettings(DisplaySurface::Dashboard, true, false) &&
+        !canOpenSettings(DisplaySurface::Dashboard, false, true) &&
+        !canOpenSettings(DisplaySurface::Setup, false, false),
+        "background attempt, portal and setup retain interaction ownership");
+  check(returnToSettings(WifiSetupOrigin::Settings, true) &&
+        !returnToSettings(WifiSetupOrigin::Settings, false) &&
+        !returnToSettings(WifiSetupOrigin::Dashboard, true),
+        "only explicit Wi-Fi Back from Settings returns there");
   check(displaySurfaceFor(true, false, false) == DisplaySurface::Calibration,
         "uncalibrated touch owns the display instead of dashboard rendering");
   check(displaySurfaceFor(true, false, true) == DisplaySurface::Calibration,
@@ -331,6 +357,12 @@ void testRecordedCenterHeaderPainter() {
   paintCenterHeaderText(display, prior, "--:--", false, true);
   check(display.clearX == 139 && display.clearWidth == 43 && prior == 39,
         "full frame must reset retained width before current clock paint");
+  paintCenterHeaderText(display, prior, "23:59", false, false, 0, "PM");
+  check(prior == 105 && display.drawFont == 2 && display.drawX == 193,
+        "AM/PM is measured as part of the retained width and drawn in small font");
+  paintCenterHeaderText(display, prior, "HOLD 3", true, false);
+  check(display.clearWidth == 109 && display.drawX == 160,
+        "hold transition clears the entire previous AM/PM clock");
 }
 
 }  // namespace

@@ -1,8 +1,18 @@
 # Linux continuation handoff
 
-Updated 2026-09-04 after the verified physical upload of R2 firmware `d69e0cf`. The tracked
+Updated 2026-09-04 after issue #1 time-settings verification; the latest physical
+upload remains R2 firmware `d69e0cf`. The tracked
 [status and acceptance record](../../README.md) is the current task tracker;
 this handoff preserves the earlier bench evidence and continuation context.
+
+Issue #1 adds Modbus time settings on `develop`: dashboard gear → Time/Wi-Fi,
+12/24-hour format, 65 named North American/UTC zones, and dedicated NVS
+persistence. Defaults are America/Chicago and 12-hour AM/PM. Read the
+[time-settings plan](../../superpowers/plans/2026-09-04-time-settings.md).
+This change has not been flashed; its physical acceptance remains pending.
+The [verification record](../../research/2026-09-04-time-settings.md) includes
+19 C++ suites, 60 tooling tests, three builds/isolation, independent review,
+and seven local scenarios with 46 exact comparisons against reviewed goldens.
 
 This bundle is the portable continuation record for the camper gateway work
 originally developed on branch `codex/esp32-venus-starlink-touch-bridge`.

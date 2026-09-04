@@ -26,14 +26,48 @@ enum class ScanUiOutcome : uint8_t {
 enum class DisplaySurface : uint8_t {
   Calibration,
   Setup,
+  Settings,
   Dashboard,
 };
 
-inline DisplaySurface displaySurfaceFor(bool touchReady, bool calibrated, bool setupOpen) {
+inline DisplaySurface displaySurfaceFor(bool touchReady, bool calibrated, bool setupOpen,
+                                       bool settingsOpen = false) {
   if (touchReady && !calibrated) {
     return DisplaySurface::Calibration;
   }
-  return setupOpen ? DisplaySurface::Setup : DisplaySurface::Dashboard;
+  if (setupOpen) return DisplaySurface::Setup;
+  return settingsOpen ? DisplaySurface::Settings : DisplaySurface::Dashboard;
+}
+
+enum class WifiSetupOrigin : uint8_t { Dashboard, Settings };
+
+inline bool canOpenSettings(DisplaySurface surface, bool pendingAttempt, bool portalActive) {
+  return surface == DisplaySurface::Dashboard && !pendingAttempt && !portalActive;
+}
+
+inline bool returnToSettings(WifiSetupOrigin origin, bool explicitBack) {
+  return origin == WifiSetupOrigin::Settings && explicitBack;
+}
+
+class TouchSurfaceGate {
+ public:
+  void press(DisplaySurface surface, bool permitted) { surface_ = surface; active_ = permitted; }
+  bool allowMove(DisplaySurface surface) const { return active_ && surface == surface_; }
+  void release() { active_ = false; }
+ private:
+  DisplaySurface surface_ = DisplaySurface::Dashboard;
+  bool active_ = false;
+};
+
+// A successful POST stops the portal too. Consume it before treating an inactive
+// portal as expiry, after the main loop has polled its deadline/server.
+template <typename Portal, typename Submission, typename Submit, typename Expire>
+inline void coordinatePortalLifecycle(bool savedAttempt, bool physicalPortalActive,
+                                      Portal& portal, Submission& submission,
+                                      Submit submit, Expire expire) {
+  if (savedAttempt) return;
+  if (portal.takeSubmission(submission)) { submit(submission); return; }
+  if (physicalPortalActive && !portal.active()) expire();
 }
 
 inline bool shouldPaintDashboardWan(bool fullFrameCleared, int countdown, int phase,
@@ -57,15 +91,19 @@ inline void coordinateSetupInteraction(CaptureTouch captureTouch, HasPendingRend
 
 template <typename Display>
 inline void paintCenterHeaderText(Display& display, int& previousWidth, const char* text,
-                                  bool holdLabel, bool fullFrameCleared, int background = 0) {
+                                  bool holdLabel, bool fullFrameCleared, int background = 0,
+                                  const char* meridiem = "") {
   if (fullFrameCleared) {
     previousWidth = 0;
   }
   const int font = holdLabel ? 2 : 4;
-  const int currentWidth = display.textWidth(text, font);
+  const int numberWidth = display.textWidth(text, font);
+  const int suffixWidth = !holdLabel && meridiem[0] ? display.textWidth(meridiem, 2) + 3 : 0;
+  const int currentWidth = numberWidth + suffixWidth;
   const int width = previousWidth > currentWidth ? previousWidth : currentWidth;
   display.fillRect(160 - width / 2 - 2, 0, width + 4, 20, background);
-  display.drawString(text, 160, holdLabel ? 12 : 11, font);
+  display.drawString(text, 160 - suffixWidth / 2, holdLabel ? 12 : 11, font);
+  if (suffixWidth) display.drawString(meridiem, 160 + (numberWidth + 3) / 2, 11, 2);
   previousWidth = currentWidth;
 }
 

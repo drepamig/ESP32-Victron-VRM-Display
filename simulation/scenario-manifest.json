@@ -2,6 +2,12 @@
   "schema": 1,
   "scenarios": [
     {
+      "name": "time-settings",
+      "file": "velxio/time-settings.yaml",
+      "backends": ["velxio"],
+      "screenshots": ["central-default","springbefore","springafter","fallbefore","fallafter","settings-menu","time-default","draft-24h","discarded-draft","countries","canada","canada-page-two","mexico","utc-draft","utc-24h","wifi-from-settings","wifi-back-settings","persisted-dashboard","persisted-settings","timeout-discard","unavailable"]
+    },
+    {
       "name": "boot-calibration",
       "file": "scenarios/boot-calibration.yaml",
       "screenshots": [

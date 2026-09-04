@@ -6,13 +6,13 @@
 
 class SimulationClock {
  public:
-  const char* text() const;
   uint32_t epoch() const;
   bool setFixture(const char* fixture);
   void resetFixture();
 
  private:
-  enum class Fixture { Fixed, Morning, Evening, Unavailable };
+  enum class Fixture { Fixed, Morning, Evening, Unavailable,
+                       SpringBefore, SpringAfter, FallBefore, FallAfter };
   Fixture fixture_ = Fixture::Fixed;
 };
 

@@ -1,0 +1,273 @@
+name: Time settings navigation, DST and persistence
+version: 1
+steps:
+- wait-serial: SIM READY
+- touch:
+    part-id: lcd1
+    x: 20
+    y: 20
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 219
+    y: 20
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 219
+    y: 299
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 20
+    y: 299
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- delay: 1200ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/central-default.png
+- write-serial: "SIM clock=springbefore\n"
+- wait-serial: SIM OK
+- delay: 1200ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/springbefore.png
+- write-serial: "SIM clock=springafter\n"
+- wait-serial: SIM OK
+- delay: 1200ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/springafter.png
+- write-serial: "SIM clock=fallbefore\n"
+- wait-serial: SIM OK
+- delay: 1200ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/fallbefore.png
+- write-serial: "SIM clock=fallafter\n"
+- wait-serial: SIM OK
+- delay: 1200ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/fallafter.png
+- write-serial: "SIM clock=fixed\n"
+- wait-serial: SIM OK
+- delay: 1200ms
+- touch:
+    part-id: lcd1
+    x: 14
+    y: 7
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/settings-menu.png
+- touch:
+    part-id: lcd1
+    x: 91
+    y: 93
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/time-default.png
+- touch:
+    part-id: lcd1
+    x: 170
+    y: 96
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/draft-24h.png
+- touch:
+    part-id: lcd1
+    x: 27
+    y: 17
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 91
+    y: 93
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/discarded-draft.png
+- touch:
+    part-id: lcd1
+    x: 170
+    y: 96
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 113
+    y: 219
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/countries.png
+- touch:
+    part-id: lcd1
+    x: 91
+    y: 106
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/canada.png
+- touch:
+    part-id: lcd1
+    x: 191
+    y: 300
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/canada-page-two.png
+- touch:
+    part-id: lcd1
+    x: 27
+    y: 17
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 91
+    y: 143
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/mexico.png
+- touch:
+    part-id: lcd1
+    x: 27
+    y: 17
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 91
+    y: 181
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/utc-draft.png
+- touch:
+    part-id: lcd1
+    x: 191
+    y: 300
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 27
+    y: 17
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- delay: 1200ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/utc-24h.png
+- touch:
+    part-id: lcd1
+    x: 14
+    y: 7
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 91
+    y: 171
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/wifi-from-settings.png
+- touch:
+    part-id: lcd1
+    x: 27
+    y: 17
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/wifi-back-settings.png
+- touch:
+    part-id: lcd1
+    x: 27
+    y: 17
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- reboot: preserve-flash
+- wait-serial: SIM READY
+- delay: 1200ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/persisted-dashboard.png
+- touch:
+    part-id: lcd1
+    x: 14
+    y: 7
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- touch:
+    part-id: lcd1
+    x: 91
+    y: 93
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/persisted-settings.png
+- touch:
+    part-id: lcd1
+    x: 59
+    y: 96
+    duration: 160ms
+    wait: true
+- delay: 250ms
+- delay: 61000ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/timeout-discard.png
+- write-serial: "SIM clock=unavailable\n"
+- wait-serial: SIM OK
+- delay: 1200ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/time-settings/unavailable.png
