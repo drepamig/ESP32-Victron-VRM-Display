@@ -5,6 +5,7 @@
 #include <TFT_eSPI.h>
 
 #include "SettingsUi.h"
+#include "VenusConnectionStatus.h"
 
 namespace {
 void check(bool condition, const char* message) {
@@ -40,7 +41,20 @@ struct Fixture {
     check(tap(160, 164) == SettingsAction::None && ui.view() == SettingsView::Countries,
           "Change timezone opens country selection");
   }
+
+  void openVenus() {
+    check(tap(160, 184) == SettingsAction::None && ui.view() == SettingsView::Venus,
+          "Venus OS row opens the Venus status page without performing an external action");
+  }
 };
+
+VenusConnectionStatus venusStatus(const char* address, bool current, bool reachable) {
+  VenusConnectionStatus status{};
+  std::strcpy(status.address, address);
+  status.current = current;
+  status.reachable = reachable;
+  return status;
+}
 
 // Break caught: a gear press or held finger accidentally activates a newly shown row.
 void testEntryAndEveryContactActivateOnlyOnce() {
@@ -201,6 +215,67 @@ void testPaginationSelectionAndRevisit() {
         "Mexico has its own city list");
 }
 
+// Break caught: Venus status is missing, stale state is presented as current, or updates repaint hidden views.
+void testVenusStatusRenderingAndNavigation() {
+  Fixture f;
+  check(f.ui.takeFullRenderRequest(), "opening Settings requests the initial root render");
+  f.ui.render();
+  check(f.display.drew("Venus OS"), "Settings root renders Venus OS as its third menu row");
+  const VenusConnectionStatus connected = venusStatus("192.168.1.73", true, true);
+  f.ui.setVenusStatus(connected);
+  check(!f.ui.takeFullRenderRequest(), "changing Venus status does not redraw an unseen page");
+  check(f.ui.handleTouch({160, 184}, f.now++) == SettingsAction::None &&
+            f.ui.view() == SettingsView::Venus,
+        "a fresh contact opens Venus OS from the Settings root");
+  check(f.ui.takeFullRenderRequest(), "opening Venus OS requests its page render");
+  f.ui.render();
+  check(f.display.drew("Venus OS") && f.display.drew("192.168.1.73") &&
+            f.display.drew("Connected"),
+        "a current reachable Venus shows its address and connected state");
+  check(!f.display.drew("Last seen"), "a current Venus address is not marked stale");
+  check(f.ui.handleTouch({30, 18}, f.now++) == SettingsAction::None &&
+            f.ui.view() == SettingsView::Venus,
+        "a held contact cannot leave the newly opened Venus page");
+  f.ui.handleRelease(f.now++);
+
+  f.ui.setVenusStatus(connected);
+  check(!f.ui.takeFullRenderRequest(), "unchanged visible Venus status does not redraw");
+  f.ui.setVenusStatus(venusStatus("192.168.1.73", true, false));
+  check(f.ui.takeFullRenderRequest(), "a changed visible Venus status requests redraw");
+  f.ui.render();
+  check(f.display.drew("192.168.1.73") && f.display.drew("Disconnected"),
+        "a current unreachable Venus shows its address and disconnected state");
+
+  f.ui.setVenusStatus(venusStatus("192.168.1.73", false, false));
+  check(f.ui.takeFullRenderRequest(), "a current-to-stale Venus transition requests redraw");
+  f.ui.render();
+  check(f.display.drew("Last seen") && f.display.drew("192.168.1.73") &&
+            f.display.drew("Disconnected"),
+        "a last-seen Venus address is visibly stale and disconnected");
+
+  f.ui.setVenusStatus(venusStatus("", false, false));
+  check(f.ui.takeFullRenderRequest(), "clearing a visible Venus status requests redraw");
+  f.ui.render();
+  check(f.display.drew("Not found") && f.display.drew("Disconnected"),
+        "an unknown Venus shows not found and disconnected state");
+
+  f.ui.setVenusStatus(venusStatus("", true, true));
+  check(f.ui.takeFullRenderRequest(), "unknown Venus status flags still request a visible redraw");
+  f.ui.render();
+  check(f.display.drew("Not found") && f.display.drew("Disconnected"),
+        "an empty Venus address cannot render as connected even when its flags are true");
+
+  check(f.tap(30, 18) == SettingsAction::None && f.ui.view() == SettingsView::Root,
+        "Venus Back returns to the Settings root");
+
+  check(f.ui.handleTouch({160, 184}, f.now++) == SettingsAction::None &&
+            f.ui.view() == SettingsView::Venus,
+        "a fresh contact opens Venus OS from the Settings root");
+  const uint32_t lastActivity = f.now - 1;
+  check(f.ui.poll(lastActivity + 60000) == SettingsAction::Exit && !f.ui.isOpen(),
+        "Venus page exits after the standard inactivity timeout");
+}
+
 // Break caught: modal timeouts preserve unsaved settings, ignore picker screens, or fail at wrap.
 void testTimeoutEveryViewAndWrapSafeActivity() {
   for (int depth = 0; depth < 4; ++depth) {
@@ -236,6 +311,7 @@ int main() {
   testSaveHandoffFailureRetryAndRebase();
   testPickerBackPreservesDraftAndSelection();
   testPaginationSelectionAndRevisit();
+  testVenusStatusRenderingAndNavigation();
   testTimeoutEveryViewAndWrapSafeActivity();
   std::puts("settings_ui_test: all passed");
   return 0;

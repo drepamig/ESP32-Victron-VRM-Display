@@ -6,6 +6,7 @@
 #include <freertos/queue.h>
 #include "GatewayPolicy.h"
 #include "NetworkProfiles.h"
+#include "Ipv4Bridge.h"
 
 enum class WanPhase : uint8_t { Offline, Connecting, Validating, Online };
 
@@ -43,6 +44,7 @@ class CamperNetwork {
   void clearScanFailure();
   size_t scanResults(ScanResult* output, size_t capacity);
   CamperNetworkStatus status() const;
+  BridgeNetworkSnapshot bridgeSnapshot(uint32_t nowMs) const;
   bool pendingProfileConnected() const;
   void acceptPendingProfile();
   void cancelPendingProfile(bool clearTransientStationConfig = true);
@@ -73,4 +75,5 @@ class CamperNetwork {
   uint32_t retryDeadlineMs_ = 0;
   uint32_t validationDeadlineMs_ = 0;
   QueueHandle_t validationQueue_ = nullptr;
+  Ipv4Bridge bridge_;
 };

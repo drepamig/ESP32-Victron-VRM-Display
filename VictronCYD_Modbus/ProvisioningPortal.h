@@ -8,7 +8,8 @@
 
 class ProvisioningPortal {
  public:
-  ProvisioningPortal();
+  using ClientCheck = bool (*)(const IPAddress&, void*);
+  explicit ProvisioningPortal(ClientCheck clientCheck = nullptr, void* context = nullptr);
 
   bool begin(const String& selectedSsid, uint8_t securityType, uint32_t nowMs);
   void poll(uint32_t nowMs);
@@ -30,6 +31,8 @@ class ProvisioningPortal {
   void clearPendingSubmission();
 
   WebServer server_{80};
+  ClientCheck clientCheck_;
+  void* clientContext_;
   bool handlersRegistered_ = false;
   bool active_ = false;
   bool pendingReady_ = false;

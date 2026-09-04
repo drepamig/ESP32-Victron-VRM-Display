@@ -1,0 +1,39 @@
+name: Venus address, status and fallback display
+version: 1
+steps:
+  - wait-serial: SIM READY
+  - touch: {part-id: lcd1, x: 20, y: 20, duration: 160ms, wait: true}
+  - delay: 250ms
+  - touch: {part-id: lcd1, x: 219, y: 20, duration: 160ms, wait: true}
+  - delay: 250ms
+  - touch: {part-id: lcd1, x: 219, y: 299, duration: 160ms, wait: true}
+  - delay: 250ms
+  - touch: {part-id: lcd1, x: 20, y: 299, duration: 160ms, wait: true}
+  - delay: 2400ms
+  - touch: {part-id: lcd1, x: 14, y: 7, duration: 160ms, wait: true}
+  - delay: 250ms
+  - take-screenshot: {part-id: lcd1, save-to: '../../build/simulation/results/venus-address/settings-menu.png'}
+  - touch: {part-id: lcd1, x: 119, y: 250, duration: 160ms, wait: true}
+  - delay: 250ms
+  - take-screenshot: {part-id: lcd1, save-to: '../../build/simulation/results/venus-address/current.png'}
+  - write-serial: "SIM venus=changed\n"
+  - wait-serial: SIM OK
+  - delay: 2500ms
+  - take-screenshot: {part-id: lcd1, save-to: '../../build/simulation/results/venus-address/changed.png'}
+  - write-serial: "SIM modbus=offline\n"
+  - wait-serial: SIM OK
+  - delay: 2500ms
+  - take-screenshot: {part-id: lcd1, save-to: '../../build/simulation/results/venus-address/unreachable.png'}
+  - write-serial: "SIM venus=offline\n"
+  - wait-serial: SIM OK
+  - delay: 500ms
+  - take-screenshot: {part-id: lcd1, save-to: '../../build/simulation/results/venus-address/last-seen.png'}
+  - write-serial: "SIM modbus=nominal\n"
+  - wait-serial: SIM OK
+  - write-serial: "SIM venus=fallback\n"
+  - wait-serial: SIM OK
+  - delay: 2500ms
+  - take-screenshot: {part-id: lcd1, save-to: '../../build/simulation/results/venus-address/fallback.png'}
+  - touch: {part-id: lcd1, x: 27, y: 17, duration: 160ms, wait: true}
+  - delay: 250ms
+  - take-screenshot: {part-id: lcd1, save-to: '../../build/simulation/results/venus-address/back-settings.png'}

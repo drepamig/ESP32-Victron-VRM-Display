@@ -3,6 +3,7 @@
 #ifdef CYD_SIMULATION
 
 #include "CamperNetwork.h"
+#include "Ipv4Bridge.h"
 
 class SimCamperNetwork {
  public:
@@ -19,6 +20,8 @@ class SimCamperNetwork {
   void clearScanFailure();
   size_t scanResults(ScanResult* output, size_t capacity);
   CamperNetworkStatus status() const;
+  BridgeNetworkSnapshot bridgeSnapshot(uint32_t nowMs) const;
+  bool setVenusFixture(const char* fixture);
   bool pendingProfileConnected() const;
   void acceptPendingProfile();
   void cancelPendingProfile(bool clearTransientStationConfig = true);
@@ -48,6 +51,8 @@ class SimCamperNetwork {
   uint32_t connectionReadyAtMs_ = 0;
   IPAddress upstreamAddress_;
   int32_t upstreamRssi_ = 0;
+  uint32_t venusAddress_ = 0xc0000232;
+  uint32_t bridgeGeneration_ = 1;
 };
 
 #endif

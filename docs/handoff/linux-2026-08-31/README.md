@@ -29,15 +29,18 @@ See the [upload record](../../research/2026-09-04-time-settings-upload.md).
 
 The current branch implements:
 
-- a persistent private `Camper-Victron` AP at `192.168.50.1/24`;
-- outbound NAPT through one explicitly selected upstream Wi-Fi profile;
+- a persistent `Camper-Victron` AP with upstream IPv4 DHCP while connected,
+  reverting to `192.168.50.1/24` local DHCP when upstream Wi-Fi/IP is lost;
+- bidirectional IPv4 access through one explicitly selected upstream Wi-Fi profile;
 - a realtime Victron Modbus dashboard whose GX and WAN health are independent;
 - XPT2046 resistive-touch calibration stored separately in NVS;
 - a physically activated on-device keyboard for secured upstream networks, with
   the time-limited phone portal available through **Use phone**; and
 - touch management for up to five saved upstream profiles.
 
-Do not modify Venus OS files, add inbound forwarding, log credentials, or let
+The [approved IPv4 repeater design](../../superpowers/specs/2026-09-04-ipv4-repeater-design.md)
+supersedes the original outbound-only NAPT restriction. Real network acceptance
+of this change remains pending. Do not modify Venus OS files, log credentials, or let
 the firmware silently roam to a stronger saved profile.
 
 ## Completed development
@@ -134,8 +137,9 @@ its password to tracked files or logs.
    character count, and Connect gating.
 2. Enter the password on-device and verify WAN progresses through
    connecting/validating to online.
-3. Join a laptop to `Camper-Victron`; verify `192.168.50.1`, DNS resolution,
-   and outbound HTTPS through NAPT.
+3. Join a laptop to `Camper-Victron`; verify an upstream DHCP address, DNS,
+   outbound HTTPS, and direct IPv4 access from another upstream client. Repeat
+   without the uplink and verify local DHCP with the ESP32 at `192.168.50.1`.
 4. Try deliberately bad credentials and prove the previously active profile is
    restored, the password returns masked and editable, and the bad password is
    absent from output.

@@ -1,6 +1,6 @@
 # Gateway status and acceptance record
 
-Updated 2026-09-04 after the issue #1 time-settings release and verified upload.
+Updated 2026-09-04 for the approved IPv4 repeater implementation.
 The latest verified physical upload is firmware `8e2cd3b`. This is the tracked status
 record for the ESP32 Venus-Starlink touch bridge. Work in the current checkout
 on `develop` according to [AGENTS.md](../AGENTS.md).
@@ -24,13 +24,13 @@ reviewed `6ef6c93` baseline.
 | 1: Fork and baseline | Implemented; the firmware repository is now the current checkout. |
 | 2: Pure gateway policies | Implemented with host coverage. |
 | 3: Persistent profiles | Implemented with transactional storage and host coverage; saved activation is implemented under R1 below. |
-| 4: AP, NAPT, uplink and scans | Implemented, including the R2 outage correction; physical routing/recovery acceptance is pending. |
+| 4: AP, uplink and scans | NAPT replaced by the approved IPv4 repeater; physical routing/recovery acceptance is pending. |
 | 5: Touch and calibration | Implemented; inset mapping correction and historical hardware checks passed. |
 | 6: Network-selection UI | Implemented; historical navigation checks passed; keyboard entry was added later. |
 | 7: Physical phone portal | Implemented and retained as the explicit **Use phone** fallback; hardware boundaries remain to be exercised. |
 | 8: Application integration | Implemented; R1 now uses the shared connection controller. |
 | 9: Independent ESP32 bench | Partially complete; remaining checks are listed below. |
-| 10: Venus migration | Pending; supported configuration, stable addressing, TCP 502, and rollback must be established at the camper. |
+| 10: Venus migration | Pending; configure DHCP on the ESP32 AP and verify learned MAC/address, TCP 502/22, and rollback at the camper. |
 | 11: End-to-end field acceptance | Pending; requires real Starlink and live Venus/GX together. |
 | 12: Final documentation and verification | Partially complete; current docs/tooling exist, but measured acceptance, deployment/rollback runbook, and final review remain open. |
 
@@ -41,6 +41,27 @@ share the pending-profile path. The
 [virtual bench plan](superpowers/plans/2026-09-03-cyd-virtual-bench.md) is
 implemented and was merged at `4e5384f`; simulated network/GX evidence does not
 complete physical gateway acceptance.
+
+## IPv4 repeater and Venus address
+
+The [approved design](superpowers/specs/2026-09-04-ipv4-repeater-design.md)
+replaces outbound-only NAPT with bidirectional IPv4 forwarding. AP clients use
+upstream DHCP while the selected Wi-Fi connection has an address. Loss of that
+connection restores local DHCP; DNS/Internet-only failure does not renumber
+clients. Address-domain changes reconnect AP clients to renew their leases.
+
+The dashboard learns Venus from successful Modbus reads among observed AP
+clients and persists its MAC in a separate `venusidentity` namespace. Modbus
+follows that MAC's address; late results from a previous address/domain cannot
+make the current device healthy. **Settings → Venus OS** shows the IP and
+connection status, with **Last seen** for a missing device. It has no SSH text.
+The existing phone portal remains physically activated and checks AP-client
+membership; its screen follows the ESP32's current management address.
+
+See the [verification and physical acceptance record](research/2026-09-04-ipv4-repeater.md).
+This implementation has not been flashed. The physical upload above still
+contains the earlier NAPT behavior. Direct upstream SSH, real DHCP forwarding,
+outage/recovery, and live Modbus acceptance remain pending.
 
 ## Issue #1: Time configuration
 
@@ -68,7 +89,7 @@ Velxio is the chosen local simulator backend alongside the existing host
 tests. Use local host/tooling tests, firmware builds, and Velxio for supported
 UI, navigation, and simulated-behavior scenarios. Reserve Wokwi for targeted comparisons
 or an agreed release checkpoint. Physical hardware remains the acceptance
-authority for real Wi-Fi/AP/NAPT, reboot persistence, and deployment behavior.
+authority for real Wi-Fi/IPv4 forwarding, reboot persistence, and deployment behavior.
 
 The [Velxio runner](superpowers/plans/2026-09-03-velxio-local-runner.md) now pins
 the runtime/adapters, builds an isolated DIO image, and runs offline against
@@ -76,7 +97,8 @@ dummy inputs. `sim-build`, `sim-test`, and `all` default to local execution.
 Cloud runs require an explicit Wokwi backend and scenario/full-suite selection;
 there is no fallback. Golden promotion reuses reviewed recorded local captures.
 See the [implementation evidence](research/2026-09-03-velxio-local-runner.md).
-R2 adds `wan-outage` and issue #1 adds `time-settings`. Seven local scenarios
+R2 adds `wan-outage`, issue #1 adds `time-settings`, and the repeater adds
+`venus-address`. Eight local scenarios
 are supported; six earlier scenarios still lack local
 acceptance, and all outstanding physical acceptance remains open. The next task
 is controlled Task 9 hardware acceptance.
@@ -155,6 +177,7 @@ responsive setup, AP availability, and recovery after an NVS-preserving upload.
 
 | Evidence | Result and scope |
 | --- | --- |
+| IPv4 repeater | 23 C++ suites, 61 Python tests, production and local DIO builds, current attestation/isolation, independent code approval, and four local scenarios with 42 exact RGBA matches after review. Not flashed; real DHCP/SSH/Modbus pending. [Evidence](research/2026-09-04-ipv4-repeater.md). |
 | Issue #1: time settings | 19 C++ suites, 60 Python tests, three builds, both attestations/isolation, independent review, seven completed local scenarios and 46 exact RGBA matches after reviewed recorded promotion. Physical acceptance pending. [Evidence](research/2026-09-04-time-settings.md). |
 | R2: host/tooling matrix | Passed: 17 C++ suites and 55 Python tooling tests. Production outage, fixture, parser, and protocol regressions failed before implementation. |
 | R2: builds and isolation | Production 1,038,790 bytes flash / 49,532 globals; local DIO 559,944 / 34,516; standard simulator 559,928 / 34,516. All builds, both attestations, and production isolation passed. |
@@ -227,9 +250,9 @@ not establish timing bounds or uninterrupted routing.
 ## Remaining Task 9 acceptance
 
 R1 and R2 implementation, automated verification, and review are complete.
-The privately configured `8e2cd3b` image is now uploaded and verified. Use that
-image for acceptance; if source or configuration changes, rebuild the reviewed
-source and preserve NVS during the next verified upload.
+The privately configured `8e2cd3b` image is uploaded and verified, but predates
+the repeater. Build the reviewed repeater source with the private configuration
+and preserve NVS during the next verified upload before its acceptance checks.
 Use a controlled bench upstream in place of real Starlink; keep its SSID and
 password out of tracked results.
 
@@ -239,15 +262,16 @@ password out of tracked results.
       and reboot persistence through the on-device entry path.
 - [ ] Verify Back/cancel, masked correction after failure, and the five-minute
       entry inactivity timeout; confirm failure restores the correct profile.
-- [ ] From a laptop on the private AP, verify local gateway reachability, DNS,
-      and outbound HTTPS through NAPT; measure any scan/channel interruption.
+- [ ] From a laptop on the AP, verify upstream DHCP, DNS, outbound HTTPS and
+      direct upstream access to AP clients. Verify local DHCP without upstream;
+      measure scan/channel and addressing-domain interruptions.
 - [ ] Add a second controlled profile, switch both ways, verify active marker
       and reboot persistence, cancel a pending switch, force a failed switch and
       confirm rollback to the previous active profile with the private AP available.
       Cancel/confirm deletion, and exercise early cancellation and completion of
       the ten-second Clear Saved hold.
 - [ ] Exercise **Use phone**: physical activation, wrong-code rejection,
-      ten-minute expiry, single use, cancellation, and AP-subnet restriction.
+      ten-minute expiry, single use, cancellation, and AP-client membership.
 - [ ] Disable the selected upstream for at least five minutes; verify red WAN,
       responsive setup, continuous AP availability, and no no-data reboot.
       Restore it, observe Validating then Online, and measure reconnect without
@@ -259,7 +283,7 @@ password out of tracked results.
 | --- | --- | --- |
 | Scan duration and AP/channel interruption | Pending | Not measured |
 | Association/DHCP and WAN validation time | Pending | Not measured |
-| NAPT DNS/HTTPS and local reachability | Pending | Not measured |
+| IPv4 forwarding, DNS/HTTPS and local reachability | Pending | Not measured |
 | Portal timeout and closure | Pending | Not measured on hardware |
 | Five-minute outage and reconnect time | Pending | Not measured on hardware |
 

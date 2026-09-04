@@ -895,6 +895,12 @@ void WifiSetupUi::renderSavedConnecting() {
   display_.drawString("Back to cancel", 160, 160, 2);
 }
 
+void WifiSetupUi::setPortalAddress(const IPAddress& address) {
+  if (portalAddress_ == address) return;
+  portalAddress_ = address;
+  if (view_ == WifiSetupView::Portal) requestFullRender();
+}
+
 void WifiSetupUi::renderSaved() {
   display_.setTextDatum(TL_DATUM);
   for (size_t row = 0; row < savedProfileCount_; ++row) {
@@ -1023,7 +1029,10 @@ void WifiSetupUi::renderPortal() {
   display_.drawString(portalSsid_, display_.width() / 2, 82, 2);
   display_.drawString("Join Camper-Victron, then open", display_.width() / 2, 112, 2);
   display_.setTextColor(TFT_CYAN, kBackground);
-  display_.drawString("http://192.168.50.1/setup", display_.width() / 2, 137, 2);
+  char address[40];
+  std::snprintf(address, sizeof(address), "http://%u.%u.%u.%u/setup",
+                portalAddress_[0], portalAddress_[1], portalAddress_[2], portalAddress_[3]);
+  display_.drawString(address, display_.width() / 2, 137, 2);
   display_.setTextColor(TFT_WHITE, kBackground);
   display_.drawString("Pairing code", display_.width() / 2, 168, 2);
   display_.drawString(portalCode_, display_.width() / 2, 191, 4);

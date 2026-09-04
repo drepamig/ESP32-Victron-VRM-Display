@@ -1,4 +1,4 @@
 {
   "schema": 1,
-  "supported": ["boot-calibration", "wan-hold", "setup-navigation", "saved-switch", "reboot-persistence", "wan-outage", "time-settings"]
+  "supported": ["boot-calibration", "wan-hold", "setup-navigation", "saved-switch", "reboot-persistence", "wan-outage", "time-settings", "venus-address"]
 }

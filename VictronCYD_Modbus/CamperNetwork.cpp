@@ -52,8 +52,7 @@ bool CamperNetwork::begin(const char* apSsid, const char* apPassword, uint32_t) 
     return false;
   }
   const bool apReady = WiFi.AP.create(apSsid, apPassword, 6, false, 4);
-  const bool naptReady = apReady && WiFi.AP.enableNAPT(true);
-  apReady_ = apReady && naptReady;
+  apReady_ = apReady && bridge_.begin();
   if (apReady_) {
     beginAttempted_ = true;
     WiFi.setAutoReconnect(false);
@@ -67,6 +66,7 @@ bool CamperNetwork::begin(const char* apSsid, const char* apPassword, uint32_t) 
 }
 
 void CamperNetwork::poll(uint32_t nowMs) {
+  bridge_.poll(stationReady(), nowMs);
   bool validationSucceeded = false;
   if (validationWorkerActive_ &&
       xQueueReceive(validationQueue_, &validationSucceeded, 0) == pdPASS) {
@@ -130,6 +130,7 @@ bool CamperNetwork::connect(const NetworkProfile& profile, uint32_t nowMs) {
     return false;
   }
 
+  bridge_.poll(false, nowMs);
   clearSelectedProfile();
   std::memcpy(selectedSsid_, profile.ssid.c_str(), ssidLength + 1);
   std::memcpy(selectedPassphrase_, profile.passphrase.c_str(), passphraseLength + 1);
@@ -258,6 +259,7 @@ void CamperNetwork::cancelPendingProfile(bool clearTransientStationConfig) {
     return;
   }
   WiFi.disconnect(false, clearTransientStationConfig);
+  bridge_.poll(false, millis());
   pendingProfile_ = false;
   selectedProfile_ = false;
   stationLifecycleActive_ = false;
@@ -271,6 +273,7 @@ void CamperNetwork::cancelPendingProfile(bool clearTransientStationConfig) {
 
 void CamperNetwork::disconnectUpstream() {
   WiFi.disconnect(false, true);
+  bridge_.poll(false, millis());
   pendingProfile_ = false;
   selectedProfile_ = false;
   stationLifecycleActive_ = false;
@@ -320,4 +323,8 @@ void CamperNetwork::clearSelectedProfile() {
 bool CamperNetwork::stationReady() const {
   return stationLifecycleActive_ && WiFi.isConnected() &&
          static_cast<uint32_t>(WiFi.localIP()) != 0 && WiFi.SSID() == String(selectedSsid_);
+}
+
+BridgeNetworkSnapshot CamperNetwork::bridgeSnapshot(uint32_t nowMs) const {
+  return bridge_.snapshot(nowMs);
 }

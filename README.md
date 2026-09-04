@@ -36,6 +36,10 @@ if you want to watch a site you're not on the same network as.
   **Use phone**.
 - Modbus time settings: persistent 12/24-hour display and named US, Canadian,
   Mexican, and UTC timezones with automatic seasonal changes where applicable.
+- IPv4 Wi-Fi repeater with upstream DHCP, direct upstream access to Venus, and
+  automatic local networking when the upstream Wi-Fi connection is unavailable.
+- **Settings → Venus OS** shows its current IP and Modbus connection status;
+  an unavailable device's previous address is marked **Last seen**.
 
 ## Development status
 
@@ -51,10 +55,10 @@ retain amber/Connecting. See the [status and acceptance record](docs/README.md) 
 evidence, remaining bench/field checks, and the latest recorded firmware upload.
 Continue development on `develop` following [AGENTS.md](AGENTS.md).
 
-## Modbus time and Wi-Fi settings
+## Modbus settings
 
-Tap the dashboard's upper-left gear to open **Settings**, then **Time** or
-**Wi-Fi**. Holding WAN for three seconds still opens Wi-Fi directly. Settings
+Tap the dashboard's upper-left gear to open **Settings**, then **Time**,
+**Wi-Fi**, or **Venus OS**. Holding WAN for three seconds still opens Wi-Fi directly. Settings
 and WAN entry wait until any active connection attempt finishes.
 
 In **Time**, choose **12h** or **24h** and use **Change timezone** to select a
@@ -111,18 +115,36 @@ settings below into `User_Setup.h` (or a selected custom setup):
 
 ## 2a. Realtime version (VictronCYD_Modbus) — recommended
 
-1. On the GX: **Settings → Services → Modbus TCP = ON**. Note the GX IP address
-   (Settings → Ethernet/WiFi).
+1. On the GX: **Settings → Services → Modbus TCP = ON**. Configure its Wi-Fi
+   interface for DHCP and join the ESP32's AP with the SSID/password below.
 2. Copy `VictronCYD_Modbus/secrets.example.h` to the ignored
    `VictronCYD_Modbus/secrets.h`. Set the private AP SSID and a 12–63-byte AP
-   password, `SECRET_GX_IP`, and `SECRET_SITE_NAME`. The GX must be reachable
-   from the private AP network; its migration remains a field acceptance task.
+   password and `SECRET_SITE_NAME`. The dashboard learns the GX address from
+   associated AP clients and remembers its MAC after successful Modbus reads.
+   A compiled GX address is no longer used.
 3. Build the reviewed source with this private configuration and the CYD TFT
    settings. For bench validation, use a verified upload that preserves NVS.
 4. Hold WAN for three seconds to open Network Setup. Select an upstream from
    Nearby; unknown protected networks open masked password entry. **Use phone**
    starts the private portal fallback. Upstream credentials are saved after
    successful association/DHCP; they are not compile-time settings.
+
+With an upstream connection, AP clients receive addresses from the upstream
+router. Other devices on that LAN can reach Venus directly at the address in
+**Settings → Venus OS**, including SSH when enabled on Venus. No ESP32 port
+forward or upstream static route is required. The upstream router provides the
+network perimeter; the ESP32 does not isolate its AP clients from that LAN.
+IPv6 and multicast discovery are outside this implementation's scope.
+
+When upstream Wi-Fi or its IP address is lost, the ESP32 restores local DHCP
+on `192.168.50.0/24`, with the ESP32 at `192.168.50.1`. Returning upstream or
+changing upstream subnets briefly reconnects AP clients so they renew their
+addresses. Internet/DNS failure alone leaves local addressing unchanged.
+Modbus follows the remembered Venus MAC through address changes. The phone
+setup screen displays the ESP32's current portal address.
+
+The [repeater acceptance record](docs/research/2026-09-04-ipv4-repeater.md)
+separates local verification from pending real Wi-Fi, DHCP, SSH, and Modbus checks.
 
 Follow the [remaining acceptance checks](docs/README.md#remaining-task-9-acceptance)
 before deployment. Saved-switch and WAN-outage hardware acceptance remain pending.
@@ -164,7 +186,8 @@ arduino-cli compile --fqbn esp32:esp32:esp32 VictronCYD_Modbus
 arduino-cli upload  --fqbn esp32:esp32:esp32 -p COM3 VictronCYD_Modbus   # your port
 ```
 
-The camper gateway variant requires Arduino-ESP32 3.3.11 and XPT2046_Touchscreen 1.4. The ESP32 core version is required for the supported `WiFi.AP.enableNAPT()` API.
+The camper gateway variant requires Arduino-ESP32 3.3.11 and XPT2046_Touchscreen 1.4.
+The IPv4 repeater adapter targets that core's pinned ESP-IDF 5.5.5/lwIP interfaces.
 
 ## CYD Virtual Bench
 
@@ -274,7 +297,7 @@ For a real deployment, use the normal sketch with the ignored production
 is not a real-GX release image.
 
 Before releasing, verify display inversion on the actual panel, resistive-touch
-noise and calibration feel, private AP/NAPT routing, real GX connectivity,
+noise and calibration feel, real IPv4 forwarding, GX connectivity,
 watchdog recovery, and a verified flash that does not erase NVS.
 
 ---

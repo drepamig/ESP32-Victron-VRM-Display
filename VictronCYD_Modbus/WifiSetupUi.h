@@ -84,6 +84,7 @@ class WifiSetupUi {
   void cancelCredentialAttempt();
   void cancelSavedConnection();
   void showPortal(const String& ssid, const String& code, uint32_t expiresAtMs);
+  void setPortalAddress(const IPAddress& address);
   void showResult(const String& message, bool success);
 
  private:
@@ -161,6 +162,7 @@ class WifiSetupUi {
   String savedConnectingSsid_;
   String portalSsid_;
   String portalCode_;
+  IPAddress portalAddress_{192, 168, 50, 1};
   uint32_t portalExpiresAtMs_ = 0;
   String resultMessage_;
   bool resultSuccess_ = false;

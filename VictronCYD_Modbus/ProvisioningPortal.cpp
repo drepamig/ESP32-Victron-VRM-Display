@@ -57,7 +57,8 @@ String escapeHtml(const char* value) {
 
 }  // namespace
 
-ProvisioningPortal::ProvisioningPortal() = default;
+ProvisioningPortal::ProvisioningPortal(ClientCheck clientCheck, void* context)
+    : clientCheck_(clientCheck), clientContext_(context) {}
 
 bool ProvisioningPortal::begin(const String& selectedSsid, uint8_t securityType, uint32_t nowMs) {
   const size_t ssidLength = selectedSsid.length();
@@ -172,9 +173,9 @@ void ProvisioningPortal::handleNotFound() {
 }
 
 bool ProvisioningPortal::requestAllowed() {
-  if (!active_) return false;
+  if (!active_ || clientCheck_ == nullptr) return false;
   const IPAddress remote = server_.client().remoteIP();
-  return remote[0] == 192 && remote[1] == 168 && remote[2] == 50;
+  return clientCheck_(remote, clientContext_);
 }
 
 void ProvisioningPortal::stopActiveSession() {

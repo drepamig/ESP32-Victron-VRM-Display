@@ -192,6 +192,8 @@ void SimCamperNetwork::setApFixture(bool ready, uint8_t clients) {
 }
 
 void SimCamperNetwork::resetFixtures() {
+  venusAddress_ = 0xc0000232;
+  ++bridgeGeneration_;
   connectionEstablished_ = false;
   beginAttempted_ = true;
   apReady_ = true;
@@ -206,6 +208,30 @@ void SimCamperNetwork::resetFixtures() {
   pendingConnected_ = false;
   upstreamAddress_ = IPAddress();
   upstreamRssi_ = 0;
+}
+
+BridgeNetworkSnapshot SimCamperNetwork::bridgeSnapshot(uint32_t) const {
+  BridgeNetworkSnapshot snapshot{};
+  snapshot.ready = apReady_;
+  snapshot.bridged = static_cast<uint32_t>(upstreamAddress_) != 0;
+  snapshot.generation = bridgeGeneration_;
+  if (apReady_ && apClients_ && venusAddress_) {
+    snapshot.count = 1;
+    snapshot.clients[0] = {{2,0,0,0,0,3}, venusAddress_};
+  }
+  return snapshot;
+}
+
+bool SimCamperNetwork::setVenusFixture(const char* fixture) {
+  if (!fixture) return false;
+  uint32_t next;
+  if (std::strcmp(fixture, "nominal") == 0) next = 0xc0000232;
+  else if (std::strcmp(fixture, "changed") == 0) next = 0xc0000249;
+  else if (std::strcmp(fixture, "fallback") == 0) next = 0xc0a83264;
+  else if (std::strcmp(fixture, "offline") == 0) next = 0;
+  else return false;
+  if (next != venusAddress_) { venusAddress_ = next; ++bridgeGeneration_; }
+  return true;
 }
 
 #endif

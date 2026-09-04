@@ -16,3 +16,7 @@ Upstream: https://github.com/davidmonterocrespo24/velxio/tree/77ee0cf96aff18d0b4
 Velxio is licensed under AGPL-3.0; its license is retained as `LICENSE.velxio`.
 These files retain that license for the adapted upstream material. No upstream
 web service or first-start installer is launched by the local runner.
+
+The maintained serial boundary also accepts the repository's dummy `SIM venus`
+address fixtures. This does not change the pinned runtime, DIO configuration,
+timing, touch, or display adapters.

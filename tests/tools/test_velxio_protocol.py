@@ -65,6 +65,16 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(released[2:7], bytes(5))
         self.assertEqual(released[0xA8], 0x11)
 
+    def test_venus_address_fixtures_pass_serial_boundary(self):
+        for fixture in ('nominal', 'changed', 'offline', 'fallback'):
+            steps = [{'write-serial': f'SIM venus={fixture}\n'}]
+            with self.subTest(fixture=fixture):
+                self.assertEqual(self.p.validate_steps(steps, []), steps)
+        for invalid in ('SIM venus=192.168.1.2\n', 'SIM venus=changed extra\n',
+                        'SIM venus=offline\nSIM reset\n'):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                self.p.validate_steps([{'write-serial': invalid}], [])
+
     def test_worker_shutdown_timeout_cannot_authorize_flash(self):
         with self.assertRaisesRegex(ValueError, 'shutdown'):
             self.p.validate_snapshot({'clean_shutdown': False, 'sha256': 'a'*64}, 'a'*64)

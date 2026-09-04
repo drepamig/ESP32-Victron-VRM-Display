@@ -5,10 +5,11 @@
 
 #include "TimeSettings.h"
 #include "TouchMapping.h"
+#include "VenusConnectionStatus.h"
 
 class TFT_eSPI;
 
-enum class SettingsView : uint8_t { Closed, Root, Time, Countries, Zones };
+enum class SettingsView : uint8_t { Closed, Root, Time, Countries, Zones, Venus };
 enum class SettingsAction : uint8_t { None, OpenWifi, Save, Exit };
 
 struct SettingsUiRect {
@@ -29,6 +30,7 @@ class SettingsUi {
   bool isOpen() const;
   SettingsView view() const;
   const TimeSettings& draft() const;
+  void setVenusStatus(const VenusConnectionStatus& status);
   SettingsAction handleTouch(const TouchPoint& point, uint32_t nowMs);
   void handleRelease(uint32_t nowMs);
   SettingsAction poll(uint32_t nowMs);
@@ -50,11 +52,13 @@ class SettingsUi {
   void renderTime();
   void renderCountries();
   void renderZones();
+  void renderVenus();
 
   TFT_eSPI& display_;
   SettingsView view_ = SettingsView::Closed;
   TimeSettings active_;
   TimeSettings draft_;
+  VenusConnectionStatus venusStatus_{};
   uint32_t lastActivityMs_ = 0;
   size_t countryIndex_ = 0;
   size_t zonePage_ = 0;

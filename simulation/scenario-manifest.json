@@ -2,6 +2,12 @@
   "schema": 1,
   "scenarios": [
     {
+      "name": "venus-address",
+      "file": "velxio/venus-address.yaml",
+      "backends": ["velxio"],
+      "screenshots": ["settings-menu", "current", "changed", "unreachable", "last-seen", "fallback", "back-settings"]
+    },
+    {
       "name": "time-settings",
       "file": "velxio/time-settings.yaml",
       "backends": ["velxio"],

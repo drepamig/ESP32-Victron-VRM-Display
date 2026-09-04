@@ -36,7 +36,7 @@ for mode in "${modes[@]}"; do
 done
 
 if strings "$production_elf" | grep -E \
-    'Simulation(Control|Clock)|SimCamperNetwork|SimModbusCycleSource|CYD_SIMULATION_CONFIG_ID|cyd-sim-dummy-v1|SIM (clock|scan|connect|modbus|wan|reset)'; then
+    'Simulation(Control|Clock)|SimCamperNetwork|SimModbusCycleSource|CYD_SIMULATION_CONFIG_ID|cyd-sim-dummy-v1|SIM (clock|scan|connect|modbus|wan|venus|reset)'; then
   echo "production firmware contains simulator symbols or configuration" >&2
   exit 1
 fi

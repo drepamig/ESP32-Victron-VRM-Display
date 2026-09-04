@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 #include <cstdio>
+#include <cstring>
 
 namespace {
 int signedRegister(uint16_t value) {
@@ -50,8 +51,18 @@ void setVebusStateText(int state, char output[20]) {
 }
 }  // namespace
 
-TcpModbusCycleSource::TcpModbusCycleSource(const char* gxAddress)
-    : gxAddress_(gxAddress) {}
+TcpModbusCycleSource::TcpModbusCycleSource(const char* gxAddress) {
+  if (gxAddress) std::snprintf(gxAddress_, sizeof(gxAddress_), "%s", gxAddress);
+}
+
+void TcpModbusCycleSource::setAddress(uint32_t address) {
+  char next[16]{};
+  if (address) std::snprintf(next, sizeof(next), "%u.%u.%u.%u", unsigned(address >> 24),
+      unsigned((address >> 16) & 255), unsigned((address >> 8) & 255), unsigned(address & 255));
+  if (std::strcmp(next, gxAddress_) == 0) return;
+  client_.stop();
+  std::memcpy(gxAddress_, next, sizeof(gxAddress_));
+}
 
 bool TcpModbusCycleSource::readRegisters(uint8_t unit, uint16_t address,
                                          uint16_t count, uint16_t* output) {
@@ -122,6 +133,8 @@ bool TcpModbusCycleSource::fetch(ModbusReadCycle& cycle) {
   cycle = {};
   copyModbusText(cycle.battState, sizeof(cycle.battState), "-");
   copyModbusText(cycle.sysState, sizeof(cycle.sysState), "-");
+  cycle.receivedAtMs = millis();
+  if (!gxAddress_[0]) return false;
 
   uint16_t registers[8];
   bool acValuesReady = false;
@@ -130,6 +143,8 @@ bool TcpModbusCycleSource::fetch(ModbusReadCycle& cycle) {
     cycle.acW = signedRegister(registers[0]);
     cycle.gridW = signedRegister(registers[3]);
     acValuesReady = true;
+  } else {
+    return false;
   }
   if (readRegisters(100, 840, 5, registers)) {
     cycle.battV = registers[0] / 10.0;
@@ -139,6 +154,8 @@ bool TcpModbusCycleSource::fetch(ModbusReadCycle& cycle) {
     copyModbusText(cycle.battState, sizeof(cycle.battState),
                    batteryStateText(registers[4]));
     batteryValuesReady = true;
+  } else {
+    return false;
   }
   cycle.requiredValid = acValuesReady && batteryValuesReady;
 

@@ -138,7 +138,6 @@ def _dummy_secrets_text() -> str:
     return (
         '#define SECRET_CAMPER_AP_SSID "CYD-Bench-AP"\n'
         '#define SECRET_CAMPER_AP_PASS "dummy-ap-pass-123"\n'
-        '#define SECRET_GX_IP "192.0.2.50"\n'
         '#define SECRET_SITE_NAME "CYD Virtual Bench"\n'
     )
 
@@ -152,7 +151,7 @@ def _included_in_mode(relative: PurePosixPath, mode: str) -> bool:
         or name.startswith("SimulationControl")
         or name == "SimulationDummyConfig.h"
     )
-    production_only = name.startswith("TcpModbusCycleSource") or name == "CamperNetwork.cpp"
+    production_only = name.startswith("TcpModbusCycleSource") or name in {"CamperNetwork.cpp", "Ipv4Bridge.cpp"}
     if mode == "production":
         return not simulator_only
     return not production_only

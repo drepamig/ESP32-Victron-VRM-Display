@@ -1,0 +1,103 @@
+{
+  "date": "2026-09-04",
+  "attestation": {
+    "artifacts": [
+      {
+        "path": "build/velxio/firmware.bin",
+        "sha256": "b0f08687b1910ea44f3238c9dba49a9b741d44a315f03c90aac73159a3d35060"
+      },
+      {
+        "path": "build/velxio/firmware.elf",
+        "sha256": "d6261e7cd7360be7e85c00b43fb50ac0d65e2d052be09dfbb1890f10d1d5e442"
+      }
+    ],
+    "backend": "velxio",
+    "buildConfiguration": {
+      "defines": [
+        "CYD_SIMULATION"
+      ],
+      "files": {
+        ".devcontainer/Dockerfile": "aa20fe898d27a1ae0ab5fe07d5241ff9d65fc6a902cbab4b4b33f784133014ad",
+        "tools/arduino-build.sh": "fd7887c1554fc2a7bda092c8ce62e5d30e897dfaffe45e66bee00cd0f8317e2d"
+      },
+      "fqbn": "esp32:esp32:esp32:FlashMode=dio",
+      "toolchainImageId": "sha256:9eb70ebdec9747647477e5c9a6b74e74c9a93e9460b132f4792b2a798c47b15b"
+    },
+    "buildMode": "CYD_SIMULATION",
+    "dummyConfigId": "cyd-sim-dummy-v1",
+    "fqbn": "esp32:esp32:esp32:FlashMode=dio",
+    "runtimeIdentity": {
+      "adapters": {
+        "tools/velxio/__init__.py": "9bd3d3a79652fa9751df3b34f074eff7cf0b912790547b6365c3c568cbbbbee6",
+        "tools/velxio/display.mts": "3944f663552068b8ed0527d58d23658452aa198f7ceb7ba6e6e190f555aa07b2",
+        "tools/velxio/ili9341.mts": "09a43f8b46187c5a0c9e754be2816fc0262e111091c371d47aa872abf4cca12c",
+        "tools/velxio/protocol.py": "bbf86b676823a804a1399af54f6278dd7c35333a9ca58ea85d84eb2943b16ad1",
+        "tools/velxio/replay.mts": "91fd6b0222146285f5dfea803fcc5273bcd20ca5eb00a1faa280cd187d83c195",
+        "tools/velxio/run.py": "5c9b76299c21d512674af9223c3ccdb87a6cf9c9e0041af10c0527e89148fcaf",
+        "tools/velxio/session.py": "662324d301b1767497c5aa9cbd427685bc1cbbcdb3de800228ac314981fcd47f",
+        "tools/velxio/worker.py": "4012f7f67603efdcf620e843f5319e3126e8ab89c26c873244c7ba68f4ad8724"
+      },
+      "lock": {
+        "decoderSourceSha256": "a45e0585d5417ecb7789d46cf4df65d4265881de46cc6b4ac5aebb6d097a234f",
+        "icount": 3,
+        "machine": "esp32-picsimlab",
+        "nodeImage": "node:24.3.0-bookworm-slim@sha256:8225b1806c6e37dced949224b5c0d8278a2fe593967288620e0af69b2cbc4539",
+        "nodeVersion": "24.3.0",
+        "pillowVersion": "11.3.0",
+        "pyyamlVersion": "6.0.2",
+        "runtimeImage": "ghcr.io/davidmonterocrespo24/velxio@sha256:117a82cc52ec7168b790bc8553c68fb1fcd86a16db202b847f948f7a573691d2",
+        "schema": 1,
+        "sourceRevision": "77ee0cf96aff18d0b4b10d0e77b08c72bee4c1e0",
+        "workerSha256": "2e16709bd1a6c5252e8727c2760b3a20301a9ca52c8f11d5b76dd5973757f781"
+      },
+      "lockSha256": "044824cb0b7ab7dfe75461e77fceac5e3fc840567d8a56966d99bc800aef35ff",
+      "sha256": "f69c119dad418d70dc597a4f7d3227842809501606068f875d64226e8f580dc7"
+    },
+    "schema": 1,
+    "sourceSha256": "696e56fb0ef6f0beb61055d2ade394766d7f0f9a83e3d0e9cd74725294fb8a0c"
+  },
+  "runs": [
+    {
+      "runId": "6e7d7f7973f74015b1c48dd954545a66",
+      "scenario": "venus-address",
+      "captures": 7,
+      "executionPassed": true,
+      "exactRgbaMatches": true,
+      "warnings": [
+        "E (540) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ]
+    },
+    {
+      "runId": "4dff62501ff84cbfa135794ce55ad6ab",
+      "scenario": "wan-outage",
+      "captures": 7,
+      "executionPassed": true,
+      "exactRgbaMatches": true,
+      "warnings": [
+        "E (506) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ]
+    },
+    {
+      "runId": "7d04f6661b2d40609bf9a3ec14f08865",
+      "scenario": "saved-switch",
+      "captures": 7,
+      "executionPassed": true,
+      "exactRgbaMatches": true,
+      "warnings": [
+        "E (516) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ]
+    },
+    {
+      "runId": "9a3dccbf67f34c0fb2d923e6047fcade",
+      "scenario": "time-settings",
+      "captures": 21,
+      "executionPassed": true,
+      "exactRgbaMatches": true,
+      "warnings": [
+        "E (517) task_wdt: esp_task_wdt_init(517): TWDT already initialized",
+        "E (695) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ]
+    }
+  ],
+  "captures": 42
+}

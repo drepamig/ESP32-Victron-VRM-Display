@@ -15,6 +15,7 @@ constexpr uint16_t kMuted = 0x8410;
 constexpr SettingsUiRect kBackBounds{4, 4, 56, 28};
 constexpr SettingsUiRect kTimeBounds{4, 52, 312, 40};
 constexpr SettingsUiRect kWifiBounds{4, 108, 312, 40};
+constexpr SettingsUiRect kVenusBounds{4, 164, 312, 40};
 constexpr SettingsUiRect kTwelveHourBounds{4, 58, 148, 32};
 constexpr SettingsUiRect kTwentyFourHourBounds{164, 58, 152, 32};
 constexpr SettingsUiRect kChangeZoneBounds{4, 148, 312, 32};
@@ -69,6 +70,15 @@ void SettingsUi::close() {
 bool SettingsUi::isOpen() const { return view_ != SettingsView::Closed; }
 SettingsView SettingsUi::view() const { return view_; }
 const TimeSettings& SettingsUi::draft() const { return draft_; }
+
+void SettingsUi::setVenusStatus(const VenusConnectionStatus& status) {
+  const bool changed = std::memcmp(venusStatus_.address, status.address, sizeof(venusStatus_.address)) !=
+                           0 ||
+                       venusStatus_.current != status.current ||
+                       venusStatus_.reachable != status.reachable;
+  venusStatus_ = status;
+  if (changed && view_ == SettingsView::Venus) fullRenderRequested_ = true;
+}
 
 void SettingsUi::changeView(SettingsView next) {
   view_ = next;
@@ -140,6 +150,8 @@ SettingsAction SettingsUi::handleTouch(const TouchPoint& point, uint32_t nowMs) 
       draft_ = active_;
       saveFailed_ = false;
       changeView(SettingsView::Root);
+    } else if (view_ == SettingsView::Venus) {
+      changeView(SettingsView::Root);
     } else {
       changeView(view_ == SettingsView::Zones ? SettingsView::Countries : SettingsView::Time);
     }
@@ -154,6 +166,8 @@ SettingsAction SettingsUi::handleTouch(const TouchPoint& point, uint32_t nowMs) 
     } else if (kWifiBounds.contains(point)) {
       close();
       return SettingsAction::OpenWifi;
+    } else if (kVenusBounds.contains(point)) {
+      changeView(SettingsView::Venus);
     }
     return SettingsAction::None;
   }
@@ -300,6 +314,30 @@ void SettingsUi::renderZones() {
   display_.drawString(page, 158, 220, 1);
 }
 
+void SettingsUi::renderVenus() {
+  drawHeader("Venus OS");
+  const bool hasAddress = venusStatus_.address[0] != '\0';
+  const bool connected = hasAddress && venusStatus_.current && venusStatus_.reachable;
+  if (hasAddress) {
+    char address[sizeof(venusStatus_.address) + 1]{};
+    std::memcpy(address, venusStatus_.address, sizeof(venusStatus_.address));
+    display_.setTextColor(TFT_WHITE, kBackground);
+    display_.setTextDatum(TL_DATUM);
+    display_.drawString(address, 8, 72, 4);
+    if (!venusStatus_.current) {
+      display_.setTextColor(kMuted, kBackground);
+      display_.drawString("Last seen", 8, 110, 2);
+    }
+  } else {
+    display_.setTextColor(kMuted, kBackground);
+    display_.setTextDatum(TL_DATUM);
+    display_.drawString("Not found", 8, 72, 4);
+  }
+  display_.setTextColor(connected ? TFT_GREEN : TFT_RED, kBackground);
+  display_.setTextDatum(TL_DATUM);
+  display_.drawString(connected ? "Connected" : "Disconnected", 8, 148, 2);
+}
+
 void SettingsUi::render() {
   if (!isOpen()) return;
   fullRenderRequested_ = false;
@@ -309,10 +347,12 @@ void SettingsUi::render() {
       drawHeader("Settings");
       drawButton(kTimeBounds, "Time");
       drawButton(kWifiBounds, "Wi-Fi");
+      drawButton(kVenusBounds, "Venus OS");
       break;
     case SettingsView::Time: renderTime(); break;
     case SettingsView::Countries: renderCountries(); break;
     case SettingsView::Zones: renderZones(); break;
+    case SettingsView::Venus: renderVenus(); break;
     case SettingsView::Closed: break;
   }
 }

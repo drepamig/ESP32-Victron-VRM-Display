@@ -2,6 +2,13 @@ config/TFT_eSPI_CYD.h
 VictronCYD_Modbus/CamperNetwork.cpp
 VictronCYD_Modbus/CamperNetwork.h
 VictronCYD_Modbus/CamperNetworkRuntime.h
+VictronCYD_Modbus/Ipv4Bridge.h
+VictronCYD_Modbus/Ipv4Bridge.cpp
+VictronCYD_Modbus/Ipv4BridgeCore.h
+VictronCYD_Modbus/Ipv4BridgeCore.cpp
+VictronCYD_Modbus/VenusAddressTracker.h
+VictronCYD_Modbus/VenusAddressTracker.cpp
+VictronCYD_Modbus/VenusConnectionStatus.h
 VictronCYD_Modbus/CredentialEntryController.cpp
 VictronCYD_Modbus/CredentialEntryController.h
 VictronCYD_Modbus/CredentialKeyboardLayout.cpp

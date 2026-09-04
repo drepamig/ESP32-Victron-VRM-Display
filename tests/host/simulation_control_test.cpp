@@ -28,6 +28,22 @@ int main() {
   SimulationClock clock;
   SimulationControl control(network, modbus, clock);
 
+  const auto originalVenus = network.bridgeSnapshot(0);
+  execute(control, "SIM venus=changed", "SIM OK");
+  const auto changedVenus = network.bridgeSnapshot(1);
+  check(changedVenus.count == 1 && changedVenus.clients[0].address == 0xc0000249 &&
+            changedVenus.generation != originalVenus.generation,
+        "Venus fixture changes the same network snapshot consumed by the tracker");
+  execute(control, "SIM venus=offline", "SIM OK");
+  check(network.bridgeSnapshot(2).count == 0, "Venus departure removes current address");
+  execute(control, "SIM venus=fallback", "SIM OK");
+  check(network.bridgeSnapshot(3).clients[0].address == 0xc0a83264,
+        "fallback fixture exposes local DHCP address");
+  execute(control, "SIM venus=invalid", "SIM ERROR");
+  check(network.bridgeSnapshot(4).clients[0].address == 0xc0a83264,
+        "invalid address fixture cannot mutate endpoint");
+  execute(control, "SIM venus=nominal", "SIM OK");
+
   execute(control, "SIM clock=springbefore", "SIM OK");
   check(clock.epoch() == 1805011199U, "spring fixture is the UTC second before the Chicago jump");
   execute(control, "SIM clock=springafter", "SIM OK");

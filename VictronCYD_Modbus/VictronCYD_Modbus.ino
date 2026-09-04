@@ -1,7 +1,7 @@
 /*
  * ESP32-Victron-VRM-Display — local Modbus TCP dashboard and camper gateway.
  *
- * The ESP32 keeps its private AP/NAPT service alive while independently managing
+ * The ESP32 keeps its AP/IPv4 repeater service alive while independently managing
  * an upstream profile, the touch WiFi selector, and GX Modbus polling.
  */
 #include <WiFi.h>
@@ -24,6 +24,7 @@
 #include "WifiSetupUi.h"
 #include "SettingsUi.h"
 #include "TimeSettings.h"
+#include "VenusAddressTracker.h"
 #include "esp_task_wdt.h"
 #include "RuntimeConfig.h"
 #ifdef CYD_SIMULATION
@@ -73,9 +74,23 @@ WifiSetupOrigin wifiSetupOrigin = WifiSetupOrigin::Dashboard;
 TouchSurfaceGate touchSurfaceGate;
 CamperNetworkRuntime camperNetwork;
 NetworkProfileStore profileStore;
-ProvisioningPortal portal;
+bool isAssociatedPortalClient(const IPAddress& address, void*) {
+  const auto snapshot = camperNetwork.bridgeSnapshot(millis());
+  const uint32_t ip = (uint32_t(address[0]) << 24) | (uint32_t(address[1]) << 16) |
+                      (uint32_t(address[2]) << 8) | address[3];
+  for (size_t i = 0; i < snapshot.count; ++i) {
+    if (snapshot.ready && ip && snapshot.clients[i].address == ip) return true;
+  }
+  return false;
+}
+ProvisioningPortal portal(isAssociatedPortalClient);
+VenusAddressTracker venusTracker;
 
-ModbusCycleSourceRuntime modbusCycleSource(SECRET_GX_IP);
+ModbusCycleSourceRuntime modbusCycleSource;
+struct ModbusWorkResult {
+  VenusProbe probe;
+  ModbusSnapshot snapshot;
+};
 #ifdef CYD_SIMULATION
 SimulationClock simulationClock;
 SimulationControl simulationControl(camperNetwork, modbusCycleSource, simulationClock);
@@ -92,7 +107,9 @@ bool gxOnline = false;
 bool profileStoreReady = false;
 bool blink = false;
 uint32_t lastModbusRequestMs = 0;
+uint32_t lastModbusTargetToken = 0;
 uint32_t lastClockMs = 0;
+uint32_t lastVenusRefreshMs = 0;
 
 GatewayConnectionController<CamperNetworkRuntime> connectionController(camperNetwork, profileStore);
 
@@ -129,23 +146,31 @@ ClockText clockText() {
 }
 
 void modbusWorker(void*) {
-  uint8_t request = 0;
+  VenusProbe request{};
+  uint32_t activeToken = 0;
   ModbusSnapshot retainedSnapshot = makeDefaultModbusSnapshot();
   for (;;) {
     if (xQueueReceive(modbusRequestQueue, &request, portMAX_DELAY) != pdPASS) {
       continue;
     }
-    ModbusReadCycle cycle;
-    modbusCycleSource.fetch(cycle);
+    if (request.token != activeToken) {
+      modbusCycleSource.setAddress(0);
+      retainedSnapshot = makeDefaultModbusSnapshot();
+      activeToken = request.token;
+    }
+    modbusCycleSource.setAddress(request.address);
+    ModbusReadCycle cycle{};
+    if (request.address) modbusCycleSource.fetch(cycle);
     retainedSnapshot = mergeModbusSnapshot(retainedSnapshot, cycle);
     Serial.printf("[MB] result=%s\n", retainedSnapshot.valid ? "valid" : "invalid");
-    xQueueOverwrite(modbusResultQueue, &retainedSnapshot);
+    const ModbusWorkResult result{request, retainedSnapshot};
+    xQueueOverwrite(modbusResultQueue, &result);
   }
 }
 
 bool startModbusWorker() {
-  modbusRequestQueue = xQueueCreate(1, sizeof(uint8_t));
-  modbusResultQueue = xQueueCreate(1, sizeof(ModbusSnapshot));
+  modbusRequestQueue = xQueueCreate(1, sizeof(VenusProbe));
+  modbusResultQueue = xQueueCreate(1, sizeof(ModbusWorkResult));
   if (modbusRequestQueue == nullptr || modbusResultQueue == nullptr) {
     if (modbusRequestQueue != nullptr) {
       vQueueDelete(modbusRequestQueue);
@@ -707,11 +732,16 @@ void pollModbusWhenDue(uint32_t nowMs) {
     return;
   }
 
-  ModbusSnapshot received;
+  ModbusWorkResult received;
   if (xQueueReceive(modbusResultQueue, &received, 0) == pdPASS) {
     modbusRequestInFlight = false;
-    if (received.valid) {
-      dashboardSnapshot = received;
+    const bool fresh = isRecentValidGxSnapshot(received.snapshot.valid, millis(),
+                                              received.snapshot.receivedAtMs,
+                                              kGxSnapshotMaximumAgeMs);
+    const bool accepted = venusTracker.recordResult(received.probe, fresh,
+                                                     received.snapshot.receivedAtMs);
+    if (accepted) {
+      dashboardSnapshot = received.snapshot;
       hasValidGxSnapshot = true;
       if (currentDisplaySurface() == DisplaySurface::Dashboard) {
         drawDashboardValues();
@@ -719,13 +749,37 @@ void pollModbusWhenDue(uint32_t nowMs) {
     }
   }
 
-  if (!modbusRequestInFlight && nowMs - lastModbusRequestMs >= kModbusPollMs) {
-    const uint8_t request = 1;
+  const VenusProbe request = venusTracker.request();
+  const bool targetChanged = request.token != lastModbusTargetToken;
+  if (!modbusRequestInFlight &&
+      (targetChanged || (request.address && nowMs - lastModbusRequestMs >= kModbusPollMs))) {
+    // A zero-address change is a worker command too: close the old socket even
+    // when the device remains absent and there is no next endpoint to poll.
     if (xQueueSend(modbusRequestQueue, &request, 0) == pdPASS) {
       modbusRequestInFlight = true;
       lastModbusRequestMs = nowMs;
+      lastModbusTargetToken = request.token;
     }
   }
+}
+
+void refreshVenusAddress(uint32_t nowMs) {
+  if (nowMs - lastVenusRefreshMs >= 250) {
+    lastVenusRefreshMs = nowMs;
+    const auto network = camperNetwork.bridgeSnapshot(nowMs);
+    wifiSetupUi.setPortalAddress(network.bridged && network.ready
+                                    ? camperNetwork.status().upstreamAddress
+                                    : IPAddress(192, 168, 50, 1));
+    const auto previous = venusTracker.request();
+    venusTracker.update(network.clients, network.ready ? network.count : 0,
+                        network.generation, nowMs);
+    if (previous.token != venusTracker.request().token) {
+      hasValidGxSnapshot = false;
+      gxOnline = false;
+    }
+  }
+  venusTracker.persistIdentity(nowMs);
+  settingsUi.setVenusStatus(venusTracker.status(nowMs));
 }
 
 void updateClockAndStatusWhenDue(uint32_t nowMs) {
@@ -788,6 +842,7 @@ void setup() {
   touchInputReady = touchInput.begin();
   timeSettingsStore.load(activeTimeSettings);
   applyTimeSettings(activeTimeSettings);
+  venusTracker.begin();
 #ifdef CYD_SIMULATION
   // Initialize local sockets for the real portal without Wi-Fi or NTP traffic.
   if (!Network.begin()) {
@@ -831,6 +886,7 @@ void loop() {
 #endif
   const uint32_t nowMs = millis();
   camperNetwork.poll(nowMs);
+  refreshVenusAddress(nowMs);
   portal.poll(nowMs);
   handlePortalLifecycle(nowMs);
   handleTouchAndUiActions(nowMs);

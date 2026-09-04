@@ -42,7 +42,7 @@ commit it. Do not erase NVS or modify Venus.
 
 The approved testing direction is local host tests/builds plus Velxio for
 routine supported simulator checks, targeted Wokwi comparisons only when
-needed, and physical hardware for real Wi-Fi/AP/NAPT and deployment acceptance.
+needed, and physical hardware for real Wi-Fi/IPv4 forwarding and deployment acceptance.
 The maintained local runner follows
 `docs/superpowers/plans/2026-09-03-velxio-local-runner.md`; use the recorded
 verification status before extending its supported scenario set. Keep the
@@ -73,7 +73,7 @@ flow first, then validate **Use phone** as the time-limited private portal
 fallback. Ask the user for the current upstream SSID only when provisioning
 begins; do not add it to tracked files or logs.
 
-Continue the remaining Task 9 physical keyboard, provisioning, NAPT,
+Continue the remaining Task 9 physical keyboard, provisioning, IPv4 forwarding,
 bad-credential correction and rollback, second-profile selection/deletion,
 phone-fallback portal-boundary, five-minute loss, and reconnect scenarios
 exactly as listed in the handoff.

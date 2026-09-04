@@ -61,8 +61,8 @@ void testApValidationOrderAndSingleStartup() {
   check(gateway.begin("Camper", "123456789012", 0), "AP accepts twelve-byte password");
   check(WiFi.events.size() >= 5 && WiFi.events[0] == "persistent" &&
             WiFi.events[1] == "mode" && WiFi.events[2] == "config" &&
-            WiFi.events[3] == "create" && WiFi.events[4] == "napt",
-        "RAM-only policy precedes AP mode/config/create/NAPT order");
+            WiFi.events[3] == "create" && WiFi.events[4] == "bridge",
+        "RAM-only policy precedes AP mode/config/create/bridge order");
   check(WiFi.persistentCalls == 1 && !WiFi.persistentValue,
         "WiFi persistence is disabled before initialization");
   check(WiFi.modeCalls == 1 && WiFi.modeValue == WIFI_AP_STA, "AP+STA mode once");
@@ -76,12 +76,12 @@ void testApValidationOrderAndSingleStartup() {
   }
   check(WiFi.AP.createChannel == 6 && !WiFi.AP.createHidden && WiFi.AP.createMaxConnections == 4,
         "AP uses exact channel, visibility, and client limit");
-  check(WiFi.AP.naptCalls == 1 && !WiFi.autoReconnect, "outbound NAPT on and implicit reconnect off");
+  check(WiFi.AP.naptCalls == 0 && !WiFi.autoReconnect, "bridge replaces NAPT and implicit reconnect stays off");
   check(FakeRtos::lastQueueLength == 1 && FakeRtos::lastQueueItemSize == sizeof(bool),
         "WAN validation queue has length one and carries only success/failure");
   const size_t eventCount = WiFi.events.size();
   check(gateway.begin("ignored", "abcdefghijkl", 1), "repeat begin reports existing AP");
-  check(WiFi.events.size() == eventCount, "repeat begin does not restart AP/NAPT");
+  check(WiFi.events.size() == eventCount, "repeat begin does not restart AP/bridge");
   check(gateway.status().apReady, "status reports AP ready");
 }
 
@@ -136,7 +136,7 @@ void testStartupFailuresStayHonestAndRetrySafely() {
         "queue allocation failure cannot accept an uplink");
   FakeRtos::queueCreationSucceeds = true;
   check(noQueue.begin("Camper", "abcdefghijkl", 2), "startup retries after queue allocation recovers");
-  check(FakeRtos::queueCreateCalls == 2 && WiFi.AP.createCalls == 1 && WiFi.AP.naptCalls == 1,
+  check(FakeRtos::queueCreateCalls == 2 && WiFi.AP.createCalls == 1 && WiFi.AP.naptCalls == 0,
         "queue retry performs one successful AP startup");
 }
 
@@ -200,10 +200,13 @@ void testDnsFailureAndThirtySecondRevalidation() {
   associateStation();
   Network.result = false;
   gateway.poll(1);
+  const auto bridgeGeneration = gateway.bridgeSnapshot(1).generation;
   if (!FakeRtos::pendingTasks.empty()) FakeRtos::runNextTask();
   gateway.poll(2);
   check(gateway.status().wanPhase == WanPhase::Offline && WiFi.disconnectCalls == 0,
         "DNS failure leaves associated station offline");
+  check(gateway.bridgeSnapshot(2).bridged && gateway.bridgeSnapshot(2).generation == bridgeGeneration,
+        "DNS-only failure keeps upstream bridge domain and generation");
   gateway.poll(30001);
   check(FakeRtos::createCalls == 1, "DNS failure waits full thirty seconds");
   gateway.poll(30002);
@@ -219,6 +222,8 @@ void testDnsFailureAndThirtySecondRevalidation() {
   gateway.poll(60003);
   check(FakeRtos::createCalls == 3 && gateway.status().wanPhase == WanPhase::Validating,
         "online connection revalidates every thirty seconds");
+  check(gateway.bridgeSnapshot(60003).bridged && gateway.bridgeSnapshot(60003).generation == bridgeGeneration,
+        "internet health changes never restart bridge addressing");
 }
 
 void testRetryCadenceCapResetAndWraparound() {
@@ -309,8 +314,8 @@ void testAcceptCancelAndDisconnectKeepAp() {
   check(WiFi.disconnectCalls == 1 && WiFi.beginSsids.size() == 1 &&
             WiFi.disconnectEraseAp == std::vector<bool>{true} &&
             disconnected.status().wanPhase == WanPhase::Offline && disconnected.status().apReady &&
-            WiFi.AP.naptCalls == 1,
-        "Clear All erases transient STA configuration while AP and NAPT remain");
+            WiFi.AP.naptCalls == 0 && !disconnected.bridgeSnapshot(60000).bridged,
+        "Clear All erases transient STA configuration while AP enters fallback");
 }
 
 void testEstablishedOutageStaysOfflineThroughEveryRetry(bool dhcpOnly, uint32_t origin) {
@@ -358,8 +363,9 @@ void testEstablishedOutageStaysOfflineThroughEveryRetry(bool dhcpOnly, uint32_t 
   }
   check(gateway.status().apReady && gateway.status().apClientCount == 3 &&
             WiFi.AP.createCalls == 1 && WiFi.AP.configCalls.size() == 1 &&
-            WiFi.AP.naptCalls == 1 && WiFi.modeCalls == 1 && WiFi.disconnectCalls == 0,
-        "five-minute outage leaves AP, NAPT and attached clients unchanged");
+            WiFi.AP.naptCalls == 0 && WiFi.modeCalls == 1 && WiFi.disconnectCalls == 0 &&
+            !gateway.bridgeSnapshot(lostAt + 300000).bridged,
+        "five-minute outage retains AP service in fallback without NAPT");
   associateStation();
   gateway.poll(lostAt + 300001);
   check(gateway.status().wanPhase == WanPhase::Validating && FakeRtos::createCalls == 2,
@@ -370,6 +376,34 @@ void testEstablishedOutageStaysOfflineThroughEveryRetry(bool dhcpOnly, uint32_t 
         "fresh DNS restores Online without reopening accepted profile");
   check(Serial.output().find("not-a-real-secret") == std::string::npos,
         "outage does not emit profile credentials");
+}
+
+void testSessionReplacementInvalidatesBeforeNextPoll() {
+  resetFakes();
+  CamperNetwork gateway;
+  startGateway(gateway);
+  gateway.connect(profile("same-network"), 0);
+  associateStation(); gateway.poll(1);
+  const auto generation = gateway.bridgeSnapshot(1).generation;
+  check(gateway.bridgeSnapshot(1).bridged, "first session is bridged");
+  check(!gateway.connect(profile(""), 2) && gateway.bridgeSnapshot(2).generation == generation,
+        "rejected connection leaves domain intact");
+  check(gateway.connect(profile("same-network"), 3), "same-network replacement accepted");
+  check(!gateway.bridgeSnapshot(3).bridged && gateway.bridgeSnapshot(3).generation != generation,
+        "new station session invalidates old domain immediately even for same SSID and IP");
+  associateStation(); gateway.poll(4);
+  const auto replacementGeneration = gateway.bridgeSnapshot(4).generation;
+  gateway.cancelPendingProfile();
+  check(!gateway.bridgeSnapshot(4).bridged && gateway.bridgeSnapshot(4).generation != replacementGeneration,
+        "pending cancel invalidates domain without waiting for poll");
+  const auto cancelledGeneration = gateway.bridgeSnapshot(4).generation;
+  gateway.cancelPendingProfile();
+  check(gateway.bridgeSnapshot(4).generation == cancelledGeneration, "cancel without pending profile remains a no-op");
+  gateway.connect(profile(), 5); associateStation(); gateway.poll(6); gateway.acceptPendingProfile();
+  const auto acceptedGeneration = gateway.bridgeSnapshot(6).generation;
+  gateway.disconnectUpstream();
+  check(!gateway.bridgeSnapshot(6).bridged && gateway.bridgeSnapshot(6).generation != acceptedGeneration,
+        "explicit disconnect invalidates current domain immediately");
 }
 
 void testLossBeforeDnsAndStaleWorkerDrain() {
@@ -520,6 +554,7 @@ int main() {
   testInitialAssociationAndSingleDnsWorker();
   testStaleDnsResultCannotValidateNewLifecycle();
   testDnsFailureAndThirtySecondRevalidation();
+  testSessionReplacementInvalidatesBeforeNextPoll();
   testRetryCadenceCapResetAndWraparound();
   testAcceptCancelAndDisconnectKeepAp();
   testEstablishedOutageStaysOfflineThroughEveryRetry(false, 0);

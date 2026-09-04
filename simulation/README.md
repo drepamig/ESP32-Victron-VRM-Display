@@ -13,6 +13,7 @@ Docker host. Local runs disable networking and require no Wokwi token.
 | wan-hold | Short press cancellation and three-second setup hold |
 | setup-navigation | Saved and Nearby navigation |
 | time-settings | Time formatting/DST, drafts, timezone picker, Wi-Fi menu, reboot persistence |
+| venus-address | Current/changed Venus IPv4, unreachable and last-seen states, fallback address, Settings Back |
 | saved-switch | Progress, Back cancellation, blocked controls, 60-second timeout, rollback and B activation |
 | reboot-persistence | New worker retains flash, calibration and B; failed submission rolls back to B |
 | wan-outage | Established Online, Offline for 30 guest seconds, setup/Back during outage, Validating and recovered Online |
@@ -21,8 +22,15 @@ Unfiltered `sim-test` runs this supported set and lists gaps. The remaining
 password, profile-editing, phone-portal, connection-flow, and dashboard-state
 scenarios are not yet accepted locally. Explicit unsupported selections fail.
 `all` runs the host/tooling matrix, dummy production build, local scenarios,
-and isolation checks. Physical Wi-Fi/AP/NAPT and deployment acceptance remain
+and isolation checks. Physical Wi-Fi/IPv4 forwarding and deployment acceptance remain
 required; these simulations use the existing network and GX fixtures.
+
+`venus-address` uses only dummy AP-client addresses. `SIM venus=nominal`,
+`changed`, `offline`, and `fallback` select the observed-address fixtures;
+`SIM modbus=offline` independently makes the current device unreachable.
+These exercise the production address tracker and Settings page, not radio or
+packet forwarding. Host frame/adapter tests and real hardware checks cover
+those boundaries separately.
 
 `wan-outage` connects the dummy Bench-Open profile through the setup UI before
 injecting WAN states. Its screenshots check presentation and navigation.
@@ -95,6 +103,13 @@ running it. Old cloud captures remain historical evidence for their own build.
 
 ## Verification history
 
+The [IPv4 repeater record](../docs/research/2026-09-04-ipv4-repeater.md) adds
+`venus-address`. All 23 C++ suites and 61 Python tests passed, as did production
+and local DIO builds/isolation and independent review. Four targeted scenarios
+completed with 42 exact matches to reviewed references. Seven new Venus captures
+and two Settings-menu changes were promoted from recorded local runs after
+visual inspection. No Wokwi execution or physical upload was performed.
+
 Issue #1's [verification record](../docs/research/2026-09-04-time-settings.md)
 adds time settings: 19 C++ suites, 60 Python tests, three builds and both
 attestations/isolation passed. All seven supported local scenarios completed;
@@ -139,7 +154,7 @@ screenshot comparisons. The seven new saved-switch images were visually
 reviewed before promotion; a repeat run reproduced them byte for byte. The
 25 existing baselines remained unchanged. Reboot persistence is covered by
 store reconstruction in the host integration suite; real reboot, Wi-Fi
-authentication, and AP/NAPT availability still require physical acceptance.
+authentication, and AP forwarding availability still require physical acceptance.
 
 The firmware is built from the same development sources as production, with
 `CYD_SIMULATION` replacing only hardware/data boundaries. It does not use the
@@ -192,5 +207,5 @@ These commands do not model radio failures, DNS workers, or automatic retries.
 
 The clock also supplies fixed profile timestamps. Simulation performs no NTP
 lookup. Pairing code `424242` and all network credentials are dummy fixtures.
-Real AP/NAPT routing, network authentication, GX transport, and touch noise
+Real IPv4 forwarding, network authentication, GX transport, and touch noise
 remain physical-release checks.

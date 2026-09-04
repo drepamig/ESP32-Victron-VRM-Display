@@ -14,6 +14,8 @@ namespace {
 
 const IPAddress kAuthorizedClient(192, 168, 50, 42);
 const IPAddress kUnauthorizedClient(192, 168, 51, 42);
+IPAddress allowedAddress = kAuthorizedClient;
+bool allowAssociated(const IPAddress& address, void*) { return address == allowedAddress; }
 
 int failures = 0;
 
@@ -26,6 +28,24 @@ void check(bool condition, const char* name) {
 
 WebServer& server() { return *WebServer::lastInstance(); }
 
+void testAssociatedClientAcrossAddressDomains() {
+  ProvisioningPortal portal(allowAssociated);
+  allowedAddress = IPAddress(192, 168, 1, 73);
+  check(portal.begin("Bridged", 3, 0), "bridge portal starts");
+  check(server().simulateRequest(HTTP_GET, "/setup", allowedAddress) &&
+            server().responseCode() == 200,
+        "associated AP client with upstream address can use portal");
+  check(server().simulateRequest(HTTP_GET, "/setup", kAuthorizedClient) &&
+            server().responseCode() == 403,
+        "old private-subnet IP grants no access without membership");
+  allowedAddress = IPAddress();
+  check(server().simulateRequest(HTTP_GET, "/setup", IPAddress(192,168,1,73)) &&
+            server().responseCode() == 403,
+        "client departure revokes portal access");
+  portal.cancel();
+  allowedAddress = kAuthorizedClient;
+}
+
 std::vector<std::pair<std::string, std::string>> form(const char* code,
                                                        const char* password) {
   return {{"code", code == nullptr ? "" : code},
@@ -34,7 +54,7 @@ std::vector<std::pair<std::string, std::string>> form(const char* code,
 
 void testCodeLifetimeAndEscapedForm() {
   fakeEspRandomValue = 7;
-  ProvisioningPortal portal;
+  ProvisioningPortal portal(allowAssociated);
   check(!server().simulateRequest(HTTP_GET, "/setup", kAuthorizedClient),
         "inactive portal must not serve requests");
   check(portal.begin("A<&\"'>", 3, 100), "valid selected network starts portal");
@@ -69,7 +89,7 @@ void testCodeLifetimeAndEscapedForm() {
 
 void testWraparoundSafeExpiry() {
   fakeEspRandomValue = 42;
-  ProvisioningPortal portal;
+  ProvisioningPortal portal(allowAssociated);
   const uint32_t startedAt = UINT32_MAX - 100;
   check(portal.begin("Wrapped", 3, startedAt), "wraparound portal starts");
   check(portal.expiresAtMs() == 599899, "expiry deadline must wrap modulo uint32_t");
@@ -81,7 +101,7 @@ void testWraparoundSafeExpiry() {
 
 void testRouteAndSubnetBoundaries() {
   fakeEspRandomValue = 123456;
-  ProvisioningPortal portal;
+  ProvisioningPortal portal(allowAssociated);
   check(portal.begin("Boundary", 3, 0), "boundary portal starts");
 
   check(server().simulateRequest(HTTP_GET, "/setup", kUnauthorizedClient) &&
@@ -109,7 +129,7 @@ void testRouteAndSubnetBoundaries() {
 
 void testCodeValidation() {
   fakeEspRandomValue = 246810;
-  ProvisioningPortal portal;
+  ProvisioningPortal portal(allowAssociated);
   check(portal.begin("Secured", 3, 0), "secured validation portal starts");
 
   check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
@@ -129,7 +149,7 @@ void testCodeValidation() {
 
 void testProtectedPassphraseBoundariesAndPrintableBytes() {
   fakeEspRandomValue = 246810;
-  ProvisioningPortal portal;
+  ProvisioningPortal portal(allowAssociated);
   const char* const tooShort[] = {"", "x", "xx", "xxx", "xxxx", "xxxxx", "xxxxxx",
                                  "xxxxxxx"};
   std::string genericFailureBody;
@@ -195,7 +215,7 @@ void testProtectedPassphraseBoundariesAndPrintableBytes() {
 
 void testSharedSubmissionContractAndOneShotTransfer() {
   fakeEspRandomValue = 13579;
-  ProvisioningPortal portal;
+  ProvisioningPortal portal(allowAssociated);
   check(portal.begin("SyntheticNet", 3, 500), "shared-submission portal starts");
   check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
                                  form("013579", "A1!A1!A1!")) &&
@@ -222,7 +242,7 @@ void testSharedSubmissionContractAndOneShotTransfer() {
 
 void testOpenNetworksAcceptOnlyEmptyPasswords() {
   fakeEspRandomValue = 112233;
-  ProvisioningPortal portal;
+  ProvisioningPortal portal(allowAssociated);
   check(portal.begin("Cafe Open", 0, 500), "open-network portal starts");
   check(server().simulateRequest(HTTP_POST, "/setup", kAuthorizedClient,
                                  form("112233", "x")) &&
@@ -245,7 +265,7 @@ void testOpenNetworksAcceptOnlyEmptyPasswords() {
 
 void testCancelTimeoutAndRepeatedBeginClearOldState() {
   fakeEspRandomValue = 111111;
-  ProvisioningPortal portal;
+  ProvisioningPortal portal(allowAssociated);
   check(portal.begin("Cancelled", 3, 0), "cancel test portal starts");
   portal.cancel();
   CredentialSubmission output;
@@ -291,8 +311,9 @@ void testCancelTimeoutAndRepeatedBeginClearOldState() {
 }  // namespace
 
 int main() {
+  testAssociatedClientAcrossAddressDomains();
   {
-    ProvisioningPortal portal;
+    ProvisioningPortal portal(allowAssociated);
     CredentialSubmission submission;
     bool physicalPortalActive = true;
     int submitted = 0, expired = 0;

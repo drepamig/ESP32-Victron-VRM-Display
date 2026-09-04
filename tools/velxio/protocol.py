@@ -40,7 +40,7 @@ def validate_steps(steps, captures):
         elif op in ('wait-serial', 'write-serial'):
             if not isinstance(value, str) or not value:
                 raise ValueError('serial step requires text')
-            if op == 'write-serial' and not re.fullmatch(r'SIM (?:reset|(?:clock|scan|connect|modbus|wan)=[a-z]+)\n', value):
+            if op == 'write-serial' and not re.fullmatch(r'SIM (?:reset|(?:clock|scan|connect|modbus|wan|venus)=[a-z]+)\n', value):
                 raise ValueError('only dummy SIM fixtures may be submitted')
         elif op == 'reboot':
             if value != 'preserve-flash':

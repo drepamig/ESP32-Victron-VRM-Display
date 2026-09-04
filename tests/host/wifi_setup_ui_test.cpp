@@ -902,6 +902,21 @@ int main() {
     check(display.drew("A [ACTIVE]") && !display.drewContaining("Connecting"),
           "cancel returns to Saved with previous active marker");
   }
+  {
+    TFT_eSPI display;
+    WifiSetupUi ui(display);
+    ui.showPortal("fixture", "123456", 70000);
+    ui.setPortalAddress(IPAddress(192, 168, 1, 27));
+    check(ui.takeFullRenderRequest(), "changed portal address requests a render");
+    ui.render(offlineStatus());
+    check(display.drew("http://192.168.1.27/setup"), "portal shows current upstream address");
+    ui.setPortalAddress(IPAddress(192, 168, 1, 27));
+    check(!ui.takeFullRenderRequest(), "unchanged portal address does not repaint");
+    ui.setPortalAddress(IPAddress(192, 168, 50, 1));
+    check(ui.takeFullRenderRequest(), "fallback transition updates portal address");
+    ui.render(offlineStatus());
+    check(display.drew("http://192.168.50.1/setup"), "portal shows fallback address");
+  }
   testWanHoldRequiresContinuousContact();
   testLocalSetupTransitionsRequestExactlyOneFullRender();
   testStaleNearbyPageDoesNotDefeatTransitionCoalescing();
