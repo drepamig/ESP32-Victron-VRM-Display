@@ -1,14 +1,14 @@
 # Gateway status and acceptance record
 
-Updated 2026-09-03 for R1, the FT6206 fix, and the maintained local Velxio bench
-on `develop`, following documentation baseline `8010d11`. This is the tracked status
+Updated 2026-09-03 for R2's WAN-outage correction on `develop`, following
+implementation baseline `b9e92f7`. This is the tracked status
 record for the ESP32 Venus-Starlink touch bridge. Work in the current checkout
 on `develop` according to [AGENTS.md](../AGENTS.md).
 
 The firmware implementation includes the original gateway work, later touch
 corrections, on-device Wi-Fi password entry, and the virtual bench. Hardware
-acceptance is incomplete. R1 is implemented and automatically verified; R2
-remains open.
+acceptance is incomplete. R1 and R2 are implemented, reviewed, and automatically
+verified; their physical acceptance remains pending.
 
 ## Plan reconciliation
 
@@ -24,7 +24,7 @@ reviewed `6ef6c93` baseline.
 | 1: Fork and baseline | Implemented; the firmware repository is now the current checkout. |
 | 2: Pure gateway policies | Implemented with host coverage. |
 | 3: Persistent profiles | Implemented with transactional storage and host coverage; saved activation is implemented under R1 below. |
-| 4: AP, NAPT, uplink and scans | Implemented; finding R2 remains open and physical routing/recovery acceptance is pending. |
+| 4: AP, NAPT, uplink and scans | Implemented, including the R2 outage correction; physical routing/recovery acceptance is pending. |
 | 5: Touch and calibration | Implemented; inset mapping correction and historical hardware checks passed. |
 | 6: Network-selection UI | Implemented; historical navigation checks passed; keyboard entry was added later. |
 | 7: Physical phone portal | Implemented and retained as the explicit **Use phone** fallback; hardware boundaries remain to be exercised. |
@@ -56,8 +56,9 @@ dummy inputs. `sim-build`, `sim-test`, and `all` default to local execution.
 Cloud runs require an explicit Wokwi backend and scenario/full-suite selection;
 there is no fallback. Golden promotion reuses reviewed recorded local captures.
 See the [implementation evidence](research/2026-09-03-velxio-local-runner.md).
-R2 remains the next gateway behavior correction. Six scenarios still lack local
-acceptance, and all outstanding physical acceptance remains open.
+R2 adds a local `wan-outage` scenario. Six earlier scenarios still lack local
+acceptance, and all outstanding physical acceptance remains open. The next task
+is controlled Task 9 hardware acceptance.
 
 ## Review findings
 
@@ -100,33 +101,45 @@ using an NVS-preserving upload. No board was flashed for this change.
 
 ### R2: Upstream loss stays amber instead of red/offline
 
-Status: open, reproduced against the production module with host Wi-Fi fakes
-at `6ef6c93`; this was not a physical outage test.
+Status: implemented, automatically verified, and independently reviewed on
+2026-09-03; physical acceptance pending. See the
+[approved R2 plan](superpowers/plans/2026-09-03-r2-wan-outage.md) and
+[verification evidence](research/2026-09-03-r2-wan-outage.md).
 
-[CamperNetwork::poll](../VictronCYD_Modbus/CamperNetwork.cpp) assigns
-`WanPhase::Connecting` whenever the station lacks a connection/address but a
-profile remains selected. It stays there throughout backoff. The dashboard
-renders Connecting as amber; Task 9 requires red/offline during an extended
-upstream outage.
+[CamperNetwork::poll](../VictronCYD_Modbus/CamperNetwork.cpp) now tracks whether
+the selected SSID has established association and DHCP in its current
+lifecycle. Losing either reports Offline on the next poll and throughout
+automatic retries. Restoration reports Validating until fresh DNS succeeds.
+Stale DNS results cannot restore Online, and a draining old worker cannot
+prevent fresh validation. Only the selected SSID can establish readiness.
 
-The review probe started the real module, connected and DNS-validated a
-synthetic profile, accepted it, then removed the fake station connection and
-address. After polling through 300,000 ms of outage, the result was
-`Connecting` with the AP still ready. The Offline acceptance assertion failed.
-The probe is an ignored review artifact, not a committed regression test.
+Fresh boot connection, explicit selection, and rollback retain Connecting.
+The existing 5/10/20/40/60-second capped backoff, selected profile, AP/NAPT,
+display colors, refresh cadence, and touch feedback are preserved. Acceptance
+of a saved profile remains based on matching association/DHCP, independent of
+DNS. No credential storage or NVS schema changes are included.
 
-Acceptance for the correction: represent an unavailable uplink as red/offline
-while retaining selected-profile retry/backoff and AP availability. Cover the
-five-minute outage and successful recovery with a production-module
-regression, then measure the same behavior on hardware.
+The original `6ef6c93` probe exposed Connecting after 300,000 ms. The maintained
+production-module regression now exercises five-minute association and DHCP
+outages, exact retry boundaries and wraparound, same-profile recovery, stale
+SSID/DNS state, and AP continuity. New regressions failed before the fix.
+The local `wan-outage` fixtures check rendering and setup/Back navigation;
+they do not simulate radio failures or prove production retry behavior.
+
+Physical acceptance must still measure a five-minute outage, red WAN,
+responsive setup, AP availability, and recovery after an NVS-preserving upload.
 
 ## Verification evidence
 
 | Evidence | Result and scope |
 | --- | --- |
+| R2: host/tooling matrix | Passed: 17 C++ suites and 55 Python tooling tests. Production outage, fixture, parser, and protocol regressions failed before implementation. |
+| R2: builds and isolation | Production 1,038,790 bytes flash / 49,532 globals; local DIO 559,944 / 34,516; standard simulator 559,928 / 34,516. All builds, both attestations, and production isolation passed. |
+| R2: targeted local scenarios | `wan-outage`, `saved-switch`, and `reboot-persistence` passed with 19 exact RGBA comparisons. Seven new outage images were visually reviewed before recorded promotion and reproduced byte for byte on repeat. Existing goldens unchanged; zero Wokwi executions. [Run IDs and evidence](research/2026-09-03-r2-wan-outage.md). |
+| R2: review | Independent specification PASS and quality APPROVE; no actionable findings. `git diff --check` passed. Physical outage/recovery and R1 acceptance remain pending. |
 | Velxio runner: final host/tooling matrix | Passed: 17 C++ suites and 54 Python tooling tests, including failure handling, capture integrity, offline dispatch, attestation, and destination-link rejection. |
 | Velxio runner: builds and isolation | Production 1,038,650 bytes flash / 49,524 globals; local DIO 559,660 / 34,516; standard simulator 559,644 / 34,516. All builds and both simulator attestations/isolation passed. No Wokwi execution. |
-| Velxio runner: local acceptance | Five supported scenarios, 18 exact RGBA image comparisons; repeated calibration/navigation, hold, and flash-preserving reboot passed. Five new reboot references were visually reviewed and promoted from recorded captures. See the [implementation evidence](research/2026-09-03-velxio-local-runner.md). Physical reboot, real Wi-Fi/AP/NAPT, and R2 remain open. |
+| Velxio runner: local acceptance | Five supported scenarios, 18 exact RGBA image comparisons; repeated calibration/navigation, hold, and flash-preserving reboot passed. Five new reboot references were visually reviewed and promoted from recorded captures. See the [implementation evidence](research/2026-09-03-velxio-local-runner.md). R2 remained open at that checkpoint; physical reboot and real Wi-Fi/AP/NAPT remain pending. |
 | FT6206 release fix, 2026-09-03 | Passed: 17 C++ suites and 14 Python tests; new release-race regression failed before the fix. Actual Adafruit-driver reproduction also changed from failure to success. Independent review found no issues. |
 | FT6206 fix: builds and local navigation | Production 1,038,650 bytes flash / 49,524 globals; simulator 559,644 / 34,516; attestation/isolation passed. Two local Velxio runs each matched Calibration/Saved/Nearby exactly after the fix. No Wokwi rerun or golden changes; [investigation and evidence](research/2026-09-03-velxio-investigation.md#ft6206-correction-and-local-retest). |
 | R1, 2026-09-03: complete host/tooling matrix | Passed: 16 C++ suites and 14 Python tooling tests, including the new production controller integration suite. |
@@ -147,7 +160,8 @@ configured real-GX deployment image.
 Rebuild and rerun appropriate verification after any source correction.
 The FT6206 correction affects the simulator touch boundary; its latest local
 verification is recorded separately. Earlier R1 cloud results apply to the
-pre-correction image. Physical acceptance and R2 remain pending.
+pre-correction image. Physical acceptance remains pending; R2's current
+verification is recorded separately.
 
 The earlier R1 verification used the then-cloud `tools/dev.ps1 all` for the complete host/tooling,
 production, simulator, isolation, and live scenario run. Its initial comparison
@@ -185,8 +199,8 @@ not establish timing bounds or uninterrupted routing.
 
 ## Remaining Task 9 acceptance
 
-R1 implementation and review are complete. Correct R2 before the outage
-acceptance check. Build the exact reviewed source with private deployment
+R1 and R2 implementation, automated verification, and review are complete.
+Build the exact reviewed source with private deployment
 configuration and preserve NVS during verified upload.
 Use a controlled bench upstream in place of real Starlink; keep its SSID and
 password out of tracked results.
@@ -208,7 +222,8 @@ password out of tracked results.
       ten-minute expiry, single use, cancellation, and AP-subnet restriction.
 - [ ] Disable the selected upstream for at least five minutes; verify red WAN,
       responsive setup, continuous AP availability, and no no-data reboot.
-      Restore it and measure reconnect without roaming to another profile.
+      Restore it, observe Validating then Online, and measure reconnect without
+      roaming to another profile. Fresh selection and rollback start Connecting.
 - [ ] Record observed timing, firmware commit, test conditions, and pass/fail
       results below; do not replace unperformed checks with simulator results.
 

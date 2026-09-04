@@ -26,6 +26,7 @@ class SimCamperNetwork {
 
   bool setScanFixture(const char* fixture);
   bool setConnectFixture(const char* fixture);
+  bool setWanFixture(const char* fixture);
   void setApFixture(bool ready, uint8_t clients);
   void resetFixtures();
 
@@ -43,6 +44,7 @@ class SimCamperNetwork {
   bool connectionPending_ = false;
   bool pendingProfile_ = false;
   bool pendingConnected_ = false;
+  bool connectionEstablished_ = false;
   uint32_t connectionReadyAtMs_ = 0;
   IPAddress upstreamAddress_;
   int32_t upstreamRssi_ = 0;

@@ -97,6 +97,22 @@
       ]
     },
     {
+      "name": "wan-outage",
+      "file": "velxio/wan-outage.yaml",
+      "backends": [
+        "velxio"
+      ],
+      "screenshots": [
+        "online",
+        "offline",
+        "offline-after-30s",
+        "setup-offline",
+        "back-offline",
+        "validating",
+        "recovered-online"
+      ]
+    },
+    {
       "name": "reboot-persistence",
       "file": "velxio/reboot-persistence.yaml",
       "backends": [

@@ -1,0 +1,62 @@
+name: Established WAN outage and recovery presentation
+version: 1
+# SIM wan states exercise rendering/navigation. Production host tests exercise
+# actual retry scheduling, DNS invalidation, and the five-minute outage.
+steps:
+  - wait-serial: 'SIM READY'
+  - touch: {part-id: lcd1, x: 20, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 20, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 219, y: 299, duration: 120ms, wait: true}
+  - delay: 100ms
+  - touch: {part-id: lcd1, x: 20, y: 299, duration: 120ms, wait: true}
+  - delay: 300ms
+  - touch-press: {part-id: lcd1, x: 218, y: 20}
+  - delay: 3300ms
+  - touch-release: {part-id: lcd1}
+  - delay: 700ms
+  - touch: {part-id: lcd1, x: 187, y: 20, duration: 200ms, wait: true}
+  - delay: 300ms
+  # BenchOpen is the dummy open profile in the second Nearby row.
+  - touch: {part-id: lcd1, x: 77, y: 107, duration: 200ms, wait: true}
+  - delay: 2000ms
+  - touch: {part-id: lcd1, x: 29, y: 20, duration: 200ms, wait: true}
+  - delay: 1200ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/wan-outage/online.png'
+  - write-serial: "SIM wan=offline\n"
+  - wait-serial: 'SIM OK'
+  - delay: 1200ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/wan-outage/offline.png'
+  - delay: 30000ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/wan-outage/offline-after-30s.png'
+  - touch-press: {part-id: lcd1, x: 218, y: 20}
+  - delay: 3300ms
+  - touch-release: {part-id: lcd1}
+  - delay: 700ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/wan-outage/setup-offline.png'
+  - touch: {part-id: lcd1, x: 29, y: 20, duration: 200ms, wait: true}
+  - delay: 1200ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/wan-outage/back-offline.png'
+  - write-serial: "SIM wan=validating\n"
+  - wait-serial: 'SIM OK'
+  - delay: 1200ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/wan-outage/validating.png'
+  - write-serial: "SIM wan=online\n"
+  - wait-serial: 'SIM OK'
+  - delay: 1200ms
+  - take-screenshot:
+      part-id: lcd1
+      save-to: '../../build/simulation/results/wan-outage/recovered-online.png'

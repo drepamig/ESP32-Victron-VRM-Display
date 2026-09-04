@@ -39,6 +39,8 @@ bool SimulationControl::processLine(const char* line, char* response,
         accepted = network_.setScanFixture(fixture);
       } else if (keyLength == 7 && std::strncmp(assignment, "connect", 7) == 0) {
         accepted = network_.setConnectFixture(fixture);
+      } else if (keyLength == 3 && std::strncmp(assignment, "wan", 3) == 0) {
+        accepted = network_.setWanFixture(fixture);
       } else if (keyLength == 6 && std::strncmp(assignment, "modbus", 6) == 0) {
         accepted = modbus_.setFixture(fixture);
       }

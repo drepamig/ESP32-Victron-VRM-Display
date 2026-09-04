@@ -35,6 +35,14 @@ Ordinary tests never update goldens. Review retained actual images, then use
 `sim-update-goldens --run RUN_ID --scenario NAME` to promote the recorded local
 captures without another simulation. See the [scenario guide](../../../simulation/README.md).
 
+For R2, the targeted local verification is `wan-outage`, `saved-switch`, and
+`reboot-persistence` (one `sim-test --scenario NAME` invocation each). Build the
+standard simulator separately with `sim-build --backend wokwi`; this compiles
+locally and does not execute Wokwi. The outage fixture checks UI states and
+setup/Back; the host network suite checks real retry/DNS logic over five minutes
+of fake time. Review all seven new outage captures before recorded promotion,
+then repeat that scenario against the references.
+
 ## Optional native toolchain
 
 Install Arduino CLI 1.5.1, a C++17 compiler, Git, and the pinned ESP32 dependencies:
@@ -93,7 +101,7 @@ bash tools/run-host-tests.sh
 
 Use this script instead of copying an older per-file matrix: it includes
 `RawTouchDevice.cpp`, the credential dependencies, the simulator suites, and
-the FT6206 release-race regression. It compiles C++17 with warnings treated as
+the FT6206 release-race and production WAN-outage regressions. It compiles C++17 with warnings treated as
 errors and stops on failure.
 For the Python tooling tests, use the pinned Docker environment above or a
 native Python environment with Pillow 11.3.0:

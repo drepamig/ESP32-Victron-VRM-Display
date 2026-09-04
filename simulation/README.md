@@ -14,6 +14,7 @@ Docker host. Local runs disable networking and require no Wokwi token.
 | setup-navigation | Saved and Nearby navigation |
 | saved-switch | Progress, Back cancellation, blocked controls, 60-second timeout, rollback and B activation |
 | reboot-persistence | New worker retains flash, calibration and B; failed submission rolls back to B |
+| wan-outage | Established Online, Offline for 30 guest seconds, setup/Back during outage, Validating and recovered Online |
 
 Unfiltered `sim-test` runs this supported set and lists gaps. The remaining
 password, profile-editing, phone-portal, connection-flow, and dashboard-state
@@ -21,6 +22,11 @@ scenarios are not yet accepted locally. Explicit unsupported selections fail.
 `all` runs the host/tooling matrix, dummy production build, local scenarios,
 and isolation checks. Physical Wi-Fi/AP/NAPT and deployment acceptance remain
 required; these simulations use the existing network and GX fixtures.
+
+`wan-outage` connects the dummy Bench-Open profile through the setup UI before
+injecting WAN states. Its screenshots check presentation and navigation.
+The production `camper_network_test.cpp` suite separately checks a five-minute
+outage, retry deadlines/backoff, DHCP loss, and fresh DNS recovery with fake time.
 
 ## Pinned runtime and artifacts
 
@@ -79,6 +85,13 @@ running it. Old cloud captures remain historical evidence for their own build.
 
 ## Verification history
 
+R2's [verification record](../docs/research/2026-09-03-r2-wan-outage.md) covers
+the current outage correction: 17 C++ suites, 55 Python tests, all three builds,
+both attestations/isolation, and 19 exact comparisons across `wan-outage`,
+`saved-switch`, and `reboot-persistence`. Seven new outage captures were reviewed
+before recorded promotion and reproduced byte for byte on repeat. Existing
+goldens were unchanged. No Wokwi execution or physical upload was performed.
+
 The [Velxio investigation](../docs/research/2026-09-03-velxio-investigation.md)
 demonstrated local ESP32 boot, calibration, press/hold, and three exact
 screen matches using a separate DIO build and experimental adapters. A
@@ -98,8 +111,8 @@ The later review at `6ef6c93` reran host/tooling tests and the dummy production
 build, not live Wokwi. R1 now adds the `saved-switch` scenario with seven
 checkpoints: A active, progress, cancellation, timeout, rollback to A, success,
 and B active. The production controller host suite checks persistence and
-rollback against the real store and network module. R2 remains open: uplink
-loss stays Connecting. Track
+rollback against the real store and network module. R2 adds production-module
+outage/recovery regressions and the local `wan-outage` presentation scenario. Track
 corrections and physical release checks in [gateway status](../docs/README.md).
 
 R1 verification on 2026-09-03 completed all 10 live scenarios and 32 exact
@@ -149,8 +162,14 @@ malformed commands print `SIM ERROR`.
 | `SIM clock=...` | `fixed` (12:34), `morning` (08:15), `evening` (21:45), `unavailable` |
 | `SIM scan=...` | `nominal`, `empty`, `failure` |
 | `SIM connect=...` | `success`, `failure` |
+| `SIM wan=...` | `offline`, `validating`, `online`; requires an established simulated connection |
 | `SIM modbus=...` | `nominal`, `stale`, `offline`, `partial` |
 | `SIM reset` | Restore all fixture defaults; does not erase profiles or calibration |
+
+WAN fixtures preserve pending/accepted profile ownership. Offline clears the
+simulated upstream address and signal; Validating and Online restore them.
+Disconnect, reset, and a new connection attempt clear fixture eligibility.
+These commands do not model radio failures, DNS workers, or automatic retries.
 
 The clock also supplies fixed profile timestamps. Simulation performs no NTP
 lookup. Pairing code `424242` and all network credentials are dummy fixtures.

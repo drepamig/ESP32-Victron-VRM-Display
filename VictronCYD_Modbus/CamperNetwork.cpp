@@ -94,10 +94,7 @@ void CamperNetwork::poll(uint32_t nowMs) {
       retryScheduled_ = false;
       return;
     }
-    if (wanPhase_ != WanPhase::Connecting) {
-      wanPhase_ = WanPhase::Connecting;
-      retryScheduled_ = false;
-    }
+    wanPhase_ = stationLifecycleEstablished_ ? WanPhase::Offline : WanPhase::Connecting;
     if (!retryScheduled_) {
       retryDeadlineMs_ = nowMs + retryBackoff_.nextDelay();
       retryScheduled_ = true;
@@ -115,16 +112,13 @@ void CamperNetwork::poll(uint32_t nowMs) {
     validationScheduled_ = false;
     return;
   }
+  stationLifecycleEstablished_ = true;
   if (validationWorkerActive_) {
-    if (validationResultCurrent_) {
-      wanPhase_ = WanPhase::Validating;
-    }
+    // Restored station readiness still needs fresh DNS after the old worker drains.
+    wanPhase_ = WanPhase::Validating;
     return;
   }
-  if (wanPhase_ == WanPhase::Connecting ||
-      ((wanPhase_ == WanPhase::Online || wanPhase_ == WanPhase::Offline) &&
-       validationScheduled_ && isDeadlineReached(nowMs, validationDeadlineMs_)) ||
-      (wanPhase_ == WanPhase::Offline && !validationScheduled_)) {
+  if (!validationScheduled_ || isDeadlineReached(nowMs, validationDeadlineMs_)) {
     startValidation(nowMs);
   }
 }
@@ -142,6 +136,7 @@ bool CamperNetwork::connect(const NetworkProfile& profile, uint32_t nowMs) {
   selectedProfile_ = true;
   pendingProfile_ = true;
   stationLifecycleActive_ = true;
+  stationLifecycleEstablished_ = false;
   validationResultCurrent_ = false;
   retryBackoff_.reset();
   retryDeadlineMs_ = nowMs + retryBackoff_.nextDelay();
@@ -266,6 +261,7 @@ void CamperNetwork::cancelPendingProfile(bool clearTransientStationConfig) {
   pendingProfile_ = false;
   selectedProfile_ = false;
   stationLifecycleActive_ = false;
+  stationLifecycleEstablished_ = false;
   validationResultCurrent_ = false;
   retryScheduled_ = false;
   validationScheduled_ = false;
@@ -278,6 +274,7 @@ void CamperNetwork::disconnectUpstream() {
   pendingProfile_ = false;
   selectedProfile_ = false;
   stationLifecycleActive_ = false;
+  stationLifecycleEstablished_ = false;
   validationResultCurrent_ = false;
   retryScheduled_ = false;
   validationScheduled_ = false;
@@ -321,5 +318,6 @@ void CamperNetwork::clearSelectedProfile() {
 }
 
 bool CamperNetwork::stationReady() const {
-  return WiFi.isConnected() && static_cast<uint32_t>(WiFi.localIP()) != 0;
+  return stationLifecycleActive_ && WiFi.isConnected() &&
+         static_cast<uint32_t>(WiFi.localIP()) != 0 && WiFi.SSID() == String(selectedSsid_);
 }

@@ -1,0 +1,436 @@
+{
+  "date": "2026-09-03",
+  "branch": "develop",
+  "baseCommit": "b9e92f7",
+  "wokwiExecutions": 0,
+  "physicalAcceptance": "pending",
+  "cppSuites": 17,
+  "pythonToolingTests": 55,
+  "targetedScenarios": 3,
+  "exactRgbaComparisons": 19,
+  "newGoldensReviewed": 7,
+  "existingGoldensChanged": 0,
+  "velxioAttestation": {
+    "artifacts": [
+      {
+        "path": "build/velxio/firmware.bin",
+        "sha256": "4c01b7dc8552b66b392d6780f50ffc090a166f08836c7a54215d2c19e456e9e4"
+      },
+      {
+        "path": "build/velxio/firmware.elf",
+        "sha256": "c22feda3c54ee6423a9326009744a90cd07629f88e4e1fce8e3ae6c9e60797b8"
+      }
+    ],
+    "backend": "velxio",
+    "buildConfiguration": {
+      "defines": [
+        "CYD_SIMULATION"
+      ],
+      "files": {
+        ".devcontainer/Dockerfile": "aa20fe898d27a1ae0ab5fe07d5241ff9d65fc6a902cbab4b4b33f784133014ad",
+        "tools/arduino-build.sh": "fd7887c1554fc2a7bda092c8ce62e5d30e897dfaffe45e66bee00cd0f8317e2d"
+      },
+      "fqbn": "esp32:esp32:esp32:FlashMode=dio",
+      "toolchainImageId": "sha256:9eb70ebdec9747647477e5c9a6b74e74c9a93e9460b132f4792b2a798c47b15b"
+    },
+    "buildMode": "CYD_SIMULATION",
+    "dummyConfigId": "cyd-sim-dummy-v1",
+    "fqbn": "esp32:esp32:esp32:FlashMode=dio",
+    "runtimeIdentity": {
+      "adapters": {
+        "tools/velxio/__init__.py": "9bd3d3a79652fa9751df3b34f074eff7cf0b912790547b6365c3c568cbbbbee6",
+        "tools/velxio/display.mts": "3944f663552068b8ed0527d58d23658452aa198f7ceb7ba6e6e190f555aa07b2",
+        "tools/velxio/ili9341.mts": "09a43f8b46187c5a0c9e754be2816fc0262e111091c371d47aa872abf4cca12c",
+        "tools/velxio/protocol.py": "bfe67d925a0f98fec368657aca585d7c766fed31bd6ee7453cd42aa689ad924f",
+        "tools/velxio/replay.mts": "91fd6b0222146285f5dfea803fcc5273bcd20ca5eb00a1faa280cd187d83c195",
+        "tools/velxio/run.py": "5c9b76299c21d512674af9223c3ccdb87a6cf9c9e0041af10c0527e89148fcaf",
+        "tools/velxio/session.py": "662324d301b1767497c5aa9cbd427685bc1cbbcdb3de800228ac314981fcd47f",
+        "tools/velxio/worker.py": "4012f7f67603efdcf620e843f5319e3126e8ab89c26c873244c7ba68f4ad8724"
+      },
+      "lock": {
+        "decoderSourceSha256": "a45e0585d5417ecb7789d46cf4df65d4265881de46cc6b4ac5aebb6d097a234f",
+        "icount": 3,
+        "machine": "esp32-picsimlab",
+        "nodeImage": "node:24.3.0-bookworm-slim@sha256:8225b1806c6e37dced949224b5c0d8278a2fe593967288620e0af69b2cbc4539",
+        "nodeVersion": "24.3.0",
+        "pillowVersion": "11.3.0",
+        "pyyamlVersion": "6.0.2",
+        "runtimeImage": "ghcr.io/davidmonterocrespo24/velxio@sha256:117a82cc52ec7168b790bc8553c68fb1fcd86a16db202b847f948f7a573691d2",
+        "schema": 1,
+        "sourceRevision": "77ee0cf96aff18d0b4b10d0e77b08c72bee4c1e0",
+        "workerSha256": "2e16709bd1a6c5252e8727c2760b3a20301a9ca52c8f11d5b76dd5973757f781"
+      },
+      "lockSha256": "044824cb0b7ab7dfe75461e77fceac5e3fc840567d8a56966d99bc800aef35ff",
+      "sha256": "fee0605feca1590424a5fa76a03b6ad54e06443139be9340a9c72e941646b19e"
+    },
+    "schema": 1,
+    "sourceSha256": "2ffce960f2e6cbedc0e874d47121f3fd7e9fe0f3b91e127ee465bb546a90cd45"
+  },
+  "standardAttestation": {
+    "artifacts": [
+      {
+        "path": "build/simulation/firmware.bin",
+        "sha256": "8e158e6ffaae0b3ec6335ec54f2c45831d0727cb208d18b30b218ba8cee75f15"
+      },
+      {
+        "path": "build/simulation/firmware.elf",
+        "sha256": "82621c82cecce6ee4ce3f5babb24557c866d115a253b4d4ecba6f5ebeaf936dc"
+      }
+    ],
+    "buildMode": "CYD_SIMULATION",
+    "dummyConfigId": "cyd-sim-dummy-v1",
+    "schema": 1,
+    "sourceSha256": "2ffce960f2e6cbedc0e874d47121f3fd7e9fe0f3b91e127ee465bb546a90cd45"
+  },
+  "builds": {
+    "production": {
+      "flashBytes": 1038790,
+      "globalBytes": 49532,
+      "elfSha256": "c2c224bb7fa0c19f379531fee7ede8764db9dd2b4e691ff91745ade334969322"
+    },
+    "velxioDio": {
+      "flashBytes": 559944,
+      "globalBytes": 34516
+    },
+    "standardSimulation": {
+      "flashBytes": 559928,
+      "globalBytes": 34516
+    }
+  },
+  "initialCaptureRun": {
+    "runId": "5e49cbaec06c494d86a521c73fe67c58",
+    "scenario": "wan-outage",
+    "scenarioSha256": "95ed127e89c0faa260f673a08de60ac8f2c7aee6b96ff15ec17d1f76b111bae9",
+    "runRecordSha256": "bebf8c0dc347d45ed7aa17ece5b2c76f7cc83e327f0f8c29d5474fe32120ef5e",
+    "resultSha256": "f4ccbc843a22c9b8f8c7b38fd65bc61afc742ddb189d2f851f9474445dfe8f10",
+    "result": {
+      "executionPassed": true,
+      "error": null,
+      "comparisons": [
+        {
+          "name": "online",
+          "match": false,
+          "mismatchedPixels": null,
+          "actualSha256": "6d136d320d091a0931ee94bd6f66ee52f8850d4357e30fa34874948df3d56cfd",
+          "expectedSha256": null
+        },
+        {
+          "name": "offline",
+          "match": false,
+          "mismatchedPixels": null,
+          "actualSha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee",
+          "expectedSha256": null
+        },
+        {
+          "name": "offline-after-30s",
+          "match": false,
+          "mismatchedPixels": null,
+          "actualSha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee",
+          "expectedSha256": null
+        },
+        {
+          "name": "setup-offline",
+          "match": false,
+          "mismatchedPixels": null,
+          "actualSha256": "97f0c9b095ac09cae37cf8edd0b7dc4d704962b22301265f3baa8054b1bcb416",
+          "expectedSha256": null
+        },
+        {
+          "name": "back-offline",
+          "match": false,
+          "mismatchedPixels": null,
+          "actualSha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee",
+          "expectedSha256": null
+        },
+        {
+          "name": "validating",
+          "match": false,
+          "mismatchedPixels": null,
+          "actualSha256": "5e2d553e3ec9d0c65a2e430ec5452c8e7c2f2cc4ef5461991b99abc7cda6ee32",
+          "expectedSha256": null
+        },
+        {
+          "name": "recovered-online",
+          "match": false,
+          "mismatchedPixels": null,
+          "actualSha256": "665e7d40354f022770bac8e8896efe80a3102565e0a8a75a5deffc48cdfd6af4",
+          "expectedSha256": null
+        }
+      ],
+      "warnings": [
+        "E (540) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+      ],
+      "segments": [
+        {
+          "ready": true,
+          "guest_ns": 49557532908
+        }
+      ],
+      "snapshots": [],
+      "wallSeconds": 138.655
+    },
+    "retainedLogHashes": {
+      "events.jsonl": "c3e5e7d75ab60270b53a48ef0abd6c74bb818861e41ebcab1dc3a8d96d9087d5",
+      "serial-0.log": "48099c3624efb738179cee54064268b43249bc200db215037593cc6aec454d48",
+      "worker-0.stderr.log": "d4ede7120e65366f75f0c382331292fce1afd363ff61257b592c21203f1c8376"
+    }
+  },
+  "acceptedRuns": [
+    {
+      "runId": "7dad6657f9214f779457776983c28ac0",
+      "scenario": "wan-outage",
+      "scenarioSha256": "95ed127e89c0faa260f673a08de60ac8f2c7aee6b96ff15ec17d1f76b111bae9",
+      "runRecordSha256": "acf486a1a3984122161da31f115ebeeb826c479a1b875d095c2a6c4e8aaa77a3",
+      "resultSha256": "e5e1575388b76dccfa0b4ce4674d19e380c0bbeb2ad9f75204e022888651b097",
+      "result": {
+        "executionPassed": true,
+        "error": null,
+        "comparisons": [
+          {
+            "name": "online",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "6d136d320d091a0931ee94bd6f66ee52f8850d4357e30fa34874948df3d56cfd",
+            "expectedSha256": "6d136d320d091a0931ee94bd6f66ee52f8850d4357e30fa34874948df3d56cfd"
+          },
+          {
+            "name": "offline",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee",
+            "expectedSha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee"
+          },
+          {
+            "name": "offline-after-30s",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee",
+            "expectedSha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee"
+          },
+          {
+            "name": "setup-offline",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "97f0c9b095ac09cae37cf8edd0b7dc4d704962b22301265f3baa8054b1bcb416",
+            "expectedSha256": "97f0c9b095ac09cae37cf8edd0b7dc4d704962b22301265f3baa8054b1bcb416"
+          },
+          {
+            "name": "back-offline",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee",
+            "expectedSha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee"
+          },
+          {
+            "name": "validating",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "5e2d553e3ec9d0c65a2e430ec5452c8e7c2f2cc4ef5461991b99abc7cda6ee32",
+            "expectedSha256": "5e2d553e3ec9d0c65a2e430ec5452c8e7c2f2cc4ef5461991b99abc7cda6ee32"
+          },
+          {
+            "name": "recovered-online",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "665e7d40354f022770bac8e8896efe80a3102565e0a8a75a5deffc48cdfd6af4",
+            "expectedSha256": "665e7d40354f022770bac8e8896efe80a3102565e0a8a75a5deffc48cdfd6af4"
+          }
+        ],
+        "warnings": [
+          "E (509) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+        ],
+        "segments": [
+          {
+            "ready": true,
+            "guest_ns": 49529075329
+          }
+        ],
+        "snapshots": [],
+        "wallSeconds": 136.238
+      },
+      "retainedLogHashes": {
+        "events.jsonl": "f21bb6f2fb1fd39e2a31535e001e547a1eb2251ffd6d7357f880b035375a1aac",
+        "serial-0.log": "ad9198566a79cb977df1a2027bd9f72130f2bc6c793f9ec84e63502118da3498",
+        "worker-0.stderr.log": "2be06f81bd31c5523f530ddebddd7e9b862169b897d0ceb714540c63adf7b25b"
+      }
+    },
+    {
+      "runId": "871aaf60c2f24b8189bc352d76fa3b24",
+      "scenario": "saved-switch",
+      "scenarioSha256": "335b7c283ec6cf42c7127a415dd96bb6ef81162d68b6f86a75652b18607a0b6a",
+      "runRecordSha256": "aa597c00a67862ea11be4d1c10d083010e7f63cfde4d69b0eda145c92e6ca317",
+      "resultSha256": "1819b64d6e6b1a58b9b68e1edcdb2626c032c1b25f6ce79b2c4a81b654ab7ab0",
+      "result": {
+        "executionPassed": true,
+        "error": null,
+        "comparisons": [
+          {
+            "name": "a-active",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "8dd30ce73edabe73be749e3fa4b17b9bd6f1d72ceb172c5ed872e36cf51b7a65",
+            "expectedSha256": "f3bbd4cdf5685fbd4977b140a74f577581a258a0f686c1183fe3056d91fb4ab5"
+          },
+          {
+            "name": "progress",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "52a75ea38e428a2fd3694db113986d990900e3b25fa414a00c132e250dad0f1f",
+            "expectedSha256": "d180cb20e22905057b8241827053115c0f41ed7e35a5e0ccaf992d2d9f060f39"
+          },
+          {
+            "name": "cancelled",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "8dd2d393648bf4a9250be1058f5701f73d316696ed61ef3039b628082a743560",
+            "expectedSha256": "3a82455886b3dbc94d4be9643bbbbbebe243e32f391055036178c6a20a04842e"
+          },
+          {
+            "name": "timeout",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "8f8a4c512551e8630cbdea1070f7656489772bfc7baaa7b092977992b5392df1",
+            "expectedSha256": "618ce5f9086f3bf3d47173d5da7089f82818d2c48624186807d10582e4762c09"
+          },
+          {
+            "name": "rollback-a",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "8dd30ce73edabe73be749e3fa4b17b9bd6f1d72ceb172c5ed872e36cf51b7a65",
+            "expectedSha256": "f3bbd4cdf5685fbd4977b140a74f577581a258a0f686c1183fe3056d91fb4ab5"
+          },
+          {
+            "name": "success",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "dc972f17b3ccd7f39ae396fbae0bcc76faadbc264531020b24e10e4b7c450a2b",
+            "expectedSha256": "385f8981f9dffb06850a010bd7b5f49c337e4cb1f0ef8c0bfee4f684faa176dc"
+          },
+          {
+            "name": "b-active",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+            "expectedSha256": "9e195a019f3ec57dfa66ff6be0f221bd3062719294ee7334d22084573f0deeba"
+          }
+        ],
+        "warnings": [
+          "E (511) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+        ],
+        "segments": [
+          {
+            "ready": true,
+            "guest_ns": 103934492285
+          }
+        ],
+        "snapshots": [],
+        "wallSeconds": 254.212
+      },
+      "retainedLogHashes": {
+        "events.jsonl": "4af72f90798abd67d43223c33862968891e76423e8f189f8ad7140cffe144646",
+        "serial-0.log": "784b066fe56e62e5063b5cf721bee303882c8a7018d7f4c497067f42361af5c3",
+        "worker-0.stderr.log": "d54e5f072f0e8841c67452d15f23f4ccefe4ea0c4d4cea9187abba2c4a7f8250"
+      }
+    },
+    {
+      "runId": "e34748d0ea02468fa2f27376c70b4377",
+      "scenario": "reboot-persistence",
+      "scenarioSha256": "03cdf4e6f820af2682fd6a6fab82850204123c301531b77cb56c614237ed5552",
+      "runRecordSha256": "562fb434092cefb27d5bfb50890b718cf87e05d034142c41c620c92bd025b55d",
+      "resultSha256": "bc4d3eef2aa8012c6ac0b21c8efad61cf9f1966e95d946b40cbd9f7acf39cb46",
+      "result": {
+        "executionPassed": true,
+        "error": null,
+        "comparisons": [
+          {
+            "name": "b-active-before",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+            "expectedSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c"
+          },
+          {
+            "name": "dashboard-after-reboot",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "665e7d40354f022770bac8e8896efe80a3102565e0a8a75a5deffc48cdfd6af4",
+            "expectedSha256": "665e7d40354f022770bac8e8896efe80a3102565e0a8a75a5deffc48cdfd6af4"
+          },
+          {
+            "name": "b-active-after",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+            "expectedSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c"
+          },
+          {
+            "name": "failed-submission",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "c9fff1d6ed74b79f065392109822b717c131d2616ef0c4bc33d3acfb6ccf9918",
+            "expectedSha256": "c9fff1d6ed74b79f065392109822b717c131d2616ef0c4bc33d3acfb6ccf9918"
+          },
+          {
+            "name": "rollback-b",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+            "expectedSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c"
+          }
+        ],
+        "warnings": [
+          "E (533) task_wdt: esp_task_wdt_init(517): TWDT already initialized",
+          "E (1281) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+        ],
+        "segments": [
+          {
+            "ready": true,
+            "guest_ns": 34414491457
+          },
+          {
+            "ready": true,
+            "guest_ns": 77642092015
+          }
+        ],
+        "snapshots": [
+          {
+            "parentSha256": "4c01b7dc8552b66b392d6780f50ffc090a166f08836c7a54215d2c19e456e9e4",
+            "sha256": "db6f263a9d6a39e5cb4a2bf1d64a5f71eb69339bd7fc594ce4e288b2258763d6"
+          }
+        ],
+        "wallSeconds": 279.916
+      },
+      "retainedLogHashes": {
+        "events.jsonl": "53a7f0e4a5218fd892529e17184365fdc6e516938fa7e32791cc8eb8393f7731",
+        "serial-0.log": "cb7f0f7ed3de576f1e98b6c1a294d0082bbe5b64f68c128147d9811d19c8a454",
+        "serial-1.log": "8545f058ec16a1d780490c3365532d3fa8427cdf81d8a3cb5662c7cb1459a40a",
+        "worker-0.stderr.log": "441aaf52e32a196c1d3867d10d81029c66e7ea7c71cdffcae7fa10ca8a12016e",
+        "worker-1.stderr.log": "a39a7617b3a8d3c967d381ca298d5219fddd75ad4d66b65fbc28ee48998020ae"
+      }
+    }
+  ],
+  "verificationLogHashes": {
+    "dio-build.log": "5333de21eab4b613fc45e31849be6c6cf98740bc2a0704d51914baf10eefe430",
+    "fixture-red.log": "7c95426cd90107e13ea9bedaf67683b47138efd2904de0aafb2a53f4a5ad7ff7",
+    "host-green.log": "df7de469d3b82e79917fa82ccc04639d0b17c2917d66bb68dc88178c2c818a1a",
+    "isolation.log": "7a243b5cbfd104688ff0c9cbef6b7cede51078f28354a2503516f346702ba8d3",
+    "network-green.log": "2d0bcb99d3331cd68eec48df68fd0b8c4cef15fe85da80d80145fdcb7153a8ca",
+    "network-red.log": "9365a5eaa928696b0cd60867b067b9995a5bb323c24b83386532bfdde796387c",
+    "parser-red.log": "46d17f354b56e372235faa8396dd77be2afec4caa196813f98265e3d2586fa24",
+    "production-build.log": "0591fee915d149a0ba954ca054aed054cfeecad8daa6d40e4da5f1065dea66c7",
+    "protocol-green.log": "a0645dcf48079e37173daaf1e5c0d0c3c15e2eb78fa1d3f42dfb1e5738f35f03",
+    "protocol-red.log": "9ee3b5fd9d4ed01814f8c20ac24e5d69d3c1a2859f90aa4efc678f4492376ae9",
+    "reboot-persistence.log": "472477d85a7f0c16f582bac7862741acf9124f9ffe542bd92da4a80eabb39bcc",
+    "saved-switch.log": "ef785b5bb152895e4b6990f2a8015d15d4c2370a5e1243fe4986969366ffb284",
+    "standard-build.log": "252e41c3fc577c01b3cd52ac516294578edcb9fc015933671a8d3a2569a89182",
+    "tooling-green.log": "46a91e810bd925333ca447b0b77c96d49966863af0a960bbfeae8c93903393ab",
+    "wan-outage-initial.log": "fdd9c26aa06e59f4f1a0357f4820907a59117b84b53e6d9fa4dea24c129dc3ee",
+    "wan-outage-promotion.log": "be231f46cd366d049cd39241444f59a9e3165aaf1df96b183a4e28dfe7b94ba3",
+    "wan-outage-repeat.log": "416d993cc418ff013a747b2d555160570973637a2259d6e48338ff64f9f12fa0"
+  },
+  "review": {
+    "specification": "PASS",
+    "quality": "APPROVE",
+    "actionableFindings": 0
+  }
+}

@@ -10,9 +10,72 @@ void check(bool condition, const char* message) {
     std::exit(1);
   }
 }
+
+void testWanFixtureLifecycle() {
+  SimCamperNetwork network;
+  network.begin("Bench", "dummy-pass-123", 0);
+  for (const char* value : {"offline", "validating", "online"}) {
+    check(!network.setWanFixture(value), "WAN fixture rejects fresh boot");
+  }
+  NetworkProfile profile;
+  profile.ssid = "Bench-Open";
+  network.connect(profile, 0);
+  check(!network.setWanFixture("online") && network.status().wanPhase == WanPhase::Connecting,
+        "WAN fixture cannot shortcut a pending connection");
+  network.poll(1000);
+  check(network.setWanFixture("offline"), "established attempt accepts offline WAN fixture");
+  network.poll(301000);
+  check(network.status().wanPhase == WanPhase::Offline && !network.pendingProfileConnected() &&
+            network.status().upstreamAddress == IPAddress() && network.status().upstreamRssi == 0,
+        "offline fixture clears readiness and remains offline across five minutes");
+  check(network.setWanFixture("validating") && network.pendingProfileConnected() &&
+            network.status().wanPhase == WanPhase::Validating &&
+            network.status().upstreamAddress == IPAddress(192, 0, 2, 25) &&
+            network.status().upstreamRssi == -48,
+        "validating restores nominal station readiness without accepting pending owner");
+  for (const char* value : {static_cast<const char*>(nullptr), "", "Online", "online ", "connecting", "offline=online"}) {
+    check(!network.setWanFixture(value) && network.status().wanPhase == WanPhase::Validating &&
+              network.pendingProfileConnected() && network.status().upstreamRssi == -48,
+          "invalid WAN values preserve phase, readiness and pending ownership");
+  }
+  network.acceptPendingProfile();
+  check(network.setWanFixture("online") && !network.pendingProfileConnected(),
+        "WAN fixture never resurrects accepted pending ownership");
+  network.setApFixture(true, 3);
+  check(network.setWanFixture("offline") && network.setWanFixture("validating") &&
+            network.setWanFixture("online") && network.status().wanPhase == WanPhase::Online &&
+            network.status().apReady && network.status().apClientCount == 3,
+        "repeated outage and recovery preserve eligibility and AP client fixture");
+  NetworkProfile invalid;
+  check(!network.connect(invalid, 301001) && network.setWanFixture("online"),
+        "rejected connect does not clear established fixture eligibility");
+  network.connect(profile, 301002);
+  check(!network.setWanFixture("offline"), "accepted new connect clears prior eligibility");
+  network.setConnectFixture("failure");
+  network.poll(302002);
+  check(!network.setWanFixture("online") && network.status().wanPhase == WanPhase::Offline,
+        "failed replacement cannot inherit established fixture eligibility");
+  network.cancelPendingProfile();
+  check(!network.setWanFixture("online"), "cancelled attempt has no fixture eligibility");
+  network.setConnectFixture("success");
+  network.connect(profile, 302003);
+  network.acceptPendingProfile();
+  network.poll(303003);
+  check(network.setWanFixture("offline") && network.setWanFixture("online") &&
+            !network.pendingProfileConnected(),
+        "acceptance before establishment preserves ownership through fixture recovery");
+  network.disconnectUpstream();
+  check(!network.setWanFixture("online"), "disconnect clears fixture eligibility");
+  network.connect(profile, 303004);
+  network.poll(304004);
+  network.resetFixtures();
+  check(!network.setWanFixture("online") && network.status().wanPhase == WanPhase::Offline,
+        "reset clears fixture eligibility");
+}
 }  // namespace
 
 int main() {
+  testWanFixtureLifecycle();
   SimCamperNetwork network;
   check(!network.begin("Bench", "too-short", 0),
         "simulated AP preserves production password validation");

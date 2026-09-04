@@ -1,6 +1,6 @@
 # Linux continuation handoff
 
-Updated 2026-09-03 for R1 and the local Velxio runner on `develop` after `8010d11`. The tracked
+Updated 2026-09-03 for R2 on `develop` after implementation baseline `b9e92f7`. The tracked
 [status and acceptance record](../../README.md) is the current task tracker;
 this handoff preserves the earlier bench evidence and continuation context.
 
@@ -35,8 +35,9 @@ Original implementation Tasks 1 through 8 were completed and reviewed. The
 2026-09-03 review reopened follow-up work in Tasks 4 and 8. R1 is now
 implemented through GatewayConnectionController: saved selection activates
 only after the selected SSID associates and receives DHCP, with a cancellable
-progress screen and 60-second rollback. R2 (an unavailable uplink remains
-Connecting) remains open. See the [findings](../../README.md#review-findings).
+progress screen and 60-second rollback. R2 now reports established upstream
+loss as Offline throughout retries and requires fresh DNS after recovery.
+See the [findings](../../README.md#review-findings) for verification status.
 Historical Task 9 bench work recorded the following on physical hardware:
 
 - the private AP starts without an upstream network and the dashboard remains
@@ -88,11 +89,11 @@ two targeted local Velxio navigation runs. Wokwi was not rerun after that
 fix; see the [investigation](../../research/2026-09-03-velxio-investigation.md#ft6206-correction-and-local-retest).
 The [maintained local runner](../../superpowers/plans/2026-09-03-velxio-local-runner.md)
 uses Velxio by default for supported calibration, navigation, saved-switch,
-and reboot-persistence checks. See the current status record for measured
+reboot-persistence, and WAN-outage checks. See the current status record for measured
 acceptance. `sim-test` and `all` are local; Wokwi requires explicit backend and
 scenario/full-suite selection. Review recorded captures before promotion;
-golden updates reuse the run without another simulation. R2 remains the next
-gateway behavior correction, and R1 physical acceptance remains pending.
+golden updates reuse the run without another simulation. R1 and R2 physical
+acceptance remain pending.
 After verification and an NVS-preserving upload of the privately configured
 image, continue controlled upstream provisioning through the keyboard-first flow.
 
@@ -100,7 +101,7 @@ image, continue controlled upstream provisioning through the keyboard-first flow
 
 The [current acceptance checklist](../../README.md#remaining-task-9-acceptance)
 includes saved-selection reboot/rollback coverage, reset protection, and timing
-records. R1 requires physical proof; correct R2 before its outage scenario.
+records. R1 and R2 require physical proof using the reviewed source.
 
 Use the user-controlled bench upstream in place of real Starlink during this
 phase. Ask the user for its current SSID when needed; do not add that SSID or
@@ -123,9 +124,11 @@ its password to tracked files or logs.
 6. Select **Use phone**, then verify the fallback portal boundaries: unavailable
    before physical activation, wrong-code rejection, timeout rejection,
    single-use behavior, and closure after an accepted submission.
-7. Disable the selected upstream for at least five minutes. Verify WAN goes
-   offline while the private AP and setup UI remain available and no two-minute
-   reboot occurs. Re-enable it and measure automatic reconnect.
+7. After association/DHCP and WAN validation, disable the selected upstream for
+   at least five minutes. Verify WAN goes red/Offline throughout retries while
+   the private AP and setup UI remain available and no two-minute reboot occurs.
+   Re-enable it; observe Validating then Online and measure automatic reconnect
+   to the same profile. Fresh selections and rollback start amber/Connecting.
 8. Record measured scan, association, interruption, timeout, and reconnect
    behavior in `docs/README.md`, then commit those observed results.
 
@@ -134,7 +137,19 @@ the hardware is co-located for Tasks 10 and 11.
 
 ## Current repository verification
 
-The final local-runner matrix passed 17 C++ suites and 54 Python tooling tests.
+R2 verification passed 17 C++ suites and 55 Python tooling tests. Production
+(1,038,790 bytes flash / 49,532 globals), local DIO (559,944 / 34,516), and
+standard simulator (559,928 / 34,516) builds passed, as did both attestations
+and production isolation. Independent review found no actionable findings.
+The three targeted local scenarios `wan-outage`, `saved-switch`, and
+`reboot-persistence` passed 19 exact RGBA comparisons. Seven new outage captures
+were visually reviewed before recorded promotion and reproduced on repeat;
+existing goldens were unchanged. See the
+[R2 verification report](../../research/2026-09-03-r2-wan-outage.md) for run IDs,
+hashes, and the expected initial missing-reference failure. Zero Wokwi minutes
+were used; R1/R2 physical acceptance remains pending.
+
+The earlier local-runner matrix passed 17 C++ suites and 54 Python tooling tests.
 Production, local DIO, and standard simulator builds passed, along with both
 simulator attestations and production isolation. The five supported local
 scenarios and reviewed reboot captures are recorded in the

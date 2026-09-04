@@ -47,6 +47,17 @@ class ProtocolTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 self.p.duration_ms(invalid)
 
+    def test_local_wan_fixtures_pass_serial_whitelist(self):
+        for phase in ('offline', 'validating', 'online'):
+            steps = [{'write-serial': f'SIM wan={phase}\n'}]
+            with self.subTest(phase=phase):
+                self.assertEqual(self.p.validate_steps(steps, []), steps)
+        for invalid in ('SIM wan=online extra\n', 'SIM wan=online=offline\n',
+                        'SIM wan=Online\n', 'SIM wan=\n', 'SIM wan=online',
+                        'SIM wan=online\nSIM reset\n', 'SIM password=secret\n'):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                self.p.validate_steps([{'write-serial': invalid}], [])
+
     def test_contact_release_clears_the_coordinate_frame(self):
         pressed = self.p.touch_registers(239, 319)
         self.assertEqual(pressed[2:7], bytes([1, 0, 239, 1, 63]))

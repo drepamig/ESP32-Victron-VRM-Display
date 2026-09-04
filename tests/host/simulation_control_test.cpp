@@ -28,6 +28,35 @@ int main() {
   SimulationClock clock;
   SimulationControl control(network, modbus, clock);
 
+  execute(control, "SIM wan=online", "SIM ERROR");
+  NetworkProfile wanProfile;
+  wanProfile.ssid = "Bench-Open";
+  network.connect(wanProfile, 0);
+  execute(control, "SIM wan=offline", "SIM ERROR");
+  network.poll(1000);
+  execute(control, "SIM wan=offline", "SIM OK");
+  check(network.status().wanPhase == WanPhase::Offline && !network.pendingProfileConnected(),
+        "WAN parser applies outage fixture");
+  execute(control, "SIM wan=validating", "SIM OK");
+  check(network.status().wanPhase == WanPhase::Validating && network.pendingProfileConnected(),
+        "WAN parser restores validation readiness");
+  for (const char* command : {"SIM wan=", "SIM wan=unknown", "SIM wan=Online",
+                             "SIM wan=online extra", "SIM wan=online=offline",
+                             "SIM wan =online", "SIM wan=online\t", "SIM wan=online\r"}) {
+    execute(control, command, "SIM ERROR");
+    check(network.status().wanPhase == WanPhase::Validating && network.pendingProfileConnected(),
+          "rejected WAN parser command cannot mutate fixture");
+  }
+  network.acceptPendingProfile();
+  Serial.clear();
+  Serial.feed("SIM wan=offline\r\nSIM wan=validating\nSIM wan=online\n");
+  control.poll();
+  check(Serial.output() == std::string("SIM OK\nSIM OK\nSIM OK\n") &&
+            network.status().wanPhase == WanPhase::Online && !network.pendingProfileConnected(),
+        "serial WAN fixtures accept CRLF/LF and preserve accepted ownership");
+  execute(control, "SIM reset", "SIM OK");
+  execute(control, "SIM wan=online", "SIM ERROR");
+
   execute(control, "SIM clock=morning", "SIM OK");
   check(std::strcmp(clock.text(), "08:15") == 0, "clock fixture applied");
   check(clock.epoch() == 1788423300U, "morning fixture has a fixed UTC epoch");

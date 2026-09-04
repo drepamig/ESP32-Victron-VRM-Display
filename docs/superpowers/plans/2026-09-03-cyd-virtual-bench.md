@@ -10,8 +10,9 @@ following the root `AGENTS.md`; do not recreate the historical feature checkout.
 The later review at `6ef6c93` reran all 15 C++ suites, 14 Python tooling tests,
 and the dummy production build successfully. It did not rerun Wokwi or flash
 hardware. R1 has since been implemented with controller integration tests and
-a saved-switch Wokwi scenario. R2 remains open: an unavailable upstream stays
-Connecting. The acceptance block below remains the original bench evidence.
+a saved-switch Wokwi scenario. The subsequent [R2 correction](2026-09-03-r2-wan-outage.md)
+reports established upstream loss as Offline throughout retries. The acceptance
+block below remains the original bench evidence.
 See [current status and acceptance](../../README.md) before physical release.
 
 **Original implementation goal:** Build a reproducible, pixel-exact Wokwi bench for
@@ -26,7 +27,7 @@ TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206 1.1.1, Wokwi CLI
 
 **Decision: adopt Velxio as the local simulator backend alongside host tests.**
 This direction was approved after the feasibility investigation and FT6206
-release fix. The maintained runner now supports five scenarios; six others
+release fix. R2 adds `wan-outage` to the runner's five original scenarios; six others
 remain explicit coverage gaps. Do not restart backend selection as if no decision
 had been made.
 
@@ -94,10 +95,11 @@ Final acceptance passed 17 C++ suites, 54 tooling tests, all three builds,
 both simulator attestations/isolation, and 18 exact comparisons across the
 five supported local scenarios. No Wokwi minutes were used for integration.
 
-R2 remains the next gateway behavior correction. R1's physical A→B switching,
-reboot, cancellation, rollback, and AP checks remain pending and must use an
-NVS-preserving upload. Tooling progress does not close R1 physical acceptance,
-R2, or the remaining bench/field work.
+R2's later implementation and verification are recorded in its linked plan.
+R1's physical A→B switching, reboot, cancellation, rollback, and AP checks, and
+R2's real outage/recovery checks remain pending and must use an NVS-preserving
+upload. Tooling progress does not close physical acceptance or the remaining
+bench/field work.
 
 ## Constraints
 

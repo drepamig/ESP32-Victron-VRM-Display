@@ -154,11 +154,15 @@ void testStaleDnsResultCannotValidateNewLifecycle() {
         "replacement stays Connecting while stale worker A is active");
   if (!FakeRtos::pendingTasks.empty()) FakeRtos::runNextTask();
   replaced.poll(4);
+  check(replaced.status().wanPhase == WanPhase::Connecting && FakeRtos::createCalls == 1,
+        "stale SSID readiness cannot validate the replacement lifecycle");
+  associateStation();
+  replaced.poll(5);
   check(replaced.status().wanPhase != WanPhase::Online && FakeRtos::createCalls == 2 &&
             FakeRtos::pendingTasks.size() == 1,
         "worker A result is ignored and worker B validates replacement");
   if (!FakeRtos::pendingTasks.empty()) FakeRtos::runNextTask();
-  replaced.poll(5);
+  replaced.poll(6);
   check(replaced.status().wanPhase == WanPhase::Online, "worker B can validate replacement");
 
   resetFakes();
@@ -309,6 +313,146 @@ void testAcceptCancelAndDisconnectKeepAp() {
         "Clear All erases transient STA configuration while AP and NAPT remain");
 }
 
+void testEstablishedOutageStaysOfflineThroughEveryRetry(bool dhcpOnly, uint32_t origin) {
+  resetFakes();
+  Serial.clear();
+  CamperNetwork gateway;
+  startGateway(gateway);
+  WiFi.AP.clients = 3;
+  gateway.connect(profile("outage-profile"), origin);
+  associateStation();
+  gateway.poll(origin + 1);
+  FakeRtos::runNextTask();
+  gateway.poll(origin + 2);
+  gateway.acceptPendingProfile();
+  WiFi.connected = dhcpOnly;
+  WiFi.stationAddress = IPAddress();
+  const uint32_t lostAt = origin + 3;
+  gateway.poll(lostAt);
+  check(gateway.status().wanPhase == WanPhase::Offline,
+        "established association or DHCP loss reports Offline on first poll");
+  check(gateway.status().upstreamAddress == IPAddress() && gateway.status().upstreamRssi == 0,
+        "outage clears upstream address and RSSI");
+  const uint32_t deadlines[] = {5000, 15000, 35000, 75000, 135000, 195000, 255000};
+  size_t expectedBegins = 1;
+  for (uint32_t deadline : deadlines) {
+    gateway.poll(lostAt + deadline - 1);
+    check(WiFi.beginSsids.size() == expectedBegins &&
+              gateway.status().wanPhase == WanPhase::Offline,
+          "established outage stays Offline before each retry deadline");
+    gateway.poll(lostAt + deadline);
+    ++expectedBegins;
+    check(WiFi.beginSsids.size() == expectedBegins &&
+              gateway.status().wanPhase == WanPhase::Offline,
+          "established outage retries exactly at deadline and stays Offline");
+    gateway.poll(lostAt + deadline + 1);
+    check(WiFi.beginSsids.size() == expectedBegins &&
+              gateway.status().wanPhase == WanPhase::Offline,
+          "retry does not restart schedule on the following poll");
+  }
+  gateway.poll(lostAt + 300000);
+  check(gateway.status().wanPhase == WanPhase::Offline && WiFi.beginSsids.size() == 8,
+        "five-minute outage remains Offline with capped retries");
+  for (const auto& ssid : WiFi.beginSsids) {
+    check(ssid == "outage-profile", "outage retries retain selected profile");
+  }
+  check(gateway.status().apReady && gateway.status().apClientCount == 3 &&
+            WiFi.AP.createCalls == 1 && WiFi.AP.configCalls.size() == 1 &&
+            WiFi.AP.naptCalls == 1 && WiFi.modeCalls == 1 && WiFi.disconnectCalls == 0,
+        "five-minute outage leaves AP, NAPT and attached clients unchanged");
+  associateStation();
+  gateway.poll(lostAt + 300001);
+  check(gateway.status().wanPhase == WanPhase::Validating && FakeRtos::createCalls == 2,
+        "restored association and DHCP require fresh DNS validation");
+  FakeRtos::runNextTask();
+  gateway.poll(lostAt + 300002);
+  check(gateway.status().wanPhase == WanPhase::Online && !gateway.pendingProfileConnected(),
+        "fresh DNS restores Online without reopening accepted profile");
+  check(Serial.output().find("not-a-real-secret") == std::string::npos,
+        "outage does not emit profile credentials");
+}
+
+void testLossBeforeDnsAndStaleWorkerDrain() {
+  resetFakes();
+  CamperNetwork gateway;
+  startGateway(gateway);
+  gateway.connect(profile(), 0);
+  associateStation();
+  // Acceptance can precede the first network poll; establishment is independent of it.
+  gateway.acceptPendingProfile();
+  gateway.poll(1);
+  WiFi.connected = false;
+  gateway.poll(2);
+  check(gateway.status().wanPhase == WanPhase::Offline,
+        "accepted association is established before DNS succeeds");
+  associateStation();
+  gateway.poll(3);
+  check(gateway.status().wanPhase == WanPhase::Validating && FakeRtos::createCalls == 1 &&
+            FakeRtos::pendingTasks.size() == 1,
+        "recovery reports Validating while only the invalid old worker drains");
+  FakeRtos::runNextTask();
+  gateway.poll(4);
+  check(gateway.status().wanPhase == WanPhase::Validating && FakeRtos::createCalls == 2,
+        "stale DNS success is ignored and fresh validation starts after drain");
+  Network.result = false;
+  FakeRtos::runNextTask();
+  gateway.poll(5);
+  check(gateway.status().wanPhase == WanPhase::Offline,
+        "fresh DNS failure cannot reuse invalid success");
+  WiFi.connected = false;
+  gateway.poll(6);
+  gateway.poll(20005);
+  check(WiFi.beginSsids.size() == 1 && gateway.status().wanPhase == WanPhase::Offline,
+        "DNS failure does not reset accumulated retry backoff");
+  gateway.poll(20006);
+  check(WiFi.beginSsids.size() == 2, "failed validation retains twenty-second next retry");
+  associateStation();
+  gateway.poll(20007);
+  check(gateway.status().wanPhase == WanPhase::Validating, "restoration cancels DNS failure delay");
+  Network.result = true;
+  FakeRtos::runNextTask();
+  gateway.poll(20008);
+  check(gateway.status().wanPhase == WanPhase::Online, "fresh DNS eventually restores Online");
+}
+
+void testNewLifecycleDoesNotInheritEstablishment() {
+  resetFakes();
+  CamperNetwork gateway;
+  startGateway(gateway);
+  check(gateway.status().wanPhase == WanPhase::Offline, "fresh boot is Offline");
+  gateway.connect(profile("first"), 0);
+  associateStation();
+  gateway.poll(1);
+  FakeRtos::runNextTask();
+  gateway.poll(2);
+  gateway.acceptPendingProfile();
+  gateway.connect(profile("second"), 3);
+  gateway.poll(4);
+  check(gateway.status().wanPhase == WanPhase::Connecting && FakeRtos::createCalls == 1,
+        "new lifecycle ignores old SSID DHCP readiness");
+  WiFi.connected = false;
+  gateway.poll(5);
+  check(gateway.status().wanPhase == WanPhase::Connecting,
+        "old SSID never establishes replacement lifecycle");
+  gateway.cancelPendingProfile(false);
+  gateway.connect(profile("first"), 6);
+  gateway.acceptPendingProfile();
+  gateway.poll(7);
+  check(gateway.status().wanPhase == WanPhase::Connecting,
+        "rollback is a fresh Connecting lifecycle even after acceptance");
+  associateStation();
+  gateway.poll(8);
+  WiFi.connected = false;
+  gateway.poll(9);
+  check(gateway.status().wanPhase == WanPhase::Offline,
+        "rollback becomes established only after its own association and DHCP");
+  gateway.disconnectUpstream();
+  gateway.connect(profile(), 10);
+  gateway.poll(11);
+  check(gateway.status().wanPhase == WanPhase::Connecting,
+        "disconnect clears establishment for a new attempt");
+}
+
 void testAsyncScanGatingFailureAndResults() {
   resetFakes();
   CamperNetwork gateway;
@@ -378,6 +522,11 @@ int main() {
   testDnsFailureAndThirtySecondRevalidation();
   testRetryCadenceCapResetAndWraparound();
   testAcceptCancelAndDisconnectKeepAp();
+  testEstablishedOutageStaysOfflineThroughEveryRetry(false, 0);
+  testEstablishedOutageStaysOfflineThroughEveryRetry(true, 0);
+  testEstablishedOutageStaysOfflineThroughEveryRetry(false, UINT32_MAX - 1000);
+  testLossBeforeDnsAndStaleWorkerDrain();
+  testNewLifecycleDoesNotInheritEstablishment();
   testAsyncScanGatingFailureAndResults();
   return failures == 0 ? 0 : 1;
 }

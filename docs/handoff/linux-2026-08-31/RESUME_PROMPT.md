@@ -27,9 +27,9 @@ in the ignored SDD records are historical references.
 
 Before making changes, verify the branch, working tree, baseline commits in
 history, remotes, and the repository-owned toolchain. Run the complete current
-test script; it now includes 17 C++ suites and 54 Python tooling tests,
+test script; it now includes 17 C++ suites and 55 Python tooling tests,
 including production controller integration for R1 and the FT6206 release-race
-regression. Dummy builds and tests do not need production secrets. Preserve any
+and WAN-outage regressions. Dummy builds and tests do not need production secrets. Preserve any
 ignored `VictronCYD_Modbus/secrets.h`; never read a secret value into chat or
 commit it. Do not erase NVS or modify Venus.
 
@@ -50,11 +50,16 @@ R1 is implemented and reviewed: saved switching uses a cancellable progress
 view and persists only after the selected SSID associates and receives DHCP.
 Its host regressions cover persistence, rollback, timeout, and UI ownership.
 Physical A→B, reboot, cancel, failed-switch rollback, and AP acceptance remain
-pending. R2 remains the next gateway behavior correction: extended upstream loss must show red/offline while
-preserving selected-profile retries and AP availability. Add a production-module
-regression and obtain review; do not treat passing R1 tests as R2 acceptance.
+pending. R2 is implemented: established association/DHCP loss reports Offline
+through retries; restoration requires fresh DNS to move from Validating to
+Online. Fresh selection and rollback retain Connecting. Its host regression
+covers a five-minute outage and exact retry/wraparound behavior; local
+`wan-outage` checks presentation and setup/Back. R2's three builds, both simulator
+attestations/isolation, independent review, and three targeted local scenarios
+passed (19 exact images). Check the current status record for run provenance;
+physical outage/AP/recovery acceptance remains pending.
 
-After those corrections and verification, resume controlled upstream
+After confirming that verification, resume controlled upstream
 provisioning with an appropriately reviewed physical build: keep the bench
 upstream available, select it from `Nearby`, validate the masked keyboard and Connect
 flow first, then validate **Use phone** as the time-limited private portal

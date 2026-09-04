@@ -42,8 +42,10 @@ acceptance remains incomplete. Saved selection now persists only after the
 selected SSID associates and receives an IP address. Its progress screen offers
 Back to cancel; cancellation or failure within the 60-second attempt restores
 the previous active network. With no previous profile, upstream remains
-disconnected and the private AP stays available. R2 remains open: a lost
-upstream stays amber/Connecting instead of the planned red/Offline state. See the [status and acceptance record](docs/README.md) for
+disconnected and the private AP stays available. An established upstream loss
+now reports red/Offline throughout automatic retries; restored association and
+DHCP report amber/Validating until fresh DNS succeeds. New connection attempts
+retain amber/Connecting. See the [status and acceptance record](docs/README.md) for
 evidence, remaining bench/field checks, and the latest recorded firmware upload.
 Continue development on `develop` following [AGENTS.md](AGENTS.md).
 
@@ -103,7 +105,7 @@ settings below into `User_Setup.h` (or a selected custom setup):
    successful association/DHCP; they are not compile-time settings.
 
 Follow the [remaining acceptance checks](docs/README.md#remaining-task-9-acceptance)
-before deployment. Saved-switch hardware acceptance and the R2 WAN-status correction remain pending.
+before deployment. Saved-switch and WAN-outage hardware acceptance remain pending.
 
 **GX Modbus register map used** (function 3, read holding registers):
 

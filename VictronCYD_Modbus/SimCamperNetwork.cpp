@@ -27,6 +27,7 @@ void SimCamperNetwork::poll(uint32_t nowMs) {
   }
   connectionPending_ = false;
   if (connectFixture_ == ConnectFixture::Success) {
+    connectionEstablished_ = true;
     wanPhase_ = WanPhase::Online;
     pendingConnected_ = true;
     upstreamAddress_ = IPAddress(192, 0, 2, 25);
@@ -45,6 +46,7 @@ bool SimCamperNetwork::connect(const NetworkProfile& profile, uint32_t nowMs) {
     return false;
   }
   wanPhase_ = WanPhase::Connecting;
+  connectionEstablished_ = false;
   connectionPending_ = true;
   pendingProfile_ = true;
   connectionReadyAtMs_ = nowMs + 1000;
@@ -124,6 +126,7 @@ void SimCamperNetwork::cancelPendingProfile(bool) {
 }
 
 void SimCamperNetwork::disconnectUpstream() {
+  connectionEstablished_ = false;
   pendingProfile_ = false;
   connectionPending_ = false;
   connectionReadyAtMs_ = 0;
@@ -164,12 +167,32 @@ bool SimCamperNetwork::setConnectFixture(const char* fixture) {
   return true;
 }
 
+bool SimCamperNetwork::setWanFixture(const char* fixture) {
+  if (!connectionEstablished_ || fixture == nullptr) return false;
+  WanPhase phase;
+  if (std::strcmp(fixture, "offline") == 0) {
+    phase = WanPhase::Offline;
+  } else if (std::strcmp(fixture, "validating") == 0) {
+    phase = WanPhase::Validating;
+  } else if (std::strcmp(fixture, "online") == 0) {
+    phase = WanPhase::Online;
+  } else {
+    return false;
+  }
+  wanPhase_ = phase;
+  pendingConnected_ = phase != WanPhase::Offline;
+  upstreamAddress_ = pendingConnected_ ? IPAddress(192, 0, 2, 25) : IPAddress();
+  upstreamRssi_ = pendingConnected_ ? -48 : 0;
+  return true;
+}
+
 void SimCamperNetwork::setApFixture(bool ready, uint8_t clients) {
   apReady_ = ready;
   apClients_ = ready ? clients : 0;
 }
 
 void SimCamperNetwork::resetFixtures() {
+  connectionEstablished_ = false;
   beginAttempted_ = true;
   apReady_ = true;
   apClients_ = 1;
