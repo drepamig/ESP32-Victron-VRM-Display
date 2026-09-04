@@ -19,15 +19,16 @@ First read, in order:
 Use `docs/README.md` as the current task and acceptance record. The review
 baseline is `6ef6c93` on 2026-09-03. Do not restart Tasks 1-8 or repeat completed
 Task 9 calibration/countdown/navigation work as if it had never been done.
-Issue #1 time settings are implemented in the current working source: gear
+Issue #1 time settings are implemented and released in firmware `8e2cd3b`: gear
 menu, persistent 12/24h and North American/UTC timezone selection. Defaults
 are America/Chicago and 12h. See the current status/evidence before continuing;
-the physical board has not received this issue's changes.
+the physical board has received this issue's changes, with interactive acceptance pending.
 The latest recorded verified physical upload is
-`d69e0cf03ffd8a99cdbb825efdd9303a69f1962e` on 2026-09-04. All four segments
+`8e2cd3b9d5497f67c06def6adc76c0055f3cb656` on 2026-09-04. All four segments
 were hash-verified, NVS was unchanged byte for byte, and a 25-second startup
-check reported private AP ready without panic/watchdog events. UI/routing and
-R1/R2 acceptance remain pending. Confirm actual device state before any future upload.
+check reported private AP ready without panic/watchdog events. Firmware was
+pushed to `origin/develop`. Time settings, UI/routing, and R1/R2 acceptance remain
+pending. Confirm actual device state before any future upload.
 The old nested checkout, feature branch, and missing original plan/spec paths
 in the ignored SDD records are historical references.
 

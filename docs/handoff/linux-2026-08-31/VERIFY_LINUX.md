@@ -153,7 +153,7 @@ git status --short --branch
 
 ## Optional hardware upload
 
-The latest recorded verified upload is `d69e0cf` on 2026-09-04; that record does
+The latest recorded verified upload is `8e2cd3b` on 2026-09-04; that record does
 not identify the device currently connected. Resolve any new findings and
 review/verify the intended source before release. Upload only when the board
 is connected and an upload has been requested. The command below uses the

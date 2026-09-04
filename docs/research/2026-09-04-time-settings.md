@@ -77,8 +77,11 @@ The immutable original result JSON retains its pre-promotion comparisons.
 
 ## Remaining acceptance
 
-No Wokwi execution, board flashing, Venus changes, pushing, or issue closure
-was performed. The board's latest recorded upload remains R2 `d69e0cf`.
+The implementation checkpoint and companion JSON above precede release;
+they record no flashing or pushing during implementation. The subsequent
+[release and physical upload](2026-09-04-time-settings-upload.md) committed and
+pushed firmware `8e2cd3b`, then flashed it on `COM3` with NVS preserved byte
+for byte. No Wokwi execution, Venus changes, or issue closure was performed.
 Physical acceptance must verify NTP-derived local time, touch navigation, time
 settings after reboot, and existing profiles/calibration after an NVS-preserving
 upload. Real Wi-Fi/AP/NAPT and R1/R2 acceptance remain pending.

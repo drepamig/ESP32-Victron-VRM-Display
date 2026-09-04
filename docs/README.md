@@ -1,7 +1,7 @@
 # Gateway status and acceptance record
 
-Updated 2026-09-04 for issue #1 time-settings implementation and verification.
-The latest verified physical upload remains R2 firmware `d69e0cf`. This is the tracked status
+Updated 2026-09-04 after the issue #1 time-settings release and verified upload.
+The latest verified physical upload is firmware `8e2cd3b`. This is the tracked status
 record for the ESP32 Venus-Starlink touch bridge. Work in the current checkout
 on `develop` according to [AGENTS.md](../AGENTS.md).
 
@@ -58,8 +58,9 @@ boundaries. [Verification evidence](research/2026-09-04-time-settings.md) record
 and seven completed local scenarios with 46 exact comparisons to reviewed
 goldens. Physical acceptance is pending: verify gear/Time/Wi-Fi navigation,
 NTP-derived local time, timezone/format persistence after reboot, and existing
-profiles/calibration after an NVS-preserving upload. The latest physical board
-upload remains R2 firmware `d69e0cf`; issue #1 has not been flashed.
+profiles/calibration after an NVS-preserving upload. Firmware `8e2cd3b` is now
+flashed on `COM3`, with all four segments hash-verified and NVS preserved byte
+for byte. See the [upload evidence](research/2026-09-04-time-settings-upload.md).
 
 ## Local testing workflow and next development task
 
@@ -196,13 +197,13 @@ No firmware flashing, Venus changes, or pushing occurred.
 ## Recorded physical observations
 
 The latest recorded verified upload is firmware
-`d69e0cf03ffd8a99cdbb825efdd9303a69f1962e` on 2026-09-04, using the private
+`8e2cd3b9d5497f67c06def6adc76c0055f3cb656` on 2026-09-04, using the private
 configuration on `COM3`. All four firmware segments passed hash verification;
 NVS at `0x9000..0xDFFF` matched byte for byte before and after flashing. A normal
 boot reported the private AP ready, with one boot and no panic/watchdog event
 during 25 seconds. No valid GX result was observed. See the
-[upload record](research/2026-09-04-physical-upload.md) for artifact hashes,
-measurements, and limits. Physical UI, R1/R2, and routing acceptance remain pending.
+[upload record](research/2026-09-04-time-settings-upload.md) for artifact hashes,
+measurements, and limits. Physical time-settings UI, R1/R2, and routing acceptance remain pending.
 
 The following earlier touch results at firmware `a6827e6` on 2026-09-02 are
 carried forward from the original bench ledger and
@@ -226,7 +227,7 @@ not establish timing bounds or uninterrupted routing.
 ## Remaining Task 9 acceptance
 
 R1 and R2 implementation, automated verification, and review are complete.
-The privately configured `d69e0cf` image is now uploaded and verified. Use that
+The privately configured `8e2cd3b` image is now uploaded and verified. Use that
 image for acceptance; if source or configuration changes, rebuild the reviewed
 source and preserve NVS during the next verified upload.
 Use a controlled bench upstream in place of real Starlink; keep its SSID and
