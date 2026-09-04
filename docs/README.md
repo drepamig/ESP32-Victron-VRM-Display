@@ -1,7 +1,7 @@
 # Gateway status and acceptance record
 
 Updated 2026-09-04 for the approved IPv4 repeater implementation.
-The latest verified physical upload is firmware `8e2cd3b`. This is the tracked status
+The latest verified physical upload is firmware `d2df9e4`. This is the tracked status
 record for the ESP32 Venus-Starlink touch bridge. Work in the current checkout
 on `develop` according to [AGENTS.md](../AGENTS.md).
 
@@ -59,8 +59,10 @@ The existing phone portal remains physically activated and checks AP-client
 membership; its screen follows the ESP32's current management address.
 
 See the [verification and physical acceptance record](research/2026-09-04-ipv4-repeater.md).
-This implementation has not been flashed. The physical upload above still
-contains the earlier NAPT behavior. Direct upstream SSH, real DHCP forwarding,
+Firmware `d2df9e4` is flashed with all segments hash-verified and NVS preserved
+byte for byte; basic startup reports AP ready. See the
+[upload record](research/2026-09-04-ipv4-repeater-upload.md).
+Direct upstream SSH, real DHCP forwarding,
 outage/recovery, and live Modbus acceptance remain pending.
 
 ## Issue #1: Time configuration
@@ -177,7 +179,7 @@ responsive setup, AP availability, and recovery after an NVS-preserving upload.
 
 | Evidence | Result and scope |
 | --- | --- |
-| IPv4 repeater | 23 C++ suites, 61 Python tests, production and local DIO builds, current attestation/isolation, independent code approval, and four local scenarios with 42 exact RGBA matches after review. Not flashed; real DHCP/SSH/Modbus pending. [Evidence](research/2026-09-04-ipv4-repeater.md). |
+| IPv4 repeater | 23 C++ suites, 61 Python tests, production and local DIO builds, current attestation/isolation, independent code approval, and four local scenarios with 42 exact RGBA matches after review. Firmware `d2df9e4` flashed with NVS preserved and normal startup; real DHCP/SSH/Modbus pending. [Evidence](research/2026-09-04-ipv4-repeater.md). |
 | Issue #1: time settings | 19 C++ suites, 60 Python tests, three builds, both attestations/isolation, independent review, seven completed local scenarios and 46 exact RGBA matches after reviewed recorded promotion. Physical acceptance pending. [Evidence](research/2026-09-04-time-settings.md). |
 | R2: host/tooling matrix | Passed: 17 C++ suites and 55 Python tooling tests. Production outage, fixture, parser, and protocol regressions failed before implementation. |
 | R2: builds and isolation | Production 1,038,790 bytes flash / 49,532 globals; local DIO 559,944 / 34,516; standard simulator 559,928 / 34,516. All builds, both attestations, and production isolation passed. |
@@ -220,12 +222,12 @@ No firmware flashing, Venus changes, or pushing occurred.
 ## Recorded physical observations
 
 The latest recorded verified upload is firmware
-`8e2cd3b9d5497f67c06def6adc76c0055f3cb656` on 2026-09-04, using the private
+`d2df9e443f0093a01b3f10b7251e0f9580aec465` on 2026-09-04, using the private
 configuration on `COM3`. All four firmware segments passed hash verification;
 NVS at `0x9000..0xDFFF` matched byte for byte before and after flashing. A normal
 boot reported the private AP ready, with one boot and no panic/watchdog event
 during 25 seconds. No valid GX result was observed. See the
-[upload record](research/2026-09-04-time-settings-upload.md) for artifact hashes,
+[upload record](research/2026-09-04-ipv4-repeater-upload.md) for artifact hashes,
 measurements, and limits. Physical time-settings UI, R1/R2, and routing acceptance remain pending.
 
 The following earlier touch results at firmware `a6827e6` on 2026-09-02 are
@@ -250,9 +252,9 @@ not establish timing bounds or uninterrupted routing.
 ## Remaining Task 9 acceptance
 
 R1 and R2 implementation, automated verification, and review are complete.
-The privately configured `8e2cd3b` image is uploaded and verified, but predates
-the repeater. Build the reviewed repeater source with the private configuration
-and preserve NVS during the next verified upload before its acceptance checks.
+The privately configured repeater image `d2df9e4` is uploaded and verified with
+NVS preserved. Use that firmware for acceptance. Rebuild reviewed source and
+preserve NVS if a later source or private configuration change requires upload.
 Use a controlled bench upstream in place of real Starlink; keep its SSID and
 password out of tracked results.
 

@@ -24,7 +24,8 @@ menu, persistent 12/24h and North American/UTC timezone selection. Defaults
 are America/Chicago and 12h. See the current status/evidence before continuing;
 the physical board has received this issue's changes, with interactive acceptance pending.
 The latest recorded verified physical upload is
-`8e2cd3b9d5497f67c06def6adc76c0055f3cb656` on 2026-09-04. All four segments
+`d2df9e443f0093a01b3f10b7251e0f9580aec465` on 2026-09-04, adding the approved
+IPv4 repeater and Settings → Venus OS address/status page. All four segments
 were hash-verified, NVS was unchanged byte for byte, and a 25-second startup
 check reported private AP ready without panic/watchdog events. Firmware was
 pushed to `origin/develop`. Time settings, UI/routing, and R1/R2 acceptance remain
@@ -34,7 +35,7 @@ in the ignored SDD records are historical references.
 
 Before making changes, verify the branch, working tree, baseline commits in
 history, remotes, and the repository-owned toolchain. Run the complete current
-test script; it now includes 19 C++ suites and 60 Python tooling tests,
+test script; it now includes 23 C++ suites and 61 Python tooling tests,
 including production controller integration for R1 and the FT6206 release-race
 and WAN-outage regressions. Dummy builds and tests do not need production secrets. Preserve any
 ignored `VictronCYD_Modbus/secrets.h`; never read a secret value into chat or

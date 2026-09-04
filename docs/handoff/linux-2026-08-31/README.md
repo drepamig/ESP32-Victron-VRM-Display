@@ -1,7 +1,7 @@
 # Linux continuation handoff
 
-Updated 2026-09-04 after issue #1 time-settings release; the latest physical
-upload is firmware `8e2cd3b`. The tracked
+Updated 2026-09-04 after the IPv4 repeater release; the latest physical
+upload is firmware `d2df9e4`. The tracked
 [status and acceptance record](../../README.md) is the current task tracker;
 this handoff preserves the earlier bench evidence and continuation context.
 
@@ -20,10 +20,10 @@ Continue on `develop` unless the user explicitly instructs otherwise, following
 the root `AGENTS.md`; the original branch name is historical context only.
 
 The latest recorded verified upload was built from commit
-`8e2cd3b9d5497f67c06def6adc76c0055f3cb656`, using the ignored private
+`d2df9e443f0093a01b3f10b7251e0f9580aec465`, using the ignored private
 configuration on `COM3` on 2026-09-04. All four segments were hash-verified;
 NVS matched byte for byte. Firmware was pushed to `origin/develop`.
-See the [upload record](../../research/2026-09-04-time-settings-upload.md).
+See the [upload record](../../research/2026-09-04-ipv4-repeater-upload.md).
 
 ## Project outcome
 
@@ -78,9 +78,9 @@ changing the saved calibration format or touch debounce.
 
 ## Latest physical checkpoint
 
-Firmware `8e2cd3b` booted normally after the 2026-09-04 upload. A 25-second
+Firmware `d2df9e4` booted normally after the 2026-09-04 upload. A 25-second
 serial check observed private AP ready, one boot, and no panic/watchdog event.
-There was one invalid Modbus result and no valid GX result. Display/touch,
+There were two invalid Modbus results and no valid GX result. Display/touch,
 NTP/time-setting persistence, real routing, saved switching, and five-minute
 outage/recovery were not tested.
 The NVS comparison proves upload preservation, not interactive acceptance.

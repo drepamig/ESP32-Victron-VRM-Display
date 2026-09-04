@@ -87,10 +87,12 @@ is separate from these results.
 
 ## Physical acceptance still required
 
-This change has not been flashed. The last recorded physical firmware is
-`8e2cd3b`, which predates the repeater. No Wokwi cloud run was performed.
+Firmware `d2df9e4` is now flashed on `COM3`. All four segments were hash-verified,
+NVS was preserved byte for byte, and a 25-second startup check reported AP ready
+without a panic/watchdog event. See the [upload record](2026-09-04-ipv4-repeater-upload.md).
+No Wokwi cloud run was performed. Interactive and network acceptance remains below.
 
-1. Make an NVS-preserving upload, then verify existing profiles, calibration,
+1. On the uploaded firmware, verify existing profiles, calibration,
    time settings, AP SSID/password, and explicit upstream selection.
 2. Configure Venus Wi-Fi for DHCP on the ESP32 AP. Enable Modbus TCP on Venus;
    enable SSH if it is required for the installation. Confirm that the upstream
