@@ -1,0 +1,170 @@
+{
+  "date": "2026-09-03",
+  "status": "release fix verified; two targeted local navigation runs passed",
+  "wokwi_minutes": 0,
+  "host_cpp_suites": 17,
+  "python_tooling_tests": 14,
+  "independent_review": "no findings",
+  "real_driver_reproduction_before_exit": 1,
+  "real_driver_reproduction_after_exit": 0,
+  "production_flash_bytes": 1038650,
+  "production_globals_bytes": 49524,
+  "simulation_flash_bytes": 559644,
+  "simulation_globals_bytes": 34516,
+  "dio_flash_bytes": 559660,
+  "dio_globals_bytes": 34516,
+  "simulation_firmware_sha256": "74b66d0a0de5a400bc41dd4ec347d816f698e3695e9dbd94972ba2cef216bf8f",
+  "dio_firmware_sha256": "74780bcc9e143a473f7cc17bf8f50533d1504d0658b2f24b3b810786d9ae85f2",
+  "touch_source_sha256": "9d5859fc7ea5d64caaa9898556c5863a15d926ee56a60c1eccdd3fcfeaa1e338",
+  "source_sha256": "89347ef3c1bee6fac602687b06acb92639334b3bf943ad0b7c5f36ee10e149b0",
+  "runtime_image": "ghcr.io/davidmonterocrespo24/velxio@sha256:117a82cc52ec7168b790bc8553c68fb1fcd86a16db202b847f948f7a573691d2",
+  "goldens_changed": false,
+  "upstream_runtime_changes": [
+    "-icount 3",
+    "virtual clock query",
+    "FT6206 I2C proxy"
+  ],
+  "decoder_changes": [
+    "RGB565 inversion",
+    "RAMWR cursor reset"
+  ],
+  "remaining": [
+    "runner integration",
+    "other scenarios",
+    "timeout timing",
+    "NVS-preserving reboot",
+    "startup watchdog warning"
+  ],
+  "runs": [
+    {
+      "source": "touch-fixed-run1",
+      "elapsed_seconds": 39.491,
+      "guest_ms": 11389.102,
+      "sim_ready": true,
+      "fixture_ack": true,
+      "worker_returncode": 0,
+      "comparison": [
+        {
+          "actual": "calibration-1.png",
+          "expected": "boot-calibration/boot.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        },
+        {
+          "actual": "saved.png",
+          "expected": "setup-navigation/saved.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        },
+        {
+          "actual": "nearby.png",
+          "expected": "setup-navigation/nearby.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        }
+      ],
+      "short_press_keeps_dashboard": true,
+      "nearby_stable_after_release": true,
+      "events_sha256": "9b16d0752ab91daa9343611796b18bc5626751ec9bb8e15b1a9d7dc4f6be7578"
+    },
+    {
+      "source": "touch-fixed-run2",
+      "elapsed_seconds": 37.717,
+      "guest_ms": 11269.107,
+      "sim_ready": true,
+      "fixture_ack": true,
+      "worker_returncode": 0,
+      "comparison": [
+        {
+          "actual": "calibration-1.png",
+          "expected": "boot-calibration/boot.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        },
+        {
+          "actual": "saved.png",
+          "expected": "setup-navigation/saved.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        },
+        {
+          "actual": "nearby.png",
+          "expected": "setup-navigation/nearby.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        }
+      ],
+      "short_press_keeps_dashboard": true,
+      "nearby_stable_after_release": true,
+      "events_sha256": "bea78c46c2f2f139e93c97bef83c55b522b4f2360958fc6e88452d4fe6ae63d2"
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "calibration.png",
+      "sha256": "97fda52f9161858f6332e496466cbe948785044451b407f6ca6b9f0b100a1939"
+    },
+    {
+      "file": "driver-after.log",
+      "sha256": "0f00cb85e1200983bc4db2082d108ec493ed61a86baeb2cc809e282a6cd239b7"
+    },
+    {
+      "file": "driver-before.log",
+      "sha256": "5001af568e5323e7d2176c1d13f6e0f9ea2045d9a1e803650f822759a3ce58d0"
+    },
+    {
+      "file": "nearby.png",
+      "sha256": "31dbae32af5f4b91bad7e4718f96fbf493438c537f73fcb771a35110342f65ea"
+    },
+    {
+      "file": "saved.png",
+      "sha256": "c1a3f63e8507d8c48a29b7e48af9a1cba5c7a9feaffcd4fd11f3f3e8b1d9b214"
+    },
+    {
+      "file": "touch-fixed-run1-serial.log",
+      "sha256": "81ba12a1d277994297d3b4389ca2828f8dff56e97205843fe053ed411d13e759"
+    },
+    {
+      "file": "touch-fixed-run2-serial.log",
+      "sha256": "6aec72b192310f19789786a510a30f46cbf501efde7e0b25d71a08f66290c2c9"
+    }
+  ],
+  "local_harnesses": [
+    {
+      "file": "build/velxio-investigation/build_dio_fixed.sh",
+      "sha256": "b54de595543b7b50af9804d56f4f6f31a555cfd83d9ec56f4fe269974d7796ba"
+    },
+    {
+      "file": "build/velxio-investigation/touch_fixed_probe.py",
+      "sha256": "7b74144d0f3f738593a2be26e173aeb099558a99688d0743e7176369f1f59e7b"
+    },
+    {
+      "file": "build/velxio-investigation/touch_worker.py",
+      "sha256": "fe4803e593fd49ed41eb9af4a5103f5770c5ee81f30f4ed424e81a53cf5b0b0e"
+    },
+    {
+      "file": "build/velxio-investigation/prepare_touch_replay.py",
+      "sha256": "112e969a448539e742f97abfa3dff028624311e758c65d977581d1e3fe9eca5f"
+    },
+    {
+      "file": "build/velxio-investigation/compare_touch.py",
+      "sha256": "84674469498d4fed0a346b0825731378c4c4d8ceb15bcd9e953a7d8aa6891797"
+    },
+    {
+      "file": "build/velxio-investigation/release-race/run-fixed.sh",
+      "sha256": "0c083b7245239c841443e6f46677beabc01ec3f41a864979135a13d29ca0403d"
+    }
+  ]
+}

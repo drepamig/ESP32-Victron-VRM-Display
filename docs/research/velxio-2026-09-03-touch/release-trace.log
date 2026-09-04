@@ -1,0 +1,31 @@
+Source: build/velxio-investigation/touch-guest-time-run1/worker.stderr.log, lines 29869-29896
+Register 0x02 read returns 1; release update occurs; bulk read from register 0x00 returns touch count 0 in its third byte.
+
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0001 op=START_SEND result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0205 op=WRITE result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0003 op=FINISH result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0000 op=START_RECV result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x01 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0003 op=FINISH result=0x00 slave=ProxySlave
+[esp32_worker] proxy_i2c updated at 0x38 (256 bytes)
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0001 op=START_SEND result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0005 op=WRITE result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0003 op=FINISH result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0000 op=START_RECV result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0xbb slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x14 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0006 op=READ result=0x00 slave=ProxySlave
+[esp32_worker] I2C bus=1 addr=0x38 event=0x0003 op=FINISH result=0x00 slave=ProxySlave

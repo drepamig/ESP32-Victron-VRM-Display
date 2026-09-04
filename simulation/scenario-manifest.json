@@ -4,47 +4,111 @@
     {
       "name": "boot-calibration",
       "file": "scenarios/boot-calibration.yaml",
-      "screenshots": ["boot", "calibrated-dashboard"]
+      "screenshots": [
+        "boot",
+        "calibrated-dashboard"
+      ]
     },
     {
       "name": "wan-hold",
       "file": "scenarios/wan-hold.yaml",
-      "screenshots": ["cancelled-short-press", "successful-three-second-hold"]
+      "screenshots": [
+        "cancelled-short-press",
+        "successful-three-second-hold"
+      ],
+      "backendFiles": {
+        "velxio": "velxio/wan-hold.yaml"
+      }
     },
     {
       "name": "setup-navigation",
       "file": "scenarios/setup-navigation.yaml",
-      "screenshots": ["saved", "nearby"]
+      "screenshots": [
+        "saved",
+        "nearby"
+      ]
     },
     {
       "name": "protected-network",
       "file": "scenarios/protected-network.yaml",
-      "screenshots": ["protected-selection"]
+      "screenshots": [
+        "protected-selection"
+      ]
     },
     {
       "name": "password-entry",
       "file": "scenarios/password-entry.yaml",
-      "screenshots": ["masked", "visible", "hidden-again", "numbers", "symbols", "backspace"]
+      "screenshots": [
+        "masked",
+        "visible",
+        "hidden-again",
+        "numbers",
+        "symbols",
+        "backspace"
+      ]
     },
     {
       "name": "connection-flow",
       "file": "scenarios/connection-flow.yaml",
-      "screenshots": ["connecting", "failure", "retry", "success"]
+      "screenshots": [
+        "connecting",
+        "failure",
+        "retry",
+        "success"
+      ]
     },
     {
       "name": "saved-profiles",
       "file": "scenarios/saved-profiles.yaml",
-      "screenshots": ["selected", "delete-confirmation", "clear-hold", "cleared"]
+      "screenshots": [
+        "selected",
+        "delete-confirmation",
+        "clear-hold",
+        "cleared"
+      ]
     },
     {
       "name": "phone-portal",
       "file": "scenarios/phone-portal.yaml",
-      "screenshots": ["fixed-pairing-code"]
+      "screenshots": [
+        "fixed-pairing-code"
+      ]
     },
     {
       "name": "dashboard-states",
       "file": "scenarios/dashboard-states.yaml",
-      "screenshots": ["nominal", "stale", "offline"]
+      "screenshots": [
+        "nominal",
+        "stale",
+        "offline"
+      ]
+    },
+    {
+      "name": "saved-switch",
+      "file": "scenarios/saved-switch.yaml",
+      "screenshots": [
+        "a-active",
+        "progress",
+        "cancelled",
+        "timeout",
+        "rollback-a",
+        "success",
+        "b-active"
+      ]
+    },
+    {
+      "name": "reboot-persistence",
+      "file": "velxio/reboot-persistence.yaml",
+      "backends": [
+        "velxio"
+      ],
+      "screenshots": [
+        "b-active-before",
+        "dashboard-after-reboot",
+        "b-active-after",
+        "failed-submission",
+        "rollback-b"
+      ]
     }
   ]
 }

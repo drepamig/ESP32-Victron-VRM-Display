@@ -84,6 +84,7 @@ class FakeWiFiClass {
     disconnectWifiOff.clear();
     disconnectEraseAp.clear();
     connected = false;
+    stationSsid = String();
     stationAddress = IPAddress();
     stationRssi = 0;
     scanStartCalls = 0;
@@ -135,6 +136,7 @@ class FakeWiFiClass {
   }
 
   bool isConnected() const { return connected; }
+  String SSID() const { return stationSsid; }
   IPAddress localIP() const { return stationAddress; }
   int8_t RSSI() const { return stationRssi; }
 
@@ -170,6 +172,7 @@ class FakeWiFiClass {
   std::vector<bool> disconnectWifiOff;
   std::vector<bool> disconnectEraseAp;
   bool connected = false;
+  String stationSsid;
   IPAddress stationAddress;
   int8_t stationRssi = 0;
   int scanStartCalls = 0;

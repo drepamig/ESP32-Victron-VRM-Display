@@ -46,7 +46,8 @@ RawTouchSample Ft6206RawTouchDevice::sample() {
     return {false, {0, 0}, 0};
   }
   const TS_Point point = touch_.getPoint();
-  return normalizeFt6206Sample(true, point.x, point.y);
+  // Contact may end between touched() and the coordinate-frame read.
+  return normalizeFt6206Sample(point.z > 0, point.x, point.y);
 }
 
 #else

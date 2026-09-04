@@ -16,6 +16,8 @@ class NetworkProfileStore {
   bool begin();
   size_t count() const;
   int activeIndex() const;
+  // False means storage could not be read; true with index -1 means no selection.
+  bool loadActive(NetworkProfile& out, int& index) const;
   bool load(size_t index, NetworkProfile& out) const;
   bool activate(size_t index);
   bool upsert(const NetworkProfile& profile, size_t& storedIndex);

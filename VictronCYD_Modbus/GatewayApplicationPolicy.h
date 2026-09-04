@@ -14,6 +14,7 @@ enum class PendingProfileSource : uint8_t {
   DirectOpen,
   Portal,
   OnDevice,
+  Saved,
 };
 
 enum class ScanUiOutcome : uint8_t {

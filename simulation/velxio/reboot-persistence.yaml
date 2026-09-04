@@ -1,0 +1,354 @@
+name: Saved B and calibration survive local worker reboot
+version: 1
+steps:
+- wait-serial: SIM READY
+- touch:
+    part-id: lcd1
+    x: 20
+    y: 20
+    duration: 120ms
+    wait: true
+- delay: 100ms
+- touch:
+    part-id: lcd1
+    x: 219
+    y: 20
+    duration: 120ms
+    wait: true
+- delay: 100ms
+- touch:
+    part-id: lcd1
+    x: 219
+    y: 299
+    duration: 120ms
+    wait: true
+- delay: 100ms
+- touch:
+    part-id: lcd1
+    x: 20
+    y: 299
+    duration: 120ms
+    wait: true
+- delay: 300ms
+- touch-press:
+    part-id: lcd1
+    x: 218
+    y: 20
+- delay: 3200ms
+- touch-release:
+    part-id: lcd1
+- delay: 100ms
+- touch:
+    part-id: lcd1
+    x: 187
+    y: 20
+    duration: 120ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 77
+    y: 68
+    duration: 120ms
+    wait: true
+- delay: 150ms
+- touch:
+    part-id: lcd1
+    x: 20
+    y: 115
+    duration: 80ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 42
+    y: 115
+    duration: 80ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 64
+    y: 115
+    duration: 80ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 86
+    y: 115
+    duration: 80ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 108
+    y: 115
+    duration: 80ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 130
+    y: 115
+    duration: 80ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 152
+    y: 115
+    duration: 80ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 174
+    y: 115
+    duration: 80ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 177
+    y: 291
+    duration: 100ms
+    wait: true
+- delay: 2000ms
+- touch:
+    part-id: lcd1
+    x: 29
+    y: 20
+    duration: 100ms
+    wait: true
+- delay: 200ms
+- touch-press:
+    part-id: lcd1
+    x: 218
+    y: 20
+- delay: 3200ms
+- touch-release:
+    part-id: lcd1
+- delay: 200ms
+- touch:
+    part-id: lcd1
+    x: 77
+    y: 68
+    duration: 100ms
+    wait: true
+- delay: 1000ms
+- touch:
+    part-id: lcd1
+    x: 187
+    y: 20
+    duration: 100ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 77
+    y: 107
+    duration: 100ms
+    wait: true
+- delay: 2000ms
+- touch:
+    part-id: lcd1
+    x: 29
+    y: 20
+    duration: 100ms
+    wait: true
+- delay: 200ms
+- touch-press:
+    part-id: lcd1
+    x: 218
+    y: 20
+- delay: 3200ms
+- touch-release:
+    part-id: lcd1
+- delay: 200ms
+- touch:
+    part-id: lcd1
+    x: 77
+    y: 68
+    duration: 100ms
+    wait: true
+- delay: 200ms
+- touch:
+    part-id: lcd1
+    x: 43
+    y: 299
+    duration: 100ms
+    wait: true
+- delay: 1800ms
+- touch:
+    part-id: lcd1
+    x: 29
+    y: 20
+    duration: 100ms
+    wait: true
+- delay: 200ms
+- touch-press:
+    part-id: lcd1
+    x: 218
+    y: 20
+- delay: 3200ms
+- touch-release:
+    part-id: lcd1
+- delay: 200ms
+- touch:
+    part-id: lcd1
+    x: 77
+    y: 107
+    duration: 100ms
+    wait: true
+- delay: 200ms
+- touch:
+    part-id: lcd1
+    x: 43
+    y: 299
+    duration: 100ms
+    wait: true
+- delay: 1800ms
+- touch:
+    part-id: lcd1
+    x: 29
+    y: 20
+    duration: 100ms
+    wait: true
+- delay: 200ms
+- touch-press:
+    part-id: lcd1
+    x: 218
+    y: 20
+- delay: 3200ms
+- touch-release:
+    part-id: lcd1
+- delay: 200ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/reboot-persistence/b-active-before.png
+- reboot: preserve-flash
+- wait-serial: SIM READY
+- delay: 2000ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/reboot-persistence/dashboard-after-reboot.png
+- touch-press:
+    part-id: lcd1
+    x: 218
+    y: 20
+- delay: 3300ms
+- touch-release:
+    part-id: lcd1
+- delay: 700ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/reboot-persistence/b-active-after.png
+- touch:
+    part-id: lcd1
+    x: 187
+    y: 20
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 77
+    y: 145
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 20
+    y: 115
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 42
+    y: 115
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 64
+    y: 115
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 86
+    y: 115
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 108
+    y: 115
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 130
+    y: 115
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 152
+    y: 115
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- touch:
+    part-id: lcd1
+    x: 174
+    y: 115
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- write-serial: 'SIM connect=failure
+
+    '
+- wait-serial: SIM OK
+- touch:
+    part-id: lcd1
+    x: 177
+    y: 291
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- delay: 2000ms
+- write-serial: 'SIM connect=success
+
+    '
+- wait-serial: SIM OK
+- delay: 61000ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/reboot-persistence/failed-submission.png
+- touch:
+    part-id: lcd1
+    x: 29
+    y: 20
+    duration: 200ms
+    wait: true
+- delay: 300ms
+# Keyboard Back returns to Nearby; choose Saved to inspect rollback to B.
+- touch:
+    part-id: lcd1
+    x: 98
+    y: 20
+    duration: 200ms
+    wait: true
+- delay: 300ms
+- take-screenshot:
+    part-id: lcd1
+    save-to: ../../build/simulation/results/reboot-persistence/rollback-b.png

@@ -175,6 +175,12 @@ class PixelComparisonTests(unittest.TestCase):
 
 
 class ScenarioPathTests(unittest.TestCase):
+    def test_wokwi_manifest_reader_excludes_local_reboot_scenario(self):
+        repo = TOOLS.parent
+        self.assertNotIn('reboot-persistence', [s['name'] for s in run_wokwi.load_scenarios(repo, None)])
+        with self.assertRaisesRegex(ValueError, 'unknown|unsupported'):
+            run_wokwi.load_scenarios(repo, 'reboot-persistence')
+
     def test_firmware_crash_is_rejected_even_when_scenario_exits_successfully(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             log = Path(temporary) / "serial.log"

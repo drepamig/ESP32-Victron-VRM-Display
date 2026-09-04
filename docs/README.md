@@ -1,12 +1,14 @@
 # Gateway status and acceptance record
 
-Updated 2026-09-03 against `develop` at `6ef6c93`. This is the tracked status
+Updated 2026-09-03 for R1, the FT6206 fix, and the maintained local Velxio bench
+on `develop`, following documentation baseline `8010d11`. This is the tracked status
 record for the ESP32 Venus-Starlink touch bridge. Work in the current checkout
 on `develop` according to [AGENTS.md](../AGENTS.md).
 
 The firmware implementation includes the original gateway work, later touch
 corrections, on-device Wi-Fi password entry, and the virtual bench. Hardware
-acceptance is incomplete, and two functional findings remain open.
+acceptance is incomplete. R1 is implemented and automatically verified; R2
+remains open.
 
 ## Plan reconciliation
 
@@ -21,12 +23,12 @@ reviewed `6ef6c93` baseline.
 | --- | --- |
 | 1: Fork and baseline | Implemented; the firmware repository is now the current checkout. |
 | 2: Pure gateway policies | Implemented with host coverage. |
-| 3: Persistent profiles | Implemented with transactional storage and host coverage; application selection has finding R1 below. |
+| 3: Persistent profiles | Implemented with transactional storage and host coverage; saved activation is implemented under R1 below. |
 | 4: AP, NAPT, uplink and scans | Implemented; finding R2 remains open and physical routing/recovery acceptance is pending. |
 | 5: Touch and calibration | Implemented; inset mapping correction and historical hardware checks passed. |
 | 6: Network-selection UI | Implemented; historical navigation checks passed; keyboard entry was added later. |
 | 7: Physical phone portal | Implemented and retained as the explicit **Use phone** fallback; hardware boundaries remain to be exercised. |
-| 8: Application integration | Implemented; saved-profile activation needs correction under R1. |
+| 8: Application integration | Implemented; R1 now uses the shared connection controller. |
 | 9: Independent ESP32 bench | Partially complete; remaining checks are listed below. |
 | 10: Venus migration | Pending; supported configuration, stable addressing, TCP 502, and rollback must be established at the camper. |
 | 11: End-to-end field acceptance | Pending; requires real Starlink and live Venus/GX together. |
@@ -40,29 +42,61 @@ share the pending-profile path. The
 implemented and was merged at `4e5384f`; simulated network/GX evidence does not
 complete physical gateway acceptance.
 
-## Open review findings
+## Local testing workflow and next development task
 
-### R1: Saved selection does not update the active profile
+Velxio is the chosen local simulator backend alongside the existing host
+tests. Use local host/tooling tests, firmware builds, and Velxio for supported
+UI, navigation, and simulated-behavior scenarios. Reserve Wokwi for targeted comparisons
+or an agreed release checkpoint. Physical hardware remains the acceptance
+authority for real Wi-Fi/AP/NAPT, reboot persistence, and deployment behavior.
 
-Status: open, confirmed by source inspection at `6ef6c93`.
+The [Velxio runner](superpowers/plans/2026-09-03-velxio-local-runner.md) now pins
+the runtime/adapters, builds an isolated DIO image, and runs offline against
+dummy inputs. `sim-build`, `sim-test`, and `all` default to local execution.
+Cloud runs require an explicit Wokwi backend and scenario/full-suite selection;
+there is no fallback. Golden promotion reuses reviewed recorded local captures.
+See the [implementation evidence](research/2026-09-03-velxio-local-runner.md).
+R2 remains the next gateway behavior correction. Six scenarios still lack local
+acceptance, and all outstanding physical acceptance remains open.
 
-In [the sketch](../VictronCYD_Modbus/VictronCYD_Modbus.ino),
-`handleUiAction(ConnectSaved)` loads and connects the selected profile, then
-calls `acceptPendingProfile()` without updating the profile store's active
-index. Only the new-credential commit path calls `upsertAndActivate()`.
-`refreshSavedProfiles()`, boot, and pending-attempt rollback still use the
-stored active index.
+## Review findings
 
-With A stored as active, successfully connecting saved B therefore leaves the
-active marker on A; reboot and a later failed credential attempt return to A.
-The existing passing suites do not establish correct saved-selection
-persistence through the application.
+### R1: Persist successful saved-network selection
 
-Acceptance for the correction: after B successfully associates and receives
-an address, the active marker and persisted selection become B. Reboot and
-rollback from a subsequent failed new-profile attempt use B. A failed switch
-must preserve the prior successful selection. Add coverage of the production
-application path as well as the profile store.
+Status: implemented and reviewed on 2026-09-03; physical acceptance pending.
+
+The production-used [GatewayConnectionController](../VictronCYD_Modbus/GatewayConnectionController.h)
+now owns saved, keyboard, open-network, and phone-submitted attempts. It reads
+the candidate and previous active profile before replacing connectivity.
+Saved B becomes active through transactional `activate()` only when association
+and DHCP match B's SSID; stale A readiness cannot commit B. This path preserves
+stored credentials, metadata, calibration, and the NVS schema. New submissions
+continue using `upsertAndActivate()` after successful association/DHCP.
+
+The SavedConnecting view paints B's name, Connecting, WAN status, and Back
+before Wi-Fi work starts. It blocks other controls and setup inactivity exit.
+Back cancels to Saved with the previous active marker. Rejection, 60-second
+timeout, cancellation, and activation-write failure restore the retained
+previous profile. Without one, upstream stays disconnected and the AP remains
+available. Successful B selection drives the refreshed marker, reboot, and
+rollback from later failed credential attempts. Internet/DNS validation is
+not required to persist the selection. Boot and automatic reconnection retain
+their existing behavior.
+
+Regressions demonstrated failure before the fix for stale A readiness,
+missing progress painting, and saved attempt start. The controller integration
+suite uses the real profile store and network module with hardware fakes. It
+covers reboot reconstruction, later rollback to B, write/read failures, timeout
+boundaries and wraparound, cancellation and late success, replacement, no
+previous profile, duplicate prevention, AP availability, and credential-free
+output. UI/controller tests verify paint-before-connect and Back contact
+capture. Independent review found two extraction regressions in portal failure
+ownership and lifecycle replacement; both were fixed with regressions and the
+follow-up review reported no remaining findings.
+
+Physical acceptance must still prove A→B switching, reboot persistence,
+cancellation, failed-switch rollback, and continued private AP availability
+using an NVS-preserving upload. No board was flashed for this change.
 
 ### R2: Upstream loss stays amber instead of red/offline
 
@@ -90,15 +124,38 @@ regression, then measure the same behavior on hardware.
 
 | Evidence | Result and scope |
 | --- | --- |
+| Velxio runner: final host/tooling matrix | Passed: 17 C++ suites and 54 Python tooling tests, including failure handling, capture integrity, offline dispatch, attestation, and destination-link rejection. |
+| Velxio runner: builds and isolation | Production 1,038,650 bytes flash / 49,524 globals; local DIO 559,660 / 34,516; standard simulator 559,644 / 34,516. All builds and both simulator attestations/isolation passed. No Wokwi execution. |
+| Velxio runner: local acceptance | Five supported scenarios, 18 exact RGBA image comparisons; repeated calibration/navigation, hold, and flash-preserving reboot passed. Five new reboot references were visually reviewed and promoted from recorded captures. See the [implementation evidence](research/2026-09-03-velxio-local-runner.md). Physical reboot, real Wi-Fi/AP/NAPT, and R2 remain open. |
+| FT6206 release fix, 2026-09-03 | Passed: 17 C++ suites and 14 Python tests; new release-race regression failed before the fix. Actual Adafruit-driver reproduction also changed from failure to success. Independent review found no issues. |
+| FT6206 fix: builds and local navigation | Production 1,038,650 bytes flash / 49,524 globals; simulator 559,644 / 34,516; attestation/isolation passed. Two local Velxio runs each matched Calibration/Saved/Nearby exactly after the fix. No Wokwi rerun or golden changes; [investigation and evidence](research/2026-09-03-velxio-investigation.md#ft6206-correction-and-local-retest). |
+| R1, 2026-09-03: complete host/tooling matrix | Passed: 16 C++ suites and 14 Python tooling tests, including the new production controller integration suite. |
+| R1: production smoke build | Passed with generated dummy configuration: 1,038,650 bytes flash and 49,524 bytes globals. |
+| R1: simulator build and isolation | Passed: 559,636 bytes flash and 34,516 bytes globals; source/artifact attestation and production/simulator isolation verified. Both builds emit only the documented TFT_eSPI `TOUCH_CS` warnings. |
+| R1: Wokwi screenshots | All 10 live scenarios completed; 32 exact screenshot matches. The 25 existing baselines were unchanged. Seven new saved-switch captures were visually reviewed before promotion; a repeat live run reproduced all seven byte for byte. Final comparison also verified attestation and serial logs. |
+| R1: review and diff | Independent follow-up review found no remaining actionable issues; `git diff --check` passed. |
 | Review at `6ef6c93`, 2026-09-03: `tools/dev.ps1 test` | Passed: 15 C++ suites and 14 Python tooling tests. |
 | Same review: `tools/dev.ps1 firmware-build` | Passed using the generated dummy production configuration: 1,035,746 bytes flash and 49,492 bytes globals; only the documented TFT_eSPI `TOUCH_CS` warnings. |
 | Same review: focused WAN-loss probe | Failed the planned Offline condition after five minutes; AP remained ready in the fake environment. See R2. |
 | Same review: `git diff --check` | Passed; no tracked source changes were made by the review. |
 | Earlier virtual bench acceptance, 2026-09-03 | Records successful production/simulator builds, isolation/attestation, 9 Wokwi scenarios and 25 exact screenshot matches. See the linked virtual bench plan for that run's evidence. |
 
-The review did not rerun Wokwi, flash a board, or perform hardware/network
-checks. A successful dummy build is not a configured real-GX deployment image.
+The earlier review at `6ef6c93` did not rerun Wokwi, flash a board, or perform
+hardware/network checks. R1 automated verification is recorded separately
+above; physical checks remain pending. A successful dummy build is not a
+configured real-GX deployment image.
 Rebuild and rerun appropriate verification after any source correction.
+The FT6206 correction affects the simulator touch boundary; its latest local
+verification is recorded separately. Earlier R1 cloud results apply to the
+pre-correction image. Physical acceptance and R2 remain pending.
+
+The earlier R1 verification used the then-cloud `tools/dev.ps1 all` for the complete host/tooling,
+production, simulator, isolation, and live scenario run. Its initial comparison
+reported only the seven expected missing saved-switch baselines. After visual
+review, the existing `tools/run_wokwi.py update-goldens --scenario saved-switch`
+runner repeated that scenario and promoted the captures. All 32 resulting
+images then passed the repository comparator against the final baselines.
+No firmware flashing, Venus changes, or pushing occurred.
 
 ## Recorded physical observations
 
@@ -128,9 +185,9 @@ not establish timing bounds or uninterrupted routing.
 
 ## Remaining Task 9 acceptance
 
-First correct R1 and R2, review the changes, and run the complete host/tooling
-matrix and firmware build. For physical testing, build the reviewed source
-with private deployment configuration and preserve NVS during verified upload.
+R1 implementation and review are complete. Correct R2 before the outage
+acceptance check. Build the exact reviewed source with private deployment
+configuration and preserve NVS during verified upload.
 Use a controlled bench upstream in place of real Starlink; keep its SSID and
 password out of tracked results.
 
@@ -143,8 +200,10 @@ password out of tracked results.
 - [ ] From a laptop on the private AP, verify local gateway reachability, DNS,
       and outbound HTTPS through NAPT; measure any scan/channel interruption.
 - [ ] Add a second controlled profile, switch both ways, verify active marker
-      and reboot persistence, cancel/confirm deletion, and exercise early
-      cancellation and completion of the ten-second Clear Saved hold.
+      and reboot persistence, cancel a pending switch, force a failed switch and
+      confirm rollback to the previous active profile with the private AP available.
+      Cancel/confirm deletion, and exercise early cancellation and completion of
+      the ten-second Clear Saved hold.
 - [ ] Exercise **Use phone**: physical activation, wrong-code rejection,
       ten-minute expiry, single use, cancellation, and AP-subnet restriction.
 - [ ] Disable the selected upstream for at least five minutes; verify red WAN,

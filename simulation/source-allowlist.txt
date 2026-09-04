@@ -8,6 +8,7 @@ VictronCYD_Modbus/CredentialKeyboardLayout.cpp
 VictronCYD_Modbus/CredentialKeyboardLayout.h
 VictronCYD_Modbus/CredentialSubmission.h
 VictronCYD_Modbus/GatewayApplicationPolicy.h
+VictronCYD_Modbus/GatewayConnectionController.h
 VictronCYD_Modbus/GatewayPolicy.h
 VictronCYD_Modbus/ModbusCycleSource.h
 VictronCYD_Modbus/ModbusCycleSourceRuntime.h

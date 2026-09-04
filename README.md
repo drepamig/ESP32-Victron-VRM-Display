@@ -38,10 +38,12 @@ if you want to watch a site you're not on the same network as.
 ## Development status
 
 The gateway, on-device keyboard, and virtual bench are implemented. Physical
-acceptance remains incomplete. The 2026-09-03 review at `6ef6c93` found two
-open issues: choosing a saved network does not persist the active selection,
-and a lost upstream remains amber/Connecting instead of the planned
-red/Offline state. See the [status and acceptance record](docs/README.md) for
+acceptance remains incomplete. Saved selection now persists only after the
+selected SSID associates and receives an IP address. Its progress screen offers
+Back to cancel; cancellation or failure within the 60-second attempt restores
+the previous active network. With no previous profile, upstream remains
+disconnected and the private AP stays available. R2 remains open: a lost
+upstream stays amber/Connecting instead of the planned red/Offline state. See the [status and acceptance record](docs/README.md) for
 evidence, remaining bench/field checks, and the latest recorded firmware upload.
 Continue development on `develop` following [AGENTS.md](AGENTS.md).
 
@@ -101,7 +103,7 @@ settings below into `User_Setup.h` (or a selected custom setup):
    successful association/DHCP; they are not compile-time settings.
 
 Follow the [remaining acceptance checks](docs/README.md#remaining-task-9-acceptance)
-before deployment. The saved-selection and WAN-status issues above are still open.
+before deployment. Saved-switch hardware acceptance and the R2 WAN-status correction remain pending.
 
 **GX Modbus register map used** (function 3, read holding registers):
 
@@ -145,13 +147,13 @@ The camper gateway variant requires Arduino-ESP32 3.3.11 and XPT2046_Touchscreen
 ## CYD Virtual Bench
 
 The virtual bench runs the Modbus firmware without a physical CYD. Native C++
-tests cover state and policy quickly; Wokwi runs the complete ESP32 image,
+tests cover state and policy quickly; the local Velxio runner executes the ESP32 image,
 `TFT_eSPI` drawing code, FT6206-backed scripted touch input, and exact 320x240
-golden screenshot comparisons.
+golden screenshot comparisons. Wokwi remains available for explicit targeted comparisons.
 
 ### Prerequisites and setup
 
-Install Docker Desktop and Python on Windows, then run from the repository
+Install Docker Desktop and Python 3.11 or newer on Windows, then run from the repository
 root:
 
 ```powershell
@@ -172,53 +174,63 @@ Docker's own image storage remains Docker-managed.
 
 ### Commands
 
+The [local bench plan](docs/superpowers/plans/2026-09-03-velxio-local-runner.md)
+makes Velxio the default simulator. Setup caches the pinned Arduino toolchain,
+Velxio runtime, Node 24.3.0, Pillow 11.3.0, and PyYAML 6.0.2. Subsequent local
+checks run offline without a Wokwi token.
+
 ```powershell
+tools/dev.ps1 setup
+tools/dev.ps1 doctor
 tools/dev.ps1 test
 tools/dev.ps1 firmware-build
 tools/dev.ps1 sim-build
-tools/dev.ps1 sim-test
-tools/dev.ps1 sim-test -Scenario password-entry
-tools/dev.ps1 all
+tools/dev.ps1 sim-test -Scenario setup-navigation
 ```
 
-`firmware-build` is a production-mode smoke compile that always uses dummy
-bench values; it does not consume either real secrets file. The normal sketch still defaults to
-the ignored `VictronCYD_Modbus/secrets.h` outside staged builds.
+`all` runs the host/tooling matrix, dummy production build, supported local
+scenarios, and isolation checks. Unfiltered `sim-test` lists its supported
+scenarios and coverage gaps. Supported local scenarios are `boot-calibration`,
+`wan-hold`, `setup-navigation`, `saved-switch`, and `reboot-persistence`.
+Other explicit local selections fail; they never trigger cloud execution.
+On Linux use `bash tools/bench.sh` with the same commands and lower-case flags
+such as `--scenario setup-navigation`, directly on the Docker host.
 
-Wokwi execution requires a token created in the Wokwi CI dashboard. Supply it
-only in the calling process environment:
+`firmware-build` is a production-mode smoke compile using generated dummy
+settings; it does not consume real secrets. The normal unstaged sketch still
+uses its ignored `VictronCYD_Modbus/secrets.h`.
+
+`sim-build` stages the source allowlist and creates the separate DIO firmware
+in `build/velxio`. Attestation binds source, build configuration, actual flash
+mode, runtime/adapters, and artifacts. Wokwi builds remain in `build/simulation`.
+
+Wokwi requires an explicit selection and a token supplied only in the process
+environment. State which scenario is needed and why before executing it:
 
 ```powershell
-$env:WOKWI_CLI_TOKEN = 'wok_...'
-tools/dev.ps1 sim-test
+tools/dev.ps1 sim-test -Backend wokwi -Scenario password-entry
 ```
 
-The value is forwarded to the one simulator container at runtime and is not
-stored in the image, repository, attestation, or command arguments. Scenarios
-use deterministic fake networks and Modbus data; they do not require Wokwi
-custom access points or a private gateway.
-
-`sim-build` stages only the files in `simulation/source-allowlist.txt`, excludes
-both real `secrets.h` files, and emits `build/simulation/firmware.bin`,
-`firmware.elf`, and an attestation containing source and artifact SHA-256
-values. The runner refuses stale, tampered, escaped, or production artifacts
-before contacting Wokwi.
+`-Backend wokwi -FullSuite` is reserved for an explicitly requested cloud suite
+or agreed release checkpoint. No local command silently falls back to Wokwi.
 
 ### Golden screenshot review
 
-Ordinary `sim-test` never changes baselines. On a mismatch it preserves
-`expected.png`, `actual.png`, and a magenta-highlighted `diff.png` below
-`build/simulation/diffs/<scenario>/<checkpoint>/`.
+Runs retain their identity, serial logs, actual 320x240 RGBA captures, and
+comparisons under `build/velxio/results/<run-id>/<scenario>`. Pixel mismatches
+produce `<checkpoint>.diff.png`; the run's input snapshot retains the expected
+image. Ordinary tests never modify goldens.
 
-After reviewing the actual images, update only the intended scenario:
+After visually reviewing the actual images, promote only the intended run:
 
 ```powershell
-tools/dev.ps1 sim-update-goldens -Scenario password-entry
+tools/dev.ps1 sim-update-goldens -Run RUN_ID -Scenario reboot-persistence
 git diff --stat -- simulation/goldens
 ```
 
-The command prints every changed baseline before copying it. All committed
-goldens preserve Wokwi's native RGBA mode and must be exactly 320x240 pixels.
+Promotion validates current source/runtime/scenario identity and capture hashes.
+It copies the recorded captures without rerunning the simulator. Missing,
+incomplete, stale, or tampered records are rejected.
 
 ### Physical release
 

@@ -6,42 +6,34 @@ and the distinction between build verification and physical acceptance.
 
 ## Preferred Docker verification
 
-Run from the repository root with a working Docker installation. The image
-contains the pinned toolchain and Python dependencies; no production secrets
-or Wokwi token are needed for these checks.
+Run these on the Docker host from the repository root with Python 3.11 or newer:
 
 ```bash
-docker build --tag victron-cyd-virtual-bench:2026-09-03 \
-  --file .devcontainer/Dockerfile .
-
-docker run --rm --init --volume "$PWD:/workspace" --workdir /workspace \
-  victron-cyd-virtual-bench:2026-09-03 bash tools/bench.sh doctor
-
-docker run --rm --init --volume "$PWD:/workspace" --workdir /workspace \
-  victron-cyd-virtual-bench:2026-09-03 bash tools/bench.sh test
-
-docker run --rm --init --volume "$PWD:/workspace" --workdir /workspace \
-  victron-cyd-virtual-bench:2026-09-03 bash tools/bench.sh firmware-build
+bash tools/bench.sh setup
+bash tools/bench.sh doctor
+bash tools/bench.sh test
+bash tools/bench.sh firmware-build
+bash tools/bench.sh sim-build
+bash tools/bench.sh sim-test --scenario setup-navigation
 ```
 
-`test` runs the complete C++ and Python matrices (15 and 14 at `6ef6c93`).
-`firmware-build` always stages generated dummy production settings, uses
-`config/TFT_eSPI_CYD.h`, and writes to `build/firmware`. Its output is a smoke
-image, not a privately configured deployment image.
+The host runner coordinates separate cached toolchain and Velxio containers.
+Do not run `bench.sh` inside a toolchain container or mount the Docker socket
+into it. After setup, local builds and simulations run with networking disabled.
 
-For simulator builds, use the same Docker invocation with `sim-build`. For
-live scenarios, make the token available in the calling process environment
-and pass its name only:
+`test` runs the complete C++ and Python matrices. `firmware-build` stages dummy
+production settings and writes a smoke image to `build/firmware`; it is not a
+privately configured deployment image. `sim-build` defaults to the isolated
+DIO target in `build/velxio`.
 
-```bash
-docker run --rm --init --env WOKWI_CLI_TOKEN \
-  --volume "$PWD:/workspace" --workdir /workspace \
-  victron-cyd-virtual-bench:2026-09-03 bash tools/bench.sh sim-test
-```
+For an explicitly selected cloud comparison, supply the token in the host
+process environment and use `sim-test --backend wokwi --scenario NAME`.
+Cloud full suites require explicit `--full-suite` authorization. No fallback
+occurs from local simulation to cloud execution.
 
-Ordinary simulation tests do not update goldens. See the
-[scenario guide](../../../simulation/README.md) for pixel review and the
-limitations of simulated networks and GX data.
+Ordinary tests never update goldens. Review retained actual images, then use
+`sim-update-goldens --run RUN_ID --scenario NAME` to promote the recorded local
+captures without another simulation. See the [scenario guide](../../../simulation/README.md).
 
 ## Optional native toolchain
 
@@ -100,8 +92,9 @@ bash tools/run-host-tests.sh
 ```
 
 Use this script instead of copying an older per-file matrix: it includes
-`RawTouchDevice.cpp`, the credential dependencies, and all four simulator
-suites. It compiles C++17 with warnings treated as errors and stops on failure.
+`RawTouchDevice.cpp`, the credential dependencies, the simulator suites, and
+the FT6206 release-race regression. It compiles C++17 with warnings treated as
+errors and stops on failure.
 For the Python tooling tests, use the pinned Docker environment above or a
 native Python environment with Pillow 11.3.0:
 

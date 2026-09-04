@@ -328,6 +328,21 @@ int NetworkProfileStore::activeIndex() const {
   return active;
 }
 
+bool NetworkProfileStore::loadActive(NetworkProfile& out, int& index) const {
+  Preferences preferences;
+  if (!preferences.begin(kNamespace, true)) {
+    return false;
+  }
+  StoreSnapshot snapshot;
+  const bool loaded = readVisibleSnapshot(preferences, snapshot);
+  if (loaded) {
+    index = snapshot.active;
+    out = index >= 0 ? snapshot.profiles[index] : NetworkProfile{};
+  }
+  preferences.end();
+  return loaded;
+}
+
 bool NetworkProfileStore::load(size_t index, NetworkProfile& out) const {
   Preferences preferences;
   if (!preferences.begin(kNamespace, true)) {

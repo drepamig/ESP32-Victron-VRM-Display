@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "sourceRevision": "77ee0cf96aff18d0b4b10d0e77b08c72bee4c1e0",
+  "runtimeImage": "ghcr.io/davidmonterocrespo24/velxio@sha256:117a82cc52ec7168b790bc8553c68fb1fcd86a16db202b847f948f7a573691d2",
+  "nodeImage": "node:24.3.0-bookworm-slim@sha256:8225b1806c6e37dced949224b5c0d8278a2fe593967288620e0af69b2cbc4539",
+  "nodeVersion": "24.3.0",
+  "pillowVersion": "11.3.0",
+  "pyyamlVersion": "6.0.2",
+  "workerSha256": "2e16709bd1a6c5252e8727c2760b3a20301a9ca52c8f11d5b76dd5973757f781",
+  "decoderSourceSha256": "a45e0585d5417ecb7789d46cf4df65d4265881de46cc6b4ac5aebb6d097a234f",
+  "machine": "esp32-picsimlab",
+  "icount": 3
+}

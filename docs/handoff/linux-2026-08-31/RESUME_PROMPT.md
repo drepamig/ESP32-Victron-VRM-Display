@@ -27,18 +27,32 @@ in the ignored SDD records are historical references.
 
 Before making changes, verify the branch, working tree, baseline commits in
 history, remotes, and the repository-owned toolchain. Run the complete current
-test script; it includes 15 C++ suites and 14 Python tooling tests at the review
-baseline. Dummy builds and tests do not need production secrets. Preserve any
+test script; it now includes 17 C++ suites and 54 Python tooling tests,
+including production controller integration for R1 and the FT6206 release-race
+regression. Dummy builds and tests do not need production secrets. Preserve any
 ignored `VictronCYD_Modbus/secrets.h`; never read a secret value into chat or
 commit it. Do not erase NVS or modify Venus.
 
+The approved testing direction is local host tests/builds plus Velxio for
+routine supported simulator checks, targeted Wokwi comparisons only when
+needed, and physical hardware for real Wi-Fi/AP/NAPT and deployment acceptance.
+The maintained local runner follows
+`docs/superpowers/plans/2026-09-03-velxio-local-runner.md`; use the recorded
+verification status before extending its supported scenario set. Keep the
+runtime/DIO/timing/touch/display adapters pinned and preserve actual captures.
+`sim-build`, `sim-test`, and `all` default to Velxio. Wokwi requires explicit
+backend and scenario/full-suite selection; follow `AGENTS.md` quota rules.
+Promote reviewed local captures with a run ID, without a simulation rerun.
+
 The earlier physical feedback and top-row touch checkpoints are complete.
 Physical validation of the newer on-device password keyboard is still pending.
-First resolve the two open findings in `docs/README.md`: R1, successful saved
-selection must update the persisted active profile used by the marker, reboot,
-and rollback; R2, extended upstream loss must show red/offline while preserving
-selected-profile retries and AP availability. Existing tests pass despite these
-gaps; add focused coverage of the production behavior and obtain review.
+R1 is implemented and reviewed: saved switching uses a cancellable progress
+view and persists only after the selected SSID associates and receives DHCP.
+Its host regressions cover persistence, rollback, timeout, and UI ownership.
+Physical A→B, reboot, cancel, failed-switch rollback, and AP acceptance remain
+pending. R2 remains the next gateway behavior correction: extended upstream loss must show red/offline while
+preserving selected-profile retries and AP availability. Add a production-module
+regression and obtain review; do not treat passing R1 tests as R2 acceptance.
 
 After those corrections and verification, resume controlled upstream
 provisioning with an appropriately reviewed physical build: keep the bench

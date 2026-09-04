@@ -23,6 +23,7 @@ typedef enum {
 class Preferences {
  public:
   bool begin(const char* name, bool readOnly = false, const char* = nullptr) {
+    if (readOnly && ++readOpenCount_ == failOnReadOpen_) return false;
     namespace_ = name == nullptr ? "" : name;
     readOnly_ = readOnly;
     started_ = true;
@@ -141,7 +142,11 @@ class Preferences {
   static void clearFaults() {
     failOnMutation_ = 0;
     failFromMutation_ = 0;
+    failOnReadOpen_ = 0;
+    readOpenCount_ = 0;
   }
+
+  static void failOnReadOpen(size_t open) { failOnReadOpen_ = open; readOpenCount_ = 0; }
 
   static void putRawUChar(const char* name, const char* key, uint8_t value) { storage_[name][key] = value; }
   static void putRawChar(const char* name, const char* key, int8_t value) { storage_[name][key] = value; }
@@ -190,6 +195,8 @@ class Preferences {
   inline static size_t failOnMutation_ = 0;
   inline static size_t failFromMutation_ = 0;
   inline static size_t mutationCount_ = 0;
+  inline static size_t failOnReadOpen_ = 0;
+  inline static size_t readOpenCount_ = 0;
   std::string namespace_;
   bool readOnly_ = false;
   bool started_ = false;

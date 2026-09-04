@@ -1,0 +1,3 @@
+steady contact=1 mapped=254,20
+release race: contact=1 pressure=1000 raw=200,200 mapped=20,20 hitsBack=1
+FAIL: coordinate frame reports release but RawTouchDevice reports contact

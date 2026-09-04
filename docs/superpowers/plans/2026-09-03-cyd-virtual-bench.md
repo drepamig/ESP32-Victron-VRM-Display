@@ -1,23 +1,103 @@
 # CYD Virtual Bench Implementation Plan
 
-**Status, reconciled 2026-09-03:** Implemented and merged into `develop` at
-`4e5384f`. The checked steps and acceptance evidence below describe the
-original implementation run. Continue in the current checkout on `develop`
+**Status, reconciled 2026-09-03:** The original Wokwi bench was implemented
+and merged into `develop` at `4e5384f`. The approved local-backend integration
+below is complete for V1–V4. The original checked
+steps and acceptance evidence describe the earlier implementation run.
+Continue in the current checkout on `develop`
 following the root `AGENTS.md`; do not recreate the historical feature checkout.
 
 The later review at `6ef6c93` reran all 15 C++ suites, 14 Python tooling tests,
 and the dummy production build successfully. It did not rerun Wokwi or flash
-hardware. Gateway findings R1/R2 remain open despite the passing virtual bench:
-saved selection is not persisted and an unavailable upstream stays Connecting.
+hardware. R1 has since been implemented with controller integration tests and
+a saved-switch Wokwi scenario. R2 remains open: an unavailable upstream stays
+Connecting. The acceptance block below remains the original bench evidence.
 See [current status and acceptance](../../README.md) before physical release.
 
-**Goal:** Build a reproducible, pixel-exact Wokwi bench for
+**Original implementation goal:** Build a reproducible, pixel-exact Wokwi bench for
 `VictronCYD_Modbus`, with fast native tests and production-safe simulator
 boundaries.
 
 **Toolchain:** Docker/devcontainer, Arduino CLI 1.5.1, Arduino-ESP32 3.3.11,
 TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206 1.1.1, Wokwi CLI
 0.26.1, C++17, Python/Pillow.
+
+## Approved testing strategy — 2026-09-03
+
+**Decision: adopt Velxio as the local simulator backend alongside host tests.**
+This direction was approved after the feasibility investigation and FT6206
+release fix. The maintained runner now supports five scenarios; six others
+remain explicit coverage gaps. Do not restart backend selection as if no decision
+had been made.
+
+| Layer | Role in the development plan |
+| --- | --- |
+| Local host/tooling tests and firmware builds | Fast checks for routine changes; production controller/store/network regressions remain here. |
+| Local Velxio | Routine firmware UI, touch, navigation, and simulated application-behavior checks once each scenario is supported by the integrated runner. No Wokwi quota is needed. |
+| Wokwi | Occasional, explicitly selected comparison runs or an agreed release checkpoint. State the selected scenarios and purpose before a cloud run. Full suites require an explicit request or agreed release checkpoint. |
+| Physical CYD and real networks/GX | Acceptance for real Wi-Fi, AP availability, NAPT, timing, persistence through actual reboot, and deployment behavior. Simulated success does not close these checks. |
+
+The evidence supports this choice: the real application runs locally,
+calibration and press/hold work, a real touch-boundary bug was found and
+fixed, and two consecutive runs reproduced Calibration/Saved/Nearby exactly
+(six comparisons). See the [investigation and measured results](../../research/2026-09-03-velxio-investigation.md#ft6206-correction-and-local-retest).
+This is a narrow verification result, not acceptance of every scenario.
+
+Maintenance of the adapters is part of the decision. Pin the Velxio source
+revision and image digest recorded in the investigation, the Arduino
+toolchain, and decoder dependencies. Retain a separate DIO simulator target,
+the tested `-icount 3` configuration and virtual-clock gesture timing, the
+FT6206 I2C proxy, and the ILI9341 inversion/RAMWR corrections. Record their
+provenance and rerun the relevant local checks when dependencies change.
+The emulator cache-error workaround and startup watchdog warning remain
+documented emulator limitations after integration.
+
+### Local Velxio runner integration — completed
+
+These deliverables were completed on 2026-09-03, separately from the original
+tasks. See the [runner plan](2026-09-03-velxio-local-runner.md) and
+[measured acceptance](../../research/2026-09-03-velxio-local-runner.md).
+They do not authorize cloud runs, flashing, Venus changes, or pushing.
+
+- [x] **V1: Reproducible local build and runtime.** Integrate the pinned runtime
+      and isolated DIO build with `tools/dev.ps1`, `tools/bench.sh`, and the
+      existing allowlist/attestation tooling. Build only dummy simulator
+      inputs; keep production and Wokwi artifacts separate. Verify source,
+      artifact, and runtime identity before execution. Once dependencies are
+      cached, local runs must work offline without a Wokwi token.
+- [x] **V2: Supported navigation runner.** Move the proven worker/touch/timing
+      and display adapters from ignored probe artifacts into maintained
+      tooling. Execute calibration, short press, hold, and Nearby navigation;
+      require `SIM READY`, reject panics/assertions, enforce bounded waits,
+      stop child processes, and compare real captured pixels. Add host/tooling
+      regressions for failure paths. Reproduce the existing three exact
+      images in two consecutive local runs before accepting this deliverable.
+- [x] **V3: Saved switching, timeouts, and reboot.** Extend local scenario
+      support to progress/cancellation, successful activation, failure and
+      rollback, the 60-second switch timeout, and flash-preserving simulated
+      reboot. Verify active selection and calibration after restart. Keep
+      timer-boundary/wraparound regressions in host tests; measure guest-time
+      waits in the simulator. Report unsupported behavior as a gap rather
+      than treating a successful process exit as acceptance.
+- [x] **V4: Make the local workflow routine.** Document explicit local entry
+      points and supported scenarios in the root README, simulation guide,
+      and handoff. Retain current-build hashes, serial logs, captures, and
+      comparisons as evidence. Use targeted Wokwi comparisons only to resolve
+      a concrete remaining discrepancy or at an agreed checkpoint; reuse
+      valid captures and review actual screenshots before any golden update.
+
+`tools/dev.ps1 sim-build`, `sim-test`, and `all` now default to Velxio.
+`sim-update-goldens -Run RUN_ID -Scenario NAME` promotes reviewed recorded local
+captures without another run. Wokwi execution requires `-Backend wokwi` plus
+a selected scenario or explicitly requested full suite; there is no fallback.
+Final acceptance passed 17 C++ suites, 54 tooling tests, all three builds,
+both simulator attestations/isolation, and 18 exact comparisons across the
+five supported local scenarios. No Wokwi minutes were used for integration.
+
+R2 remains the next gateway behavior correction. R1's physical A→B switching,
+reboot, cancellation, rollback, and AP checks remain pending and must use an
+NVS-preserving upload. Tooling progress does not close R1 physical acceptance,
+R2, or the remaining bench/field work.
 
 ## Constraints
 
@@ -28,10 +108,10 @@ TFT_eSPI 2.5.43, XPT2046_Touchscreen 1.4, Adafruit FT6206 1.1.1, Wokwi CLI
 - Ordinary test commands never alter golden images.
 - Only attested dummy simulator firmware may be sent to Wokwi under the user's
   existing authorization. Never flash physical firmware or push without a request.
-- Wokwi execution may be reported as token-blocked only after all local checks
-  and builds that do not require the token have run.
+- Follow the approved testing strategy above. Routine verification must not
+  depend on Wokwi minutes; report missing simulator coverage explicitly.
 
-## Tasks
+## Original implementation tasks (completed)
 
 ### 1. Record baseline
 

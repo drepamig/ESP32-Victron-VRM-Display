@@ -44,6 +44,7 @@ void startGateway(CamperNetwork& gateway) {
 
 void associateStation() {
   WiFi.connected = true;
+  WiFi.stationSsid = WiFi.beginSsids.back().c_str();
   WiFi.stationAddress = IPAddress(10, 20, 30, 40);
   WiFi.stationRssi = -47;
 }
@@ -359,6 +360,17 @@ void testAsyncScanGatingFailureAndResults() {
 }  // namespace
 
 int main() {
+  // Regression: an old association and DHCP address must not accept a new SSID.
+  resetFakes();
+  {
+    CamperNetwork gateway;
+    startGateway(gateway);
+    gateway.connect(profile("A"), 0);
+    associateStation();
+    gateway.acceptPendingProfile();
+    gateway.connect(profile("B"), 100);
+    check(!gateway.pendingProfileConnected(), "stale A address cannot complete B");
+  }
   testApValidationOrderAndSingleStartup();
   testStartupFailuresStayHonestAndRetrySafely();
   testInitialAssociationAndSingleDnsWorker();

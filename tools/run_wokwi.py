@@ -24,7 +24,8 @@ def load_scenarios(repo: Path, selected: str | None) -> list[dict]:
     document = json.loads(manifest_path.read_text(encoding="utf-8"))
     if document.get("schema") != 1 or not isinstance(document.get("scenarios"), list):
         raise ValueError("invalid scenario manifest")
-    scenarios = document["scenarios"]
+    scenarios = [item for item in document["scenarios"]
+                 if "wokwi" in item.get("backends", ["wokwi"])]
     if selected is not None:
         scenarios = [item for item in scenarios if item.get("name") == selected]
         if not scenarios:

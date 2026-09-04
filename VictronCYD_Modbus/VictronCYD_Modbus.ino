@@ -16,6 +16,7 @@
 
 #include "CamperNetworkRuntime.h"
 #include "GatewayApplicationPolicy.h"
+#include "GatewayConnectionController.h"
 #include "ModbusCycleSourceRuntime.h"
 #include "ModbusSnapshotPolicy.h"
 #include "NetworkProfiles.h"
@@ -87,10 +88,7 @@ bool blink = false;
 uint32_t lastModbusRequestMs = 0;
 uint32_t lastClockMs = 0;
 
-GatewayLifecyclePolicy gatewayLifecycle;
-NetworkProfile pendingProfile;
-NetworkProfile previousProfile;
-bool previousProfileAvailable = false;
+GatewayConnectionController<CamperNetworkRuntime> connectionController(camperNetwork, profileStore);
 
 const Box bGrid{4, 24, 100, 66};
 const Box bInv{110, 24, 100, 66};
@@ -395,214 +393,96 @@ void refreshSavedProfiles() {
   }
 }
 
-void clearPendingApplicationBuffers() {
-  clearProfile(pendingProfile);
-  clearProfile(previousProfile);
-  previousProfileAvailable = false;
+void replaceGatewayLifecycle(GatewayLifecycleTarget target, uint32_t nowMs = 0) {
+  if (connectionController.replace(target, nowMs)) portal.cancel();
 }
 
-bool replaceGatewayLifecycle(GatewayLifecycleTarget target, uint32_t nowMs = 0,
-                             int previousActiveIndex = -1,
-                             PendingProfileSource source = PendingProfileSource::None) {
-  const GatewayLifecycleReplacement replacement =
-      gatewayLifecycle.replaceWith(target, nowMs, previousActiveIndex, source);
-  const bool retainStationConfig =
-      retainPendingStationConfigForImmediateReplacement(replacement, target);
-  if (replacement.cancelPendingProfile) {
-    camperNetwork.cancelPendingProfile(!retainStationConfig);
+void handleConnectionResult(const GatewayConnectionResult& result, uint32_t nowMs) {
+  if (result.cancelPortal) portal.cancel();
+  if (result.outcome == GatewayConnectionOutcome::None) return;
+  if (result.outcome == GatewayConnectionOutcome::Started) {
+    if (result.source == PendingProfileSource::DirectOpen ||
+        result.source == PendingProfileSource::Portal) {
+      wifiSetupUi.close();
+      redrawCurrentView(nowMs);
+    }
+    return;
   }
-  if (replacement.cancelPhysicalPortal) {
-    portal.cancel();
-  }
-  if (target != GatewayLifecycleTarget::Exit || !gatewayLifecycle.pendingActive()) {
-    clearPendingApplicationBuffers();
-  }
-  return retainStationConfig;
-}
-
-bool reconnectPreviousProfile(uint32_t nowMs, int previousIndex) {
-  if (!previousProfileAvailable || previousIndex < 0) {
-    return false;
-  }
-  const bool connected = camperNetwork.connect(previousProfile, nowMs);
-  if (connected) {
-    camperNetwork.acceptPendingProfile();
-  }
-  return connected;
-}
-
-PendingProfileSource finishPendingFailure(const PendingProfileEvaluation& evaluation,
-                                          uint32_t nowMs) {
-  const PendingProfileSource source = gatewayLifecycle.pendingSource();
-  const bool restorePrevious =
-      evaluation.outcome == PendingProfileOutcome::RestorePrevious;
-  camperNetwork.cancelPendingProfile(!restorePrevious);
-  if (evaluation.outcome == PendingProfileOutcome::RestorePrevious) {
-    if (!reconnectPreviousProfile(nowMs, evaluation.previousActiveIndex)) {
-      camperNetwork.disconnectUpstream();
+  refreshSavedProfiles();
+  if (result.outcome == GatewayConnectionOutcome::Cancelled) {
+    if (result.source == PendingProfileSource::Saved) wifiSetupUi.cancelSavedConnection();
+    else wifiSetupUi.cancelCredentialAttempt();
+  } else if (result.outcome == GatewayConnectionOutcome::Connected) {
+    wifiSetupUi.showResult("Upstream connected", true);
+  } else {
+    const bool connectionFailure = result.outcome == GatewayConnectionOutcome::Rejected ||
+                                   result.outcome == GatewayConnectionOutcome::TimedOut;
+    const char* message = "Saved connection failed";
+    switch (result.outcome) {
+      case GatewayConnectionOutcome::StorageReadFailed: message = "Profile storage unavailable"; break;
+      case GatewayConnectionOutcome::PersistenceFailed: message = "Credential persistence failed"; break;
+      case GatewayConnectionOutcome::Rejected: message = "Connection rejected"; break;
+      case GatewayConnectionOutcome::TimedOut: message = "Connection timed out"; break;
+      default: break;
+    }
+    if (!connectionFailure || result.source != PendingProfileSource::OnDevice ||
+        !wifiSetupUi.showCredentialFailure("Connection failed", nowMs)) {
+      wifiSetupUi.showResult(message, false);
     }
   }
-  gatewayLifecycle.completePending();
-  clearPendingApplicationBuffers();
-  refreshSavedProfiles();
-  return source;
-}
-
-void showPendingConnectionFailure(const char* genericMessage,
-                                  const PendingProfileEvaluation& evaluation,
-                                  uint32_t nowMs) {
-  const PendingProfileSource source = finishPendingFailure(evaluation, nowMs);
-  if (source != PendingProfileSource::OnDevice ||
-      !wifiSetupUi.showCredentialFailure("Connection failed", nowMs)) {
-    wifiSetupUi.showResult(genericMessage, false);
-  }
-  wifiSetupUi.render(camperNetwork.status());
-}
-
-void showPendingInvariantFailure(const char* message,
-                                 const PendingProfileEvaluation& evaluation,
-                                 uint32_t nowMs) {
-  finishPendingFailure(evaluation, nowMs);
-  wifiSetupUi.showResult(message, false);
   wifiSetupUi.render(camperNetwork.status());
 }
 
 void beginPendingProfile(CredentialSubmission& submission,
                          PendingProfileSource source, uint32_t nowMs) {
-  NetworkProfile retainedPreviousProfile;
-  bool retainedPreviousAvailable = false;
-  int previousActiveIndex = -1;
-  if (profileStoreReady) {
-    previousActiveIndex = profileStore.activeIndex();
-    retainedPreviousAvailable = previousActiveIndex >= 0 &&
-                                profileStore.load(static_cast<size_t>(previousActiveIndex),
-                                                  retainedPreviousProfile);
-    if (!retainedPreviousAvailable) {
-      previousActiveIndex = -1;
-    }
-  }
-
-  replaceGatewayLifecycle(GatewayLifecycleTarget::PendingProfile, nowMs,
-                          previousActiveIndex, source);
-  previousProfileAvailable = retainedPreviousAvailable;
-  if (retainedPreviousAvailable) {
-    previousProfile = retainedPreviousProfile;
-  }
-  clearProfile(retainedPreviousProfile);
-
-  pendingProfile.ssid = submission.ssid;
-  pendingProfile.passphrase = submission.passphrase;
-  pendingProfile.securityType = submission.securityType;
-  pendingProfile.lastSuccessEpoch = 0;
-  submission.clear();
-  if (source != PendingProfileSource::OnDevice) {
-    wifiSetupUi.close();
-    redrawCurrentView(nowMs);
-  }
-  if (!camperNetwork.connect(pendingProfile, nowMs)) {
-    showPendingConnectionFailure("Connection rejected",
-                                 gatewayLifecycle.pendingImmediateFailure(), nowMs);
-  }
+  handleConnectionResult(connectionController.beginSubmitted(submission, source, nowMs,
+                                                              profileStoreReady), nowMs);
 }
 
 void startPhysicalPortal(const String& ssid, uint8_t securityType, uint32_t nowMs) {
-  replaceGatewayLifecycle(GatewayLifecycleTarget::PhysicalPortal);
+  replaceGatewayLifecycle(GatewayLifecycleTarget::PhysicalPortal, nowMs);
   if (portal.begin(ssid, securityType, nowMs)) {
     wifiSetupUi.showPortal(ssid, portal.pairingCode(), portal.expiresAtMs());
   } else {
-    replaceGatewayLifecycle(GatewayLifecycleTarget::Idle);
+    replaceGatewayLifecycle(GatewayLifecycleTarget::Idle, nowMs);
     wifiSetupUi.showResult("Setup portal failed", false);
   }
   wifiSetupUi.render(camperNetwork.status());
 }
 
-void cancelOnDevicePending(uint32_t nowMs) {
-  const PendingProfileEvaluation evaluation = gatewayLifecycle.pendingImmediateFailure();
-  const bool restorePrevious =
-      evaluation.outcome == PendingProfileOutcome::RestorePrevious;
-  camperNetwork.cancelPendingProfile(!restorePrevious);
-  if (evaluation.outcome == PendingProfileOutcome::RestorePrevious) {
-    if (!reconnectPreviousProfile(nowMs, evaluation.previousActiveIndex)) {
-      camperNetwork.disconnectUpstream();
-    }
-  }
-  gatewayLifecycle.completePending();
-  clearPendingApplicationBuffers();
-  refreshSavedProfiles();
-  wifiSetupUi.cancelCredentialAttempt();
-  wifiSetupUi.render(camperNetwork.status());
-}
-
 void handlePendingProfileCommit(uint32_t nowMs) {
-  if (!gatewayLifecycle.pendingActive()) {
-    return;
-  }
-  const PendingProfileEvaluation evaluation =
-      gatewayLifecycle.evaluatePending(camperNetwork.pendingProfileConnected(), nowMs);
-  if (evaluation.outcome == PendingProfileOutcome::None) {
-    return;
-  }
-  if (evaluation.outcome != PendingProfileOutcome::Commit) {
-    showPendingConnectionFailure("Connection timed out", evaluation, nowMs);
-    return;
-  }
-
+  if (!connectionController.pendingActive()) return;
 #ifdef CYD_SIMULATION
   const time_t currentEpoch = simulationClock.epoch();
 #else
   const time_t currentEpoch = time(nullptr);
 #endif
-  pendingProfile.lastSuccessEpoch = currentEpoch > 0 ? static_cast<uint32_t>(currentEpoch) : 0;
-  size_t storedIndex = 0;
-  if (!profileStoreReady || !profileStore.upsertAndActivate(pendingProfile, storedIndex)) {
-    showPendingInvariantFailure("Credential persistence failed",
-                                gatewayLifecycle.pendingImmediateFailure(), nowMs);
-    return;
-  }
-
-  camperNetwork.acceptPendingProfile();
-  gatewayLifecycle.completePending();
-  clearPendingApplicationBuffers();
-  refreshSavedProfiles();
-  wifiSetupUi.showResult("Upstream connected", true);
-  wifiSetupUi.render(camperNetwork.status());
+  handleConnectionResult(connectionController.poll(
+      nowMs, currentEpoch > 0 ? static_cast<uint32_t>(currentEpoch) : 0), nowMs);
 }
 
 void handlePortalLifecycle(uint32_t nowMs) {
+  if (connectionController.pendingSource() == PendingProfileSource::Saved) return;
   CredentialSubmission submission;
   if (portal.takeSubmission(submission)) {
     beginPendingProfile(submission, PendingProfileSource::Portal, nowMs);
     return;
   }
-  if (gatewayLifecycle.physicalPortalActive() && !portal.active()) {
-    replaceGatewayLifecycle(GatewayLifecycleTarget::Idle);
+  if (connectionController.physicalPortalActive() && !portal.active()) {
+    replaceGatewayLifecycle(GatewayLifecycleTarget::Idle, nowMs);
     wifiSetupUi.showResult("Setup portal expired", false);
     wifiSetupUi.render(camperNetwork.status());
   }
 }
 
 void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
+  if (connectionController.pendingSource() == PendingProfileSource::Saved &&
+      action.type != WifiSetupActionType::CancelSavedConnection) return;
   switch (action.type) {
-    case WifiSetupActionType::ConnectSaved: {
-      const bool retainedStationConfig =
-          replaceGatewayLifecycle(GatewayLifecycleTarget::SavedConnection);
-      NetworkProfile profile;
-      const bool loaded = profileStoreReady && action.profileIndex >= 0 &&
-                          profileStore.load(static_cast<size_t>(action.profileIndex), profile);
-      const bool connecting = loaded && camperNetwork.connect(profile, nowMs);
-      if (connecting) {
-        camperNetwork.acceptPendingProfile();
-      } else {
-        finishStationConfigReplacement(
-            retainedStationConfig, false,
-            [] { camperNetwork.disconnectUpstream(); });
-        wifiSetupUi.showResult("Saved connection failed", false);
-      }
-      clearProfile(profile);
-      refreshSavedProfiles();
-      wifiSetupUi.render(camperNetwork.status());
+    case WifiSetupActionType::ConnectSaved:
+      handleConnectionResult(connectionController.beginSaved(action.profileIndex, nowMs,
+                                                              profileStoreReady), nowMs);
       break;
-    }
     case WifiSetupActionType::ProvisionNew:
       if (provisioningRouteForSecurity(action.securityType) ==
           ProvisioningRoute::DirectPending) {
@@ -626,7 +506,8 @@ void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
       startPhysicalPortal(action.ssid, action.securityType, nowMs);
       break;
     case WifiSetupActionType::CancelCredentialAttempt:
-      cancelOnDevicePending(nowMs);
+    case WifiSetupActionType::CancelSavedConnection:
+      handleConnectionResult(connectionController.cancel(nowMs), nowMs);
       break;
     case WifiSetupActionType::DeleteSaved: {
       const bool erased = profileStoreReady && action.profileIndex >= 0 &&
@@ -642,7 +523,7 @@ void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
       camperNetwork.startScan();
       break;
     case WifiSetupActionType::ClearAll: {
-      replaceGatewayLifecycle(GatewayLifecycleTarget::ClearAll);
+      replaceGatewayLifecycle(GatewayLifecycleTarget::ClearAll, nowMs);
       camperNetwork.disconnectUpstream();
       const bool cleared = profileStoreReady && profileStore.clearUpstreamProfiles();
       refreshSavedProfiles();
@@ -651,7 +532,7 @@ void handleUiAction(const WifiSetupAction& action, uint32_t nowMs) {
       break;
     }
     case WifiSetupActionType::Exit:
-      replaceGatewayLifecycle(GatewayLifecycleTarget::Exit);
+      replaceGatewayLifecycle(GatewayLifecycleTarget::Exit, nowMs);
       wifiSetupUi.close();
       redrawCurrentView(nowMs);
       break;

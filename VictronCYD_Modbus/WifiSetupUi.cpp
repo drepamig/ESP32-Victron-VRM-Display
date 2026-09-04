@@ -172,7 +172,8 @@ WifiSetupAction WifiSetupUi::poll(uint32_t nowMs) {
   }
 
   if (view_ != WifiSetupView::Portal && view_ != WifiSetupView::Password &&
-      view_ != WifiSetupView::Connecting && nowMs - lastActivityMs_ >= kInactivityMs) {
+      view_ != WifiSetupView::Connecting && view_ != WifiSetupView::SavedConnecting &&
+      nowMs - lastActivityMs_ >= kInactivityMs) {
     close();
     return simpleAction(WifiSetupActionType::Exit);
   }
@@ -315,6 +316,12 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
     }
   }
 
+  if (view_ == WifiSetupView::SavedConnecting) {
+    credentialContactActive_ = true;
+    return kBackBounds.contains(point) ? simpleAction(WifiSetupActionType::CancelSavedConnection)
+                                       : noAction();
+  }
+
   if (kBackBounds.contains(point)) {
     if (view_ == WifiSetupView::ConfirmDelete) {
       view_ = WifiSetupView::Saved;
@@ -372,6 +379,10 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
       }
     }
     if (kConnectBounds.contains(point) && selectedProfileIndex_ >= 0) {
+      savedConnectingSsid_ = savedProfiles_[selectedProfileIndex_].ssid;
+      view_ = WifiSetupView::SavedConnecting;
+      cancelHolds();
+      requestFullRender();
       return simpleAction(WifiSetupActionType::ConnectSaved, selectedProfileIndex_);
     }
     if (kDeleteBounds.contains(point) && selectedProfileIndex_ >= 0) {
@@ -443,7 +454,7 @@ WifiSetupAction WifiSetupUi::handleTouch(const TouchPoint& point, uint32_t nowMs
 
 WifiSetupAction WifiSetupUi::handleTouchMove(const TouchPoint& point, uint32_t nowMs) {
   if (credentialContactActive_ || view_ == WifiSetupView::Password ||
-      view_ == WifiSetupView::Connecting) {
+      view_ == WifiSetupView::Connecting || view_ == WifiSetupView::SavedConnecting) {
     credentialContactActive_ = true;
     return noAction();
   }
@@ -533,6 +544,15 @@ bool WifiSetupUi::showCredentialFailure(const String& message, uint32_t nowMs) {
   return true;
 }
 
+void WifiSetupUi::cancelSavedConnection() {
+  if (view_ != WifiSetupView::SavedConnecting) return;
+  savedConnectingSsid_ = String();
+  view_ = WifiSetupView::Saved;
+  lastActivityMs_ = lastNowMs_;
+  cancelHolds();
+  requestFullRender();
+}
+
 void WifiSetupUi::cancelCredentialAttempt() {
   if (view_ == WifiSetupView::Password || view_ == WifiSetupView::Connecting ||
       credentialEntry_.active()) {
@@ -572,6 +592,7 @@ int WifiSetupUi::savedProfileForSsid(const String& ssid) const {
 }
 
 void WifiSetupUi::clearCredentialState() {
+  savedConnectingSsid_ = String();
   credentialEntry_.cancel();
   credentialError_ = String();
   credentialFieldNeedsRedraw_ = false;
@@ -601,7 +622,7 @@ void WifiSetupUi::drawButton(const WifiSetupRect& bounds, const char* label, boo
 void WifiSetupUi::drawHeader(WanPhase wanPhase) {
   drawButton(kBackBounds, "Back");
   if (view_ != WifiSetupView::Portal && view_ != WifiSetupView::Result &&
-      view_ != WifiSetupView::ConfirmDelete) {
+      view_ != WifiSetupView::ConfirmDelete && view_ != WifiSetupView::SavedConnecting) {
     drawButton(kSavedTabBounds, "Saved", view_ == WifiSetupView::Saved);
     drawButton(kNearbyTabBounds, "Nearby",
                view_ == WifiSetupView::Nearby || view_ == WifiSetupView::Scanning);
@@ -757,6 +778,9 @@ void WifiSetupUi::render(const CamperNetworkStatus& networkStatus) {
     case WifiSetupView::Saved:
       renderSaved();
       break;
+    case WifiSetupView::SavedConnecting:
+      renderSavedConnecting();
+      break;
     case WifiSetupView::Scanning:
       renderScanning();
       break;
@@ -847,6 +871,17 @@ void WifiSetupUi::renderDynamic(const CamperNetworkStatus& networkStatus) {
       credentialConnectNeedsRedraw_ = false;
     }
   }
+}
+
+void WifiSetupUi::renderSavedConnecting() {
+  char ssid[25];
+  formatNearbySsid(savedConnectingSsid_, ssid);
+  display_.setTextDatum(MC_DATUM);
+  display_.setTextColor(TFT_WHITE, kBackground);
+  display_.drawString(ssid, 160, 86, 2);
+  display_.drawString("Connecting...", 160, 120, 4);
+  display_.setTextColor(kMuted, kBackground);
+  display_.drawString("Back to cancel", 160, 160, 2);
 }
 
 void WifiSetupUi::renderSaved() {

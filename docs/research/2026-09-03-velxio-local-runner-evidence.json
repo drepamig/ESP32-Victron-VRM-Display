@@ -1,0 +1,398 @@
+{
+  "date": "2026-09-03",
+  "branch": "develop",
+  "wokwiExecutions": 0,
+  "cppSuites": 17,
+  "pythonToolingTests": 54,
+  "acceptedScenarios": 5,
+  "exactRgbaComparisons": 18,
+  "attestation": {
+    "artifacts": [
+      {
+        "path": "build/velxio/firmware.bin",
+        "sha256": "eb0bd3514f35814e5ab896dda90324fc4fca754bccd259b2ee08fe03dd89e092"
+      },
+      {
+        "path": "build/velxio/firmware.elf",
+        "sha256": "72b7a017daf87899ff609d477b2bede82c0e85b858b60ff4e549c9ee2cdb9e61"
+      }
+    ],
+    "backend": "velxio",
+    "buildConfiguration": {
+      "defines": [
+        "CYD_SIMULATION"
+      ],
+      "files": {
+        ".devcontainer/Dockerfile": "aa20fe898d27a1ae0ab5fe07d5241ff9d65fc6a902cbab4b4b33f784133014ad",
+        "tools/arduino-build.sh": "fd7887c1554fc2a7bda092c8ce62e5d30e897dfaffe45e66bee00cd0f8317e2d"
+      },
+      "fqbn": "esp32:esp32:esp32:FlashMode=dio",
+      "toolchainImageId": "sha256:9eb70ebdec9747647477e5c9a6b74e74c9a93e9460b132f4792b2a798c47b15b"
+    },
+    "buildMode": "CYD_SIMULATION",
+    "dummyConfigId": "cyd-sim-dummy-v1",
+    "fqbn": "esp32:esp32:esp32:FlashMode=dio",
+    "runtimeIdentity": {
+      "adapters": {
+        "tools/velxio/__init__.py": "9bd3d3a79652fa9751df3b34f074eff7cf0b912790547b6365c3c568cbbbbee6",
+        "tools/velxio/display.mts": "3944f663552068b8ed0527d58d23658452aa198f7ceb7ba6e6e190f555aa07b2",
+        "tools/velxio/ili9341.mts": "09a43f8b46187c5a0c9e754be2816fc0262e111091c371d47aa872abf4cca12c",
+        "tools/velxio/protocol.py": "6b2bb3342cb33e64b793b67d2d5ba66bc6668229f0b3112b03b9b335c67c3154",
+        "tools/velxio/replay.mts": "91fd6b0222146285f5dfea803fcc5273bcd20ca5eb00a1faa280cd187d83c195",
+        "tools/velxio/run.py": "5c9b76299c21d512674af9223c3ccdb87a6cf9c9e0041af10c0527e89148fcaf",
+        "tools/velxio/session.py": "662324d301b1767497c5aa9cbd427685bc1cbbcdb3de800228ac314981fcd47f",
+        "tools/velxio/worker.py": "4012f7f67603efdcf620e843f5319e3126e8ab89c26c873244c7ba68f4ad8724"
+      },
+      "lock": {
+        "decoderSourceSha256": "a45e0585d5417ecb7789d46cf4df65d4265881de46cc6b4ac5aebb6d097a234f",
+        "icount": 3,
+        "machine": "esp32-picsimlab",
+        "nodeImage": "node:24.3.0-bookworm-slim@sha256:8225b1806c6e37dced949224b5c0d8278a2fe593967288620e0af69b2cbc4539",
+        "nodeVersion": "24.3.0",
+        "pillowVersion": "11.3.0",
+        "pyyamlVersion": "6.0.2",
+        "runtimeImage": "ghcr.io/davidmonterocrespo24/velxio@sha256:117a82cc52ec7168b790bc8553c68fb1fcd86a16db202b847f948f7a573691d2",
+        "schema": 1,
+        "sourceRevision": "77ee0cf96aff18d0b4b10d0e77b08c72bee4c1e0",
+        "workerSha256": "2e16709bd1a6c5252e8727c2760b3a20301a9ca52c8f11d5b76dd5973757f781"
+      },
+      "lockSha256": "044824cb0b7ab7dfe75461e77fceac5e3fc840567d8a56966d99bc800aef35ff",
+      "sha256": "d23c653d8ee08e3e72af415a93bf75fb8a94b0a8593cdd6f0d9439a2a695ef3a"
+    },
+    "schema": 1,
+    "sourceSha256": "89347ef3c1bee6fac602687b06acb92639334b3bf943ad0b7c5f36ee10e149b0"
+  },
+  "cacheIdentity": {
+    "files": {
+      ".devcontainer/Dockerfile": "aa20fe898d27a1ae0ab5fe07d5241ff9d65fc6a902cbab4b4b33f784133014ad",
+      ".devcontainer/Velxio.Dockerfile": "8124040d5d160edd906d2c3b08bc3b4d0f033c818b776fec8c53eb506d105d23",
+      "simulation/velxio/runtime-lock.json": "044824cb0b7ab7dfe75461e77fceac5e3fc840567d8a56966d99bc800aef35ff"
+    },
+    "runtimeImageId": "sha256:7b2089f75b7a8d702695abaf77eedc7aa48fe5e4d4f964866a22a55ae51ce1ef",
+    "toolchainImageId": "sha256:9eb70ebdec9747647477e5c9a6b74e74c9a93e9460b132f4792b2a798c47b15b"
+  },
+  "builds": {
+    "production": {
+      "flashBytes": 1038650,
+      "globalBytes": 49524
+    },
+    "velxioDio": {
+      "flashBytes": 559660,
+      "globalBytes": 34516
+    },
+    "wokwiStandard": {
+      "flashBytes": 559644,
+      "globalBytes": 34516
+    }
+  },
+  "acceptedRuns": [
+    {
+      "runId": "31902cf167ae4268bb24e69c2a796e27",
+      "scenario": "boot-calibration",
+      "scenarioSha256": "7adfa5ccd739d6bb7560efda59f34234424c4ea1e9c15e566fa899f23d6c4c95",
+      "result": {
+        "executionPassed": true,
+        "error": null,
+        "comparisons": [
+          {
+            "name": "boot",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "97fda52f9161858f6332e496466cbe948785044451b407f6ca6b9f0b100a1939",
+            "expectedSha256": "6f1966d16a6a6f5c375b9489470b1b8dbfc2fb302e688d3a3ce451255b43e28b"
+          },
+          {
+            "name": "calibrated-dashboard",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "685b029d5369567b408a3e2385c6192e8b1d5875f3082dc99bbcd40b48a40616",
+            "expectedSha256": "50099812177b5812c65cf5d620e1e0b526ae052159653ad5399bd50366a5d5dd"
+          }
+        ],
+        "warnings": [
+          "E (514) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+        ],
+        "segments": [
+          {
+            "ready": true,
+            "guest_ns": 4580659276
+          }
+        ],
+        "snapshots": [],
+        "wallSeconds": 19.005
+      },
+      "evidenceFiles": {
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/boot-calibration/run.json": "b014834f8fd58f1af58dadec5cd05cb146eef707109a02312816dacee714538d",
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/boot-calibration/result.json": "76e993af238fa3776e3c33045929df135c899d3d08bd24a3aec19f306fe75b3e",
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/boot-calibration/events.jsonl": "5e46b30126fb3dcf2dcd4e126d5e643458b477e682f44ae183a43fd21565d7db",
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/boot-calibration/serial-0.log": "bc9436f0f2802516d3a98cc15b1d327529848596278fd903a023cebed3f577d6",
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/boot-calibration/worker-0.stderr.log": "c5e109667a4d7da6bfd35e9de160bebd32ee13bb5530a5d8ece0898e0d66197f"
+      }
+    },
+    {
+      "runId": "31902cf167ae4268bb24e69c2a796e27",
+      "scenario": "setup-navigation",
+      "scenarioSha256": "0fb89117812327de0b1483f5e57c0eddfbd1698d0063936ea3501fa5d48f0efa",
+      "result": {
+        "executionPassed": true,
+        "error": null,
+        "comparisons": [
+          {
+            "name": "saved",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "c1a3f63e8507d8c48a29b7e48af9a1cba5c7a9feaffcd4fd11f3f3e8b1d9b214",
+            "expectedSha256": "a3b68a766134c1fa8f64bb465d536f8a5ddf85a114b0cb068a70468d788f1449"
+          },
+          {
+            "name": "nearby",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "31dbae32af5f4b91bad7e4718f96fbf493438c537f73fcb771a35110342f65ea",
+            "expectedSha256": "6d7495fb2b53f1a220c0bad7a3f45fa3b20a5da88a65377dcad2e474e62e7855"
+          }
+        ],
+        "warnings": [
+          "E (542) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+        ],
+        "segments": [
+          {
+            "ready": true,
+            "guest_ns": 6232536150
+          }
+        ],
+        "snapshots": [],
+        "wallSeconds": 28.762
+      },
+      "evidenceFiles": {
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/setup-navigation/run.json": "a88acac195c5d33e135ef44e4ca0735ecbe771326215da5aafdcebd4cef73846",
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/setup-navigation/result.json": "18533daec88eb2ea2b94f5e84b36f063e5fe708e14f49875a64cc8dd1687dac7",
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/setup-navigation/events.jsonl": "5ce103df2e68f1cb2d5329f7a2c23b05ddb05bf66f2d583c6ef9daa13edfc6d5",
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/setup-navigation/serial-0.log": "a5e814e2287d14b2a670a8df6197d59f456a39248b7a09d835443a5895806fd3",
+        "build/velxio/results/31902cf167ae4268bb24e69c2a796e27/setup-navigation/worker-0.stderr.log": "85dfbde432de3423317cdcab2a6f7e72b428874f5825d385525b92b7f66b91a3"
+      }
+    },
+    {
+      "runId": "d9137c1ba5b64f638e35a4da50a59d94",
+      "scenario": "wan-hold",
+      "scenarioSha256": "37202d1a545ed8935d6334af81f1c88cbe997f88a7cc1a2f049af76a9d59e99d",
+      "result": {
+        "executionPassed": true,
+        "error": null,
+        "comparisons": [
+          {
+            "name": "cancelled-short-press",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "685b029d5369567b408a3e2385c6192e8b1d5875f3082dc99bbcd40b48a40616",
+            "expectedSha256": "50099812177b5812c65cf5d620e1e0b526ae052159653ad5399bd50366a5d5dd"
+          },
+          {
+            "name": "successful-three-second-hold",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "c1a3f63e8507d8c48a29b7e48af9a1cba5c7a9feaffcd4fd11f3f3e8b1d9b214",
+            "expectedSha256": "a3b68a766134c1fa8f64bb465d536f8a5ddf85a114b0cb068a70468d788f1449"
+          }
+        ],
+        "warnings": [
+          "E (508) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+        ],
+        "segments": [
+          {
+            "ready": true,
+            "guest_ns": 7684513129
+          }
+        ],
+        "snapshots": [],
+        "wallSeconds": 29.72
+      },
+      "evidenceFiles": {
+        "build/velxio/results/d9137c1ba5b64f638e35a4da50a59d94/wan-hold/run.json": "3f46dba291052cbed1663bbc1a2cf8deefecfcb87778c7fd39d41aff3a21d444",
+        "build/velxio/results/d9137c1ba5b64f638e35a4da50a59d94/wan-hold/result.json": "6aab14d7a7bd5060e1d5abfd29bb30010adb546cb9c39db11b0e0bf333d7044b",
+        "build/velxio/results/d9137c1ba5b64f638e35a4da50a59d94/wan-hold/events.jsonl": "9b5a3216ee21448a51491d85e3283f78750d51e7b19686b91e80662b9d9ecd6c",
+        "build/velxio/results/d9137c1ba5b64f638e35a4da50a59d94/wan-hold/serial-0.log": "aa3be8d799a05b2fc428116ba9578b1c6edafe1473704b9b0de7e6b78f34d4e2",
+        "build/velxio/results/d9137c1ba5b64f638e35a4da50a59d94/wan-hold/worker-0.stderr.log": "c20edbfffe6e699bf2d7fcbcc43fce43d67fb79393ef52c98c92921946dcc90f"
+      }
+    },
+    {
+      "runId": "6c855edaa69f44ab95de9579d5ac8bfc",
+      "scenario": "saved-switch",
+      "scenarioSha256": "335b7c283ec6cf42c7127a415dd96bb6ef81162d68b6f86a75652b18607a0b6a",
+      "result": {
+        "executionPassed": true,
+        "error": null,
+        "comparisons": [
+          {
+            "name": "a-active",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "8dd30ce73edabe73be749e3fa4b17b9bd6f1d72ceb172c5ed872e36cf51b7a65",
+            "expectedSha256": "f3bbd4cdf5685fbd4977b140a74f577581a258a0f686c1183fe3056d91fb4ab5"
+          },
+          {
+            "name": "progress",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "52a75ea38e428a2fd3694db113986d990900e3b25fa414a00c132e250dad0f1f",
+            "expectedSha256": "d180cb20e22905057b8241827053115c0f41ed7e35a5e0ccaf992d2d9f060f39"
+          },
+          {
+            "name": "cancelled",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "8dd2d393648bf4a9250be1058f5701f73d316696ed61ef3039b628082a743560",
+            "expectedSha256": "3a82455886b3dbc94d4be9643bbbbbebe243e32f391055036178c6a20a04842e"
+          },
+          {
+            "name": "timeout",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "8f8a4c512551e8630cbdea1070f7656489772bfc7baaa7b092977992b5392df1",
+            "expectedSha256": "618ce5f9086f3bf3d47173d5da7089f82818d2c48624186807d10582e4762c09"
+          },
+          {
+            "name": "rollback-a",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "8dd30ce73edabe73be749e3fa4b17b9bd6f1d72ceb172c5ed872e36cf51b7a65",
+            "expectedSha256": "f3bbd4cdf5685fbd4977b140a74f577581a258a0f686c1183fe3056d91fb4ab5"
+          },
+          {
+            "name": "success",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "dc972f17b3ccd7f39ae396fbae0bcc76faadbc264531020b24e10e4b7c450a2b",
+            "expectedSha256": "385f8981f9dffb06850a010bd7b5f49c337e4cb1f0ef8c0bfee4f684faa176dc"
+          },
+          {
+            "name": "b-active",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+            "expectedSha256": "9e195a019f3ec57dfa66ff6be0f221bd3062719294ee7334d22084573f0deeba"
+          }
+        ],
+        "warnings": [
+          "E (508) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+        ],
+        "segments": [
+          {
+            "ready": true,
+            "guest_ns": 103916091805
+          }
+        ],
+        "snapshots": [],
+        "wallSeconds": 260.114
+      },
+      "evidenceFiles": {
+        "build/velxio/results/6c855edaa69f44ab95de9579d5ac8bfc/saved-switch/run.json": "066c86c7d5fd282f36508b7ee1897aeff984b5e614d4753a0ec3bad2e0d70476",
+        "build/velxio/results/6c855edaa69f44ab95de9579d5ac8bfc/saved-switch/result.json": "e0d49d248b31c95d996ad917d5b44c7202862eb42b56499ad58908a039d19ab4",
+        "build/velxio/results/6c855edaa69f44ab95de9579d5ac8bfc/saved-switch/events.jsonl": "9ecdcb1c3c4fd4a260ac5e767d7ac37cbc0bf05b7b4537034223fc8edd6c811b",
+        "build/velxio/results/6c855edaa69f44ab95de9579d5ac8bfc/saved-switch/serial-0.log": "2098142ed90a41a95783f5f4d4523dfe136dd10fe0dfd1a4d335f30deaa14d7b",
+        "build/velxio/results/6c855edaa69f44ab95de9579d5ac8bfc/saved-switch/worker-0.stderr.log": "ab368433c23f8977581b03001178cab70a8a6aaa5dc2c46903d31c33f9d7c29f"
+      }
+    },
+    {
+      "runId": "a919de0d34294706b8be6da03494c11b",
+      "scenario": "reboot-persistence",
+      "scenarioSha256": "03cdf4e6f820af2682fd6a6fab82850204123c301531b77cb56c614237ed5552",
+      "result": {
+        "executionPassed": true,
+        "error": null,
+        "comparisons": [
+          {
+            "name": "b-active-before",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+            "expectedSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c"
+          },
+          {
+            "name": "dashboard-after-reboot",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "665e7d40354f022770bac8e8896efe80a3102565e0a8a75a5deffc48cdfd6af4",
+            "expectedSha256": "665e7d40354f022770bac8e8896efe80a3102565e0a8a75a5deffc48cdfd6af4"
+          },
+          {
+            "name": "b-active-after",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+            "expectedSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c"
+          },
+          {
+            "name": "failed-submission",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "c9fff1d6ed74b79f065392109822b717c131d2616ef0c4bc33d3acfb6ccf9918",
+            "expectedSha256": "c9fff1d6ed74b79f065392109822b717c131d2616ef0c4bc33d3acfb6ccf9918"
+          },
+          {
+            "name": "rollback-b",
+            "match": true,
+            "mismatchedPixels": 0,
+            "actualSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c",
+            "expectedSha256": "9c0cb7c8ab3b93c73290963645efb5749404a933b2e36231bb266b78da8c8d5c"
+          }
+        ],
+        "warnings": [
+          "E (510) task_wdt: esp_task_wdt_init(517): TWDT already initialized",
+          "E (1190) task_wdt: esp_task_wdt_init(517): TWDT already initialized"
+        ],
+        "segments": [
+          {
+            "ready": true,
+            "guest_ns": 34447499773
+          },
+          {
+            "ready": true,
+            "guest_ns": 77535483506
+          }
+        ],
+        "snapshots": [
+          {
+            "parentSha256": "eb0bd3514f35814e5ab896dda90324fc4fca754bccd259b2ee08fe03dd89e092",
+            "sha256": "473be54e49f91d8daf895a7212a3d272cfd0e6bd7c3a0273f55e217439bdfc71"
+          }
+        ],
+        "wallSeconds": 280.762
+      },
+      "evidenceFiles": {
+        "build/velxio/results/a919de0d34294706b8be6da03494c11b/reboot-persistence/run.json": "d4fe93e5d6479d4236dbb46f846462e4c90ba8a987c731b15b74cab26d49655f",
+        "build/velxio/results/a919de0d34294706b8be6da03494c11b/reboot-persistence/result.json": "f8ac2ba9bba895975fa1e5c984a7d6544ecb29e6403ef85ee77acfa40912c3a3",
+        "build/velxio/results/a919de0d34294706b8be6da03494c11b/reboot-persistence/events.jsonl": "7339d7748f54399aa608b48bf58c5ea7e00738b6cd142fce5f71cfe8a3a7cbfe",
+        "build/velxio/results/a919de0d34294706b8be6da03494c11b/reboot-persistence/serial-0.log": "d0b163ae818962f9888020d4bf110ab90cd37ec8a8faed858381dc116e10b7db",
+        "build/velxio/results/a919de0d34294706b8be6da03494c11b/reboot-persistence/serial-1.log": "195fa52338602e9c56f1b356cab6e2f3cb22c092bcbe08eb1a1378806221a1c0",
+        "build/velxio/results/a919de0d34294706b8be6da03494c11b/reboot-persistence/worker-0.stderr.log": "a89f4196add3b6d92b2a0207c324ae3a3ae6e27efff7147cec36464adcd6b233",
+        "build/velxio/results/a919de0d34294706b8be6da03494c11b/reboot-persistence/worker-1.stderr.log": "fab441d6218acb8ed742fe92a8cfdeee5f1c6a7ec0d87ad0dba536c3eb18d54a"
+      }
+    }
+  ],
+  "additionalEvidence": {
+    "firstCalibrationAndNavigation": "6c855edaa69f44ab95de9579d5ac8bfc",
+    "firstCorrectedWanHold": "31902cf167ae4268bb24e69c2a796e27",
+    "reviewedRebootCaptureRun": "6c855edaa69f44ab95de9579d5ac8bfc",
+    "rebootPromotion": "5 recorded images promoted after visual review; no simulation rerun for promotion",
+    "initialAllExit": "1: heartbeat phase mismatch and five missing reboot baselines; targeted follow-ups resolved both"
+  },
+  "logs": {
+    "build/velxio-work/host-matrix-final.log": "bbca7ab981755005ebb95cc289f380b1b1ce0ac4c2547495f5502e5cdd78b4b2",
+    "build/velxio-work/local-acceptance.log": "fa98fd884410c304390213c3c05fe9785139fde067cd8e29dfdffd2d77f0d69e",
+    "build/velxio-work/navigation-repeat.log": "c137ad3321295b742423c6a9fc6da20e6132a7276e5c0ed896cb07e9cdd31a92",
+    "build/velxio-work/reboot-repeat.log": "ee58a6f205a057e92603fc400b516c1c2174b4ca9dbd909b961452be42212fc6",
+    "build/velxio-work/wokwi-build.log": "16ccd06facd411974ea7008de3d3b2113754bfcf510674de7f843d1bf2481357",
+    "build/velxio-work/isolation-final.log": "7a243b5cbfd104688ff0c9cbef6b7cede51078f28354a2503516f346702ba8d3",
+    "build/velxio-work/doctor-final.log": "d5e03ecad0bb6adc6e42fd6843623367ef13438726daab1c5dd0237f970b3c44"
+  },
+  "coverageGaps": [
+    "protected-network",
+    "password-entry",
+    "connection-flow",
+    "saved-profiles",
+    "phone-portal",
+    "dashboard-states"
+  ],
+  "physicalAcceptance": "pending; simulated network fixtures do not prove real Wi-Fi/AP/NAPT or device deployment"
+}

@@ -25,6 +25,7 @@ extern const WifiSetupRect kWifiWanIndicatorBounds;
 enum class WifiSetupView : uint8_t {
   Closed,
   Saved,
+  SavedConnecting,
   Scanning,
   Nearby,
   ConfirmDelete,
@@ -41,6 +42,7 @@ enum class WifiSetupActionType : uint8_t {
   SubmitCredentials,
   UsePhone,
   CancelCredentialAttempt,
+  CancelSavedConnection,
   DeleteSaved,
   Refresh,
   ClearAll,
@@ -76,6 +78,7 @@ class WifiSetupUi {
   bool takeCredentialSubmission(CredentialSubmission& out);
   bool showCredentialFailure(const String& message, uint32_t nowMs);
   void cancelCredentialAttempt();
+  void cancelSavedConnection();
   void showPortal(const String& ssid, const String& code, uint32_t expiresAtMs);
   void showResult(const String& message, bool success);
 
@@ -99,6 +102,7 @@ class WifiSetupUi {
   void drawButton(const WifiSetupRect& bounds, const char* label, bool selected = false,
                   bool enabled = true, uint8_t font = 2);
   void renderSaved();
+  void renderSavedConnecting();
   void renderScanning();
   void renderNearby();
   void renderConfirmDelete();
@@ -150,6 +154,7 @@ class WifiSetupUi {
   CredentialEntryController credentialEntry_;
   String credentialError_;
   String nearbyNotice_;
+  String savedConnectingSsid_;
   String portalSsid_;
   String portalCode_;
   uint32_t portalExpiresAtMs_ = 0;

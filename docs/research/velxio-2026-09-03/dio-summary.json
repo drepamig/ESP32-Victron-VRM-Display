@@ -1,0 +1,23 @@
+{
+  "firmware_sha256": "0854fbebd2bb268d93d1bf66be288f4f3873195ee326fd7d10fd06ddd8324979",
+  "firmware_size": 4194304,
+  "elapsed_seconds": 3.88,
+  "worker_returncode": 0,
+  "event_counts": {
+    "system": 1,
+    "uart_tx": 468,
+    "gpio_pull": 9,
+    "rmt_event": 24,
+    "gpio_change": 4869,
+    "gpio_dir": 12,
+    "spi_batch": 4514,
+    "i2c_event": 2
+  },
+  "spi_bytes": 556969,
+  "sim_ready": true,
+  "fixture_ack": true,
+  "crash_event": false,
+  "assert_failure": false,
+  "guru_meditation": false,
+  "reboots": 0
+}

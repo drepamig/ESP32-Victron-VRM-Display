@@ -14,11 +14,12 @@ remaining acceptance, and verification evidence live in
 | 3: Password UI | `9a692fc`, followed by interaction/layout fixes through `1673bbc`. |
 | 4: Shared portal submission | `77910e3`; bounded submission shared with on-device entry. |
 | 5: Application integration | `22cebc3`, followed by flow fixes at `67e4555`. |
-| 6: Documentation/verification | `7189268`, with later tooling and docs updates; current verification includes 15 C++ suites and 14 Python tests. |
+| 6: Documentation/verification | `7189268`, with later tooling and docs updates; current verification includes 17 C++ suites and 14 Python tests after R1 and the simulator FT6206 release fix. |
 
-The review at `6ef6c93` found open saved-selection persistence and WAN-outage
-status defects in the retained gateway paths (R1/R2). Passing keyboard tests
-does not close those findings or establish physical acceptance. Use the
+The review at `6ef6c93` found saved-selection persistence and WAN-outage
+status defects in the retained gateway paths (R1/R2). R1 is now implemented and
+reviewed with controller integration coverage; R2 and physical acceptance
+remain pending. Use the
 [current verification commands](../../handoff/linux-2026-08-31/VERIFY_LINUX.md)
 instead of the historical per-file commands below; the virtual bench added
 dependencies and expanded the matrix.

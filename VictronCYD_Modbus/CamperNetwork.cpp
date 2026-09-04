@@ -248,7 +248,7 @@ CamperNetworkStatus CamperNetwork::status() const {
 }
 
 bool CamperNetwork::pendingProfileConnected() const {
-  return pendingProfile_ && stationReady();
+  return pendingProfile_ && stationReady() && WiFi.SSID() == String(selectedSsid_);
 }
 
 void CamperNetwork::acceptPendingProfile() {

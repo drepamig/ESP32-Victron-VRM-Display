@@ -1,0 +1,400 @@
+{
+  "date": "2026-09-03",
+  "status": "navigation repeatability failed; driver release race reproduced",
+  "wokwi_minutes": 0,
+  "probe_only": true,
+  "source_revision": "77ee0cf96aff18d0b4b10d0e77b08c72bee4c1e0",
+  "runtime_image": "ghcr.io/davidmonterocrespo24/velxio@sha256:117a82cc52ec7168b790bc8553c68fb1fcd86a16db202b847f948f7a573691d2",
+  "firmware_sha256": "0854fbebd2bb268d93d1bf66be288f4f3873195ee326fd7d10fd06ddd8324979",
+  "runtime_changes": [
+    "DIO build",
+    "-icount 3",
+    "virtual clock waits",
+    "FT6206 register proxy"
+  ],
+  "decoder_changes": [
+    "RGB565 inversion on 0x20/0x21",
+    "cursor reset on RAMWR 0x2c"
+  ],
+  "goldens_changed": false,
+  "reproduction_expected_exit": 1,
+  "runs": [
+    {
+      "source": "touch-guest-time-run2",
+      "elapsed_seconds": 36.463,
+      "sim_ready": true,
+      "fixture_ack": true,
+      "worker_returncode": 0,
+      "error": null,
+      "checkpoints": [
+        {
+          "probe_checkpoint": "calibration-1",
+          "wall_seconds": 9.627,
+          "guest_ms": 1301.471
+        },
+        {
+          "probe_checkpoint": "after-corner-1",
+          "wall_seconds": 11.207,
+          "guest_ms": 1913.464
+        },
+        {
+          "probe_checkpoint": "after-corner-2",
+          "wall_seconds": 12.375,
+          "guest_ms": 2577.471
+        },
+        {
+          "probe_checkpoint": "after-corner-3",
+          "wall_seconds": 13.536,
+          "guest_ms": 3221.472
+        },
+        {
+          "probe_checkpoint": "after-corner-4",
+          "wall_seconds": 16.357,
+          "guest_ms": 3867.471
+        },
+        {
+          "probe_checkpoint": "dashboard",
+          "wall_seconds": 18.795,
+          "guest_ms": 4944.594
+        },
+        {
+          "probe_checkpoint": "short-press",
+          "wall_seconds": 20.169,
+          "guest_ms": 5573.473
+        },
+        {
+          "probe_checkpoint": "saved",
+          "wall_seconds": 32.23,
+          "guest_ms": 9728.435
+        },
+        {
+          "probe_checkpoint": "nearby-pressed",
+          "wall_seconds": 33.83,
+          "guest_ms": 9994.473
+        },
+        {
+          "probe_checkpoint": "nearby-released",
+          "wall_seconds": 34.435,
+          "guest_ms": 10368.471
+        },
+        {
+          "probe_checkpoint": "nearby",
+          "wall_seconds": 36.0,
+          "guest_ms": 11457.443
+        },
+        {
+          "probe_checkpoint": "complete",
+          "wall_seconds": 36.339,
+          "guest_ms": 11457.443
+        }
+      ],
+      "comparison": [
+        {
+          "actual": "calibration-1.png",
+          "expected": "boot-calibration/boot.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        },
+        {
+          "actual": "saved.png",
+          "expected": "setup-navigation/saved.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        },
+        {
+          "actual": "nearby.png",
+          "expected": "setup-navigation/nearby.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        }
+      ]
+    },
+    {
+      "source": "touch-repeat-run",
+      "elapsed_seconds": 39.567,
+      "sim_ready": true,
+      "fixture_ack": true,
+      "worker_returncode": 0,
+      "error": null,
+      "checkpoints": [
+        {
+          "probe_checkpoint": "calibration-1",
+          "wall_seconds": 9.795,
+          "guest_ms": 1319.032
+        },
+        {
+          "probe_checkpoint": "after-corner-1",
+          "wall_seconds": 11.434,
+          "guest_ms": 1978.071
+        },
+        {
+          "probe_checkpoint": "after-corner-2",
+          "wall_seconds": 12.761,
+          "guest_ms": 2590.048
+        },
+        {
+          "probe_checkpoint": "after-corner-3",
+          "wall_seconds": 14.348,
+          "guest_ms": 3191.098
+        },
+        {
+          "probe_checkpoint": "after-corner-4",
+          "wall_seconds": 17.02,
+          "guest_ms": 3815.108
+        },
+        {
+          "probe_checkpoint": "dashboard",
+          "wall_seconds": 18.741,
+          "guest_ms": 4816.033
+        },
+        {
+          "probe_checkpoint": "short-press",
+          "wall_seconds": 20.666,
+          "guest_ms": 5379.103
+        },
+        {
+          "probe_checkpoint": "saved",
+          "wall_seconds": 32.344,
+          "guest_ms": 9511.022
+        },
+        {
+          "probe_checkpoint": "nearby-pressed",
+          "wall_seconds": 34.302,
+          "guest_ms": 9761.163
+        },
+        {
+          "probe_checkpoint": "nearby-released",
+          "wall_seconds": 36.768,
+          "guest_ms": 10110.037
+        },
+        {
+          "probe_checkpoint": "nearby",
+          "wall_seconds": 39.142,
+          "guest_ms": 11183.054
+        },
+        {
+          "probe_checkpoint": "complete",
+          "wall_seconds": 39.554,
+          "guest_ms": 11183.054
+        }
+      ],
+      "comparison": [
+        {
+          "actual": "calibration-1.png",
+          "expected": "boot-calibration/boot.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        },
+        {
+          "actual": "saved.png",
+          "expected": "setup-navigation/saved.png",
+          "exact": true,
+          "mismatched_pixels": 0,
+          "pixels": 76800,
+          "examples": []
+        },
+        {
+          "actual": "nearby.png",
+          "expected": "setup-navigation/nearby.png",
+          "exact": false,
+          "mismatched_pixels": 69815,
+          "pixels": 76800,
+          "examples": [
+            {
+              "x": 136,
+              "y": 0,
+              "actual": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "expected": [
+                248,
+                252,
+                248,
+                255
+              ]
+            },
+            {
+              "x": 137,
+              "y": 0,
+              "actual": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "expected": [
+                248,
+                252,
+                248,
+                255
+              ]
+            },
+            {
+              "x": 147,
+              "y": 0,
+              "actual": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "expected": [
+                248,
+                252,
+                248,
+                255
+              ]
+            },
+            {
+              "x": 148,
+              "y": 0,
+              "actual": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "expected": [
+                248,
+                252,
+                248,
+                255
+              ]
+            },
+            {
+              "x": 149,
+              "y": 0,
+              "actual": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "expected": [
+                248,
+                252,
+                248,
+                255
+              ]
+            },
+            {
+              "x": 150,
+              "y": 0,
+              "actual": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "expected": [
+                248,
+                252,
+                248,
+                255
+              ]
+            },
+            {
+              "x": 151,
+              "y": 0,
+              "actual": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "expected": [
+                248,
+                252,
+                248,
+                255
+              ]
+            },
+            {
+              "x": 152,
+              "y": 0,
+              "actual": [
+                0,
+                0,
+                0,
+                255
+              ],
+              "expected": [
+                248,
+                252,
+                248,
+                255
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "calibration.png",
+      "sha256": "97fda52f9161858f6332e496466cbe948785044451b407f6ca6b9f0b100a1939"
+    },
+    {
+      "file": "saved.png",
+      "sha256": "c1a3f63e8507d8c48a29b7e48af9a1cba5c7a9feaffcd4fd11f3f3e8b1d9b214"
+    },
+    {
+      "file": "nearby.png",
+      "sha256": "31dbae32af5f4b91bad7e4718f96fbf493438c537f73fcb771a35110342f65ea"
+    },
+    {
+      "file": "repeat-nearby.png",
+      "sha256": "6291c8782cf794185918fbc17e7627bf0c915152270e310cb467954fd2c835ee"
+    },
+    {
+      "file": "release-race.log",
+      "sha256": "5001af568e5323e7d2176c1d13f6e0f9ea2045d9a1e803650f822759a3ce58d0"
+    },
+    {
+      "file": "release-trace.log",
+      "sha256": "156d42dc9a9d07694e08e9e5d8bb9c7c394613124dcce58d474047ff1e09e1fd"
+    }
+  ],
+  "local_harnesses": [
+    {
+      "file": "build/velxio-investigation/touch_probe.py",
+      "sha256": "e4c4721b5424b6d676eb0e1446bf719b2f1871eb9175bafaab55dea0aa2770f0"
+    },
+    {
+      "file": "build/velxio-investigation/touch_worker.py",
+      "sha256": "fe4803e593fd49ed41eb9af4a5103f5770c5ee81f30f4ed424e81a53cf5b0b0e"
+    },
+    {
+      "file": "build/velxio-investigation/prepare_touch_replay.py",
+      "sha256": "112e969a448539e742f97abfa3dff028624311e758c65d977581d1e3fe9eca5f"
+    },
+    {
+      "file": "build/velxio-investigation/compare_touch.py",
+      "sha256": "84674469498d4fed0a346b0825731378c4c4d8ceb15bcd9e953a7d8aa6891797"
+    },
+    {
+      "file": "build/velxio-investigation/release-race/reproduce.cpp",
+      "sha256": "09c2d64cbe624aba7076502b33ff42258143586fb634888d28e870f26691b798"
+    },
+    {
+      "file": "build/velxio-investigation/release-race/fakes/Adafruit_I2CDevice.h",
+      "sha256": "f8a7432495299fa7ec428651e7abbe12cfc3b92500b79a1ea7a753556e31cdde"
+    },
+    {
+      "file": "build/velxio-investigation/release-race/run.sh",
+      "sha256": "b51d8f0db81bce65b8169d953e7a20453c51556012008d83d14620d69145b393"
+    }
+  ]
+}

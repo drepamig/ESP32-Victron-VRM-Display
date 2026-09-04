@@ -1,6 +1,6 @@
 # Linux continuation handoff
 
-Reconciled 2026-09-03 against `develop` at `6ef6c93`. The tracked
+Updated 2026-09-03 for R1 and the local Velxio runner on `develop` after `8010d11`. The tracked
 [status and acceptance record](../../README.md) is the current task tracker;
 this handoff preserves the earlier bench evidence and continuation context.
 
@@ -32,9 +32,11 @@ the firmware silently roam to a stronger saved profile.
 ## Completed development
 
 Original implementation Tasks 1 through 8 were completed and reviewed. The
-2026-09-03 review reopened follow-up work in Tasks 4 and 8: R1 (saved active
-selection is not persisted) and R2 (an unavailable uplink remains Connecting).
-Both are detailed in the [open findings](../../README.md#open-review-findings).
+2026-09-03 review reopened follow-up work in Tasks 4 and 8. R1 is now
+implemented through GatewayConnectionController: saved selection activates
+only after the selected SSID associates and receives DHCP, with a cancellable
+progress screen and 60-second rollback. R2 (an unavailable uplink remains
+Connecting) remains open. See the [findings](../../README.md#review-findings).
 Historical Task 9 bench work recorded the following on physical hardware:
 
 - the private AP starts without an upstream network and the dashboard remains
@@ -79,7 +81,18 @@ portal fallback. The newer credential-entry flow has host, compile, and
 recorded virtual-bench coverage. No later physical upload or validation is
 recorded for its keyboard layout, touch accuracy, masking, retry, or fallback.
 
-The next development work is correcting R1 and R2 with regressions and review.
+R1 is implemented and reviewed with 16 host suites and 14 tooling tests passing.
+The later simulator-only FT6206 release fix adds a host regression: all 17
+host suites and 14 tooling tests pass, along with both firmware builds and
+two targeted local Velxio navigation runs. Wokwi was not rerun after that
+fix; see the [investigation](../../research/2026-09-03-velxio-investigation.md#ft6206-correction-and-local-retest).
+The [maintained local runner](../../superpowers/plans/2026-09-03-velxio-local-runner.md)
+uses Velxio by default for supported calibration, navigation, saved-switch,
+and reboot-persistence checks. See the current status record for measured
+acceptance. `sim-test` and `all` are local; Wokwi requires explicit backend and
+scenario/full-suite selection. Review recorded captures before promotion;
+golden updates reuse the run without another simulation. R2 remains the next
+gateway behavior correction, and R1 physical acceptance remains pending.
 After verification and an NVS-preserving upload of the privately configured
 image, continue controlled upstream provisioning through the keyboard-first flow.
 
@@ -87,7 +100,7 @@ image, continue controlled upstream provisioning through the keyboard-first flow
 
 The [current acceptance checklist](../../README.md#remaining-task-9-acceptance)
 includes saved-selection reboot/rollback coverage, reset protection, and timing
-records. Resolve R1 and R2 before completing the affected hardware scenarios.
+records. R1 requires physical proof; correct R2 before its outage scenario.
 
 Use the user-controlled bench upstream in place of real Starlink during this
 phase. Ask the user for its current SSID when needed; do not add that SSID or
@@ -103,8 +116,10 @@ its password to tracked files or logs.
 4. Try deliberately bad credentials and prove the previously active profile is
    restored, the password returns masked and editable, and the bad password is
    absent from output.
-5. Add a second controlled hotspot, select between saved profiles, delete the
-   second profile with confirmation, and verify the first remains active.
+5. Add a second controlled hotspot. Prove A→B switching, active-marker and
+   reboot persistence, Back cancellation, failed-switch rollback, and continued
+   AP availability using an NVS-preserving upload. Then confirm deletion of the
+   second profile and verify the first remains active.
 6. Select **Use phone**, then verify the fallback portal boundaries: unavailable
    before physical activation, wrong-code rejection, timeout rejection,
    single-use behavior, and closure after an accepted submission.
@@ -118,6 +133,25 @@ Live Venus/GX Modbus and real Starlink field validation remain deferred until
 the hardware is co-located for Tasks 10 and 11.
 
 ## Current repository verification
+
+The final local-runner matrix passed 17 C++ suites and 54 Python tooling tests.
+Production, local DIO, and standard simulator builds passed, along with both
+simulator attestations and production isolation. The five supported local
+scenarios and reviewed reboot captures are recorded in the
+[Velxio implementation evidence](../../research/2026-09-03-velxio-local-runner.md).
+No Wokwi minutes, hardware flashing, or Venus changes were used for this phase.
+
+The earlier R1 run passed all 16 C++ host suites and 14 Python tooling tests. Its reviewed
+production smoke build uses 1,038,650 bytes flash and 49,524 bytes globals;
+the simulator uses 559,636 bytes flash and 34,516 bytes globals. Attestation
+and production/simulator isolation passed. The independent follow-up review
+reported no remaining actionable findings. See the current
+[verification record](../../README.md#verification-evidence) for Wokwi results.
+All 10 live scenarios completed with 32 exact screenshot matches. The seven
+new saved-switch images were visually reviewed before promotion and reproduced
+byte for byte by the repeat run; the 25 existing baselines were unchanged.
+Physical acceptance remains pending; this change includes no flashing, Venus
+changes, or pushing.
 
 At `6ef6c93`, the 2026-09-03 review reran `tools/dev.ps1 test` (15 C++ suites
 and 14 Python tests passed) and `tools/dev.ps1 firmware-build` (dummy production

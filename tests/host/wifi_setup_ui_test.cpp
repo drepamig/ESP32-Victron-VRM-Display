@@ -4,6 +4,7 @@
 #include <string>
 
 #include "TFT_eSPI.h"
+#include "../../VictronCYD_Modbus/GatewayApplicationPolicy.h"
 #include "../../VictronCYD_Modbus/WifiSetupUi.h"
 
 namespace {
@@ -245,6 +246,7 @@ void testSavedSelectionConnectAndDeleteConfirmation() {
   WifiSetupAction action = ui.handleTouch({55, 218}, 20);
   check(action.type == WifiSetupActionType::ConnectSaved && action.profileIndex == 0,
         "Connect must explicitly return the selected saved profile");
+  ui.cancelSavedConnection();
 
   check(ui.handleTouch({100, 82}, 30).type == WifiSetupActionType::None,
         "second saved row should select without action");
@@ -288,6 +290,7 @@ void testNearbyRoutingPaginationAndRefresh() {
   action = ui.handleTouch({55, 218}, 30);
   check(action.type == WifiSetupActionType::ConnectSaved && action.profileIndex == 0,
         "known nearby route must select the matching saved profile");
+  ui.cancelSavedConnection();
 
   check(ui.handleTouch({210, 18}, 40).type == WifiSetupActionType::Refresh,
         "Nearby tab must remain refreshable");
@@ -829,6 +832,44 @@ void testCredentialStateClearsOnTerminalTransitions() {
 }  // namespace
 
 int main() {
+  // Regression: saved Connect must paint progress before the network side effect.
+  {
+    TFT_eSPI display;
+    WifiSetupUi ui(display);
+    NetworkProfile saved[2]{{"A", "secret-a", 3, 10}, {"B", "secret-b", 3, 20}};
+    ui.setSavedProfiles(saved, 2, 0);
+    ui.open();
+    ui.handleTouch({100, 82}, 1);
+    ui.render(offlineStatus());
+    coordinateSetupInteraction(
+        [&] { return ui.handleTouch({55, 218}, 2); },
+        [&] { return ui.takeFullRenderRequest(); },
+        [&] { ui.render(offlineStatus()); },
+        [&](WifiSetupAction action) {
+          check(action.type == WifiSetupActionType::ConnectSaved && action.profileIndex == 1,
+                "saved selection starts B");
+          check(display.drewContaining("Connecting") && display.drew("B"),
+                "saved progress paints before connection initiation");
+        }, [] {});
+    check(ui.poll(60002).type == WifiSetupActionType::None && ui.isOpen(),
+          "saved progress owns the attempt across inactivity deadline");
+    check(ui.handleTouch({210, 18}, 60003).type == WifiSetupActionType::None,
+          "saved progress prevents scans");
+    for (TouchPoint point : {TouchPoint{55, 218}, TouchPoint{160, 218}, TouchPoint{270, 218},
+                            TouchPoint{100, 56}, TouchPoint{100, 18}}) {
+      check(ui.handleTouch(point, 60004).type == WifiSetupActionType::None,
+            "saved progress blocks duplicate submission, delete, clear and navigation");
+    }
+    check(ui.poll(70005).type == WifiSetupActionType::None, "saved progress cannot arm clear hold");
+    check(ui.handleTouchMove({30, 18}, 70006).type == WifiSetupActionType::None,
+          "sliding onto Back cannot cancel");
+    ui.handleRelease(70007);
+    check(ui.handleTouch({30, 18}, 70008).type == WifiSetupActionType::CancelSavedConnection,
+          "Back explicitly cancels saved attempt");
+    ui.cancelSavedConnection(); ui.render(offlineStatus());
+    check(display.drew("A [ACTIVE]") && !display.drewContaining("Connecting"),
+          "cancel returns to Saved with previous active marker");
+  }
   testWanHoldRequiresContinuousContact();
   testLocalSetupTransitionsRequestExactlyOneFullRender();
   testStaleNearbyPageDoesNotDefeatTransitionCoalescing();
